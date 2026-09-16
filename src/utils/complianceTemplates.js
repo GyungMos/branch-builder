@@ -1,0 +1,171 @@
+// 자동차관리법 시행규칙 및 지자체 조례에 따른 정비업 시설/장비 법정 기준 템플릿
+
+export const COMPLIANCE_TEMPLATES = {
+  // 1. 자동차전문정비업 (구 카센터 / 3급)
+  specialized: {
+    title: '자동차전문정비업 (카센터)',
+    description: '오일교환, 타이어, 브레이크, 하체, 배터리, 경정비 등',
+    items: [
+      {
+        id: 'c-area',
+        category: 'area',
+        title: '작업장 유효면적',
+        requirement: '지자체 조례 기준 이상 확보 (서울/수도권 통상 50㎡~70㎡ 이상, 리프트 진입공간 포함)',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'c-lift',
+        category: 'equipment',
+        title: '정비용 리프트',
+        requirement: '법정 필수 1대 이상 구비 (2주식, 4주식, 시저스 리프트 등 안전검사 합격품)',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'c-electric',
+        category: 'facility',
+        title: '전기 수전용량 및 동력 배선',
+        requirement: '한전 3상 380V 동력 수전 (통상 15kW~30kW 권장, 리프트 및 콤프레셔 구동용)',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'c-compressor',
+        category: 'facility',
+        title: '에어 콤프레셔 및 배관',
+        requirement: '정격 압력 배관 및 소음 차단 시설 (콤프레셔실 구획)',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'c-fire',
+        category: 'safety',
+        title: '소방 안전 설비',
+        requirement: 'ABC 분말 소화기 2대 이상, 피난구 유도등, 비상조명등 설치',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'c-waste-oil',
+        category: 'environment',
+        title: '폐유/지정폐기물 보관소',
+        requirement: '폐유 드럼 보관대, 누유 방지 턱(방지턱 10cm 이상) 설치 및 지정폐기물 위탁계약',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'c-oil-water',
+        category: 'environment',
+        title: '유수분리시설 (작업장 배수로)',
+        requirement: '작업장 바닥 기름 유출 방지 트렌치 및 유수분리조 구비',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'c-tools',
+        category: 'equipment',
+        title: '법정 측정/검사기구',
+        requirement: '토크렌치, 타이어 공기압 게이지, 부동액 측정기, 배터리 테스터 구비',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'c-permit',
+        category: 'admin',
+        title: '구청 정비업 등록 신청',
+        requirement: '시/군/구 교통행정과 자동차관리사업(정비업) 등록신청서 및 현장 실사',
+        status: 'waiting',
+        memo: '',
+      },
+    ],
+  },
+
+  // 2. 소형자동차정비업 (구 2급)
+  small: {
+    title: '소형자동차정비업',
+    description: '승용차, 소형 화물차 전반 정비 및 판금/도색 포함',
+    items: [
+      {
+        id: 'cs-area',
+        category: 'area',
+        title: '작업장 유효면적',
+        requirement: '작업장 400㎡ 이상 확보 (지자체별 상이)',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'cs-lift',
+        category: 'equipment',
+        title: '정비용 리프트 2대 이상',
+        requirement: '차량 하체 정비용 리프트 2대 이상 및 휠얼라인먼트 장비 구비',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'cs-paint',
+        category: 'environment',
+        title: '도색부스 및 대기배출시설 신고',
+        requirement: '대기환경보전법에 따른 대기오염 방지시설(활성탄 흡착탑/필터) 설치 및 관할 구청 신고',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'cs-electric',
+        category: 'facility',
+        title: '고압 수전 용량',
+        requirement: '한전 계약전력 50kW 이상 수전 (열풍 건조로 및 대용량 콤프레셔)',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'cs-test',
+        category: 'equipment',
+        title: '제동시험기 및 전조등시험기',
+        requirement: '법정 정기검사/정비용 제동능력 측정기 및 전조등 시험기 구비',
+        status: 'waiting',
+        memo: '',
+      },
+    ],
+  },
+
+  // 3. 종합자동차정비업 (구 1급)
+  comprehensive: {
+    title: '종합자동차정비업',
+    description: '대형 트럭, 버스, 모든 자동차의 종합 정비/검사/판금/도색',
+    items: [
+      {
+        id: 'cc-area',
+        category: 'area',
+        title: '작업장 면적 기준',
+        requirement: '작업장 1,000㎡ 이상 확보',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'cc-heavy-lift',
+        category: 'equipment',
+        title: '대형 차량용 리프트',
+        requirement: '10톤 이상 대형 4주식 리프트 및 이동식 컬럼 리프트 구비',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'cc-paint-large',
+        category: 'environment',
+        title: '대형 대기오염 방지시설',
+        requirement: '대기배출시설 허가 완료 및 대형 열풍건조 도색부스 설치',
+        status: 'waiting',
+        memo: '',
+      },
+      {
+        id: 'cc-safety',
+        category: 'safety',
+        title: '소방 완비증명 및 위험물 허가',
+        requirement: '소방서 완비증명서 수령 및 유류저장소 위험물 인허가',
+        status: 'waiting',
+        memo: '',
+      },
+    ],
+  },
+};

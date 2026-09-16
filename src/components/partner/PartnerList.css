@@ -1,0 +1,188 @@
+/* ===================================================
+   PartnerList.css - 협력업체 / 거래처 연락처 명부 스타일
+   =================================================== */
+
+.partner-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.partner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.partner-filter-bar {
+  display: flex;
+  gap: var(--space-xs);
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.partner-filter-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.partner-filter-btn:hover {
+  border-color: #f97316;
+  color: #f97316;
+}
+
+.partner-filter-btn.active {
+  background: #ea580c;
+  border-color: #ea580c;
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+/* 그리드 */
+.partner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-lg);
+}
+
+.partner-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.partner-card:hover {
+  border-color: #fb923c;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.partner-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-sm);
+}
+
+.partner-category-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.partner-company-name {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-top: var(--space-xs);
+}
+
+.partner-manager-info {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.partner-contact-box {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-xs);
+}
+
+.partner-contact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.partner-call-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 11px;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.partner-call-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 3px 12px rgba(16, 185, 129, 0.45);
+}
+
+.partner-account-box {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.partner-memo-box {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid #ea580c;
+  margin-bottom: var(--space-md);
+  line-height: 1.4;
+}
+
+.partner-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-surface-border);
+}
+
+.partner-contract-amount {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.partner-contract-amount strong {
+  color: #fb923c;
+  font-size: var(--font-size-sm);
+  margin-left: 4px;
+}

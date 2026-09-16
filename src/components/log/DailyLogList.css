@@ -1,0 +1,126 @@
+/* ===================================================
+   DailyLogList.css - 현장 일일 작업일지 & 이슈노트 스타일
+   =================================================== */
+
+.daily-log-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.daily-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.daily-log-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  position: relative;
+  padding-left: 28px;
+}
+
+.daily-log-timeline::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 11px;
+  width: 2px;
+  background: var(--color-surface-border);
+}
+
+.daily-log-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-xl);
+  position: relative;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.daily-log-card:hover {
+  border-color: #f472b6;
+  box-shadow: var(--shadow-md);
+}
+
+.daily-log-dot {
+  position: absolute;
+  top: 20px;
+  left: -24px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #db2777;
+  border: 3px solid var(--color-bg-primary);
+  box-shadow: 0 0 8px rgba(219, 39, 119, 0.6);
+}
+
+.daily-log-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.daily-log-date-badge {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.daily-log-summary {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: 500;
+  line-height: 1.5;
+  margin-bottom: var(--space-sm);
+}
+
+.daily-log-meta-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.daily-log-issue-box {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: var(--font-size-xs);
+  color: #fca5a5;
+  margin-top: var(--space-xs);
+}
+
+.daily-log-photos-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: var(--space-sm);
+}
+
+.daily-log-photo-thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--color-surface-border);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.daily-log-photo-thumb:hover {
+  transform: scale(1.06);
+}

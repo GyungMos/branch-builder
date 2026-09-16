@@ -1,0 +1,238 @@
+.cost-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.cost-summary {
+  padding: var(--space-xl);
+}
+
+.cost-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.cost-summary-header h4 {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.cost-summary-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.cost-total {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cost-categories-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.cost-category-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.cost-category-row:last-child {
+  border-bottom: none;
+}
+
+.cost-category-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+}
+
+.cost-category-amount {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.cost-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.cost-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.cost-item-icon {
+  font-size: var(--font-size-xl);
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.cost-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cost-item-title {
+  font-weight: 600;
+  font-size: var(--font-size-base);
+  margin-bottom: 4px;
+}
+
+.cost-item-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.cost-item-account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  padding: 4px 8px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.cost-account-label {
+  font-size: var(--font-size-sm);
+}
+
+.cost-item-memo {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-sm);
+}
+
+.cost-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.cost-item-amount {
+  font-weight: 700;
+  font-size: var(--font-size-base);
+  white-space: nowrap;
+}
+
+.cost-item-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.cost-item:hover .cost-item-actions {
+  opacity: 1;
+}
+
+/* 폼 접기/열기 토글 */
+.form-section-toggle {
+  padding-top: var(--space-xs);
+}
+
+.form-section-collapsible {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+}
+
+/* D-Day 배지 */
+.dday-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  margin-left: var(--space-sm);
+}
+
+.dday-badge.soon {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.dday-badge.past {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* 타임라인 액션 */
+.timeline-bar-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.timeline-row:hover .timeline-bar-actions {
+  opacity: 1;
+}
+
+.timeline-list-item-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.tab-header-actions {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.branch-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+@media (max-width: 768px) {
+  .cost-item-actions {
+    opacity: 1;
+  }
+
+  .timeline-bar-actions {
+    opacity: 1;
+  }
+
+  .cost-item {
+    padding: var(--space-md);
+  }
+}

@@ -1,0 +1,196 @@
+/* ===================================================
+   ComplianceManager.css - 정비업 법정 시설기준 및 인허가 대장 스타일
+   =================================================== */
+
+.compliance-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.compliance-hero-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.compliance-hero-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.compliance-progress-box {
+  min-width: 240px;
+  background: var(--color-bg-secondary);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-surface-border);
+}
+
+.compliance-progress-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  margin-bottom: var(--space-xs);
+  font-weight: 600;
+}
+
+.compliance-progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--color-surface);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.compliance-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+/* 템플릿 선택 바 */
+.template-select-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+/* 항목 리스트 */
+.compliance-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.compliance-item-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.compliance-item-card:hover {
+  border-color: var(--color-accent);
+}
+
+.compliance-item-card.status-fit {
+  border-left: 4px solid #10b981;
+}
+.compliance-item-card.status-in_progress {
+  border-left: 4px solid #0ea5e9;
+}
+.compliance-item-card.status-waiting {
+  border-left: 4px solid #f59e0b;
+}
+.compliance-item-card.status-na {
+  border-left: 4px solid #64748b;
+  opacity: 0.75;
+}
+
+.compliance-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.compliance-item-title {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.compliance-cat-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+}
+
+.compliance-item-req {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  background: var(--color-bg-secondary);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+}
+
+.compliance-status-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.status-toggle-btn {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--color-surface-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.status-toggle-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.status-toggle-btn.active-fit {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
+}
+.status-toggle-btn.active-in_progress {
+  background: #0ea5e9;
+  border-color: #0ea5e9;
+  color: white;
+}
+.status-toggle-btn.active-waiting {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: white;
+}
+.status-toggle-btn.active-na {
+  background: #64748b;
+  border-color: #64748b;
+  color: white;
+}
+
+.compliance-memo-input {
+  font-size: var(--font-size-xs);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-text-primary);
+  width: 100%;
+}

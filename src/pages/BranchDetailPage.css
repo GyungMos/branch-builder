@@ -1,0 +1,124 @@
+.branch-detail-header {
+  margin-bottom: var(--space-xl);
+}
+
+.branch-detail-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.branch-status-select {
+  min-width: 120px;
+  max-width: 140px;
+  font-size: var(--font-size-sm);
+  padding: var(--space-sm) var(--space-md);
+  padding-right: 32px;
+}
+
+.branch-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.summary-icon {
+  font-size: var(--font-size-xl);
+  flex-shrink: 0;
+}
+
+.summary-value {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.summary-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+}
+
+.branch-tabs {
+  margin-bottom: var(--space-xl);
+}
+
+.branch-tab-content {
+  min-height: 300px;
+}
+
+.tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xl);
+}
+
+.tab-header h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.overview-section {
+  margin-bottom: var(--space-2xl);
+}
+
+.overview-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.overview-section-header h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .branch-summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
+  }
+
+  .summary-card {
+    padding: var(--space-md);
+  }
+
+  .summary-value {
+    font-size: var(--font-size-base);
+  }
+
+  .branch-tabs {
+    display: none;
+  }
+
+  .tab-header .btn {
+    display: none;
+  }
+
+  .branch-detail-header-top {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .branch-status-select {
+    align-self: flex-start;
+  }
+}

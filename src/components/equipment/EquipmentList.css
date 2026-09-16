@@ -1,0 +1,102 @@
+/* ===================================================
+   EquipmentList.css - 정비 장비 및 리프트 설비 대장 스타일
+   =================================================== */
+
+.equipment-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.equipment-hero-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.equipment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-lg);
+}
+
+.equipment-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.equipment-card:hover {
+  border-color: #c084fc;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.equipment-card.is-installed {
+  border-left: 4px solid #10b981;
+}
+
+.equipment-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.equipment-name {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.equipment-model {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.equipment-specs-box {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  font-size: var(--font-size-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.equipment-specs-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.equipment-checks-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--color-surface-border);
+}
+
+.equipment-check-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}

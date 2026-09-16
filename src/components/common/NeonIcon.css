@@ -1,0 +1,352 @@
+/* ===================================================
+   NeonIcon.css - 3D 네온 입체 아이콘 시스템
+   (다크 모드 & 라이트 모드 완벽 3D 최적화)
+   =================================================== */
+
+.neon-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* -------------------------------------------
+   1. 다크 모드 3D 캡슐 (기본 / Dark Theme)
+   ------------------------------------------- */
+.neon-icon-badge {
+  border-radius: 12px;
+  background: radial-gradient(120% 120% at 30% 20%, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 60%, rgba(0, 0, 0, 0.4) 100%),
+              rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.neon-icon-badge:hover {
+  transform: translateY(-2px) scale(1.04);
+}
+
+/* -------------------------------------------
+   2. 라이트 모드 3D 캡슐 (Light Theme 최적화)
+   화사한 3D 엠보싱 글래스 + 컬러 앰비언트 글로우
+   ------------------------------------------- */
+[data-theme="light"] .neon-icon-badge {
+  background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
+  border: 1px solid var(--neon-border, rgba(0, 0, 0, 0.08));
+  box-shadow: 
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+    inset 0 -1.5px 3px rgba(0, 0, 0, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 2px 8px var(--neon-glow, rgba(0, 0, 0, 0.05));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+[data-theme="light"] .neon-icon-badge:hover {
+  background: linear-gradient(145deg, #ffffff 0%, #e2e8f0 100%);
+  box-shadow: 
+    inset 0 1.5px 2px rgba(255, 255, 255, 1),
+    0 6px 18px rgba(0, 0, 0, 0.1),
+    0 0 14px var(--neon-glow, rgba(0, 0, 0, 0.1));
+}
+
+/* 크기 변형 */
+.neon-icon-sm {
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+}
+.neon-icon-sm svg {
+  width: 16px;
+  height: 16px;
+}
+
+.neon-icon-md {
+  width: 38px;
+  height: 38px;
+  padding: 7px;
+}
+.neon-icon-md svg {
+  width: 22px;
+  height: 22px;
+}
+
+.neon-icon-lg {
+  width: 48px;
+  height: 48px;
+  padding: 9px;
+}
+.neon-icon-lg svg {
+  width: 28px;
+  height: 28px;
+}
+
+.neon-icon-xl {
+  width: 60px;
+  height: 60px;
+  padding: 12px;
+}
+.neon-icon-xl svg {
+  width: 36px;
+  height: 36px;
+}
+
+/* 아이콘 인라인 (배지 없이 단독) */
+.neon-icon-inline {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.neon-icon-inline.neon-icon-sm svg { width: 18px; height: 18px; }
+.neon-icon-inline.neon-icon-md svg { width: 22px; height: 22px; }
+.neon-icon-inline.neon-icon-lg svg { width: 28px; height: 28px; }
+
+/* SVG 내부 스타일링 */
+.neon-svg {
+  overflow: visible;
+  display: block;
+}
+
+/* -------------------------------------------
+   3. 색상별 네온 테마 (다크 vs 라이트 개별 튜닝)
+   ------------------------------------------- */
+
+/* 1. Emerald (건축/시공/성공) */
+.neon-theme-emerald {
+  --neon-color-1: #34d399;
+  --neon-color-2: #059669;
+  --neon-glow: rgba(16, 185, 129, 0.45);
+  --neon-border: rgba(52, 211, 153, 0.4);
+}
+.neon-theme-emerald.neon-icon-badge {
+  border-color: var(--neon-border);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 16px var(--neon-glow);
+}
+.neon-theme-emerald svg {
+  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.7));
+}
+
+[data-theme="light"] .neon-theme-emerald {
+  --neon-color-1: #059669;
+  --neon-color-2: #047857;
+  --neon-glow: rgba(16, 185, 129, 0.35);
+  --neon-border: rgba(16, 185, 129, 0.4);
+}
+[data-theme="light"] .neon-theme-emerald svg {
+  filter: drop-shadow(0 2px 4px rgba(5, 150, 105, 0.45));
+}
+
+/* 2. Cyan (대시보드/시스템) */
+.neon-theme-cyan {
+  --neon-color-1: #38bdf8;
+  --neon-color-2: #0284c7;
+  --neon-glow: rgba(6, 182, 212, 0.45);
+  --neon-border: rgba(56, 189, 248, 0.4);
+}
+.neon-theme-cyan.neon-icon-badge {
+  border-color: var(--neon-border);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 16px var(--neon-glow);
+}
+.neon-theme-cyan svg {
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.7));
+}
+
+[data-theme="light"] .neon-theme-cyan {
+  --neon-color-1: #0284c7;
+  --neon-color-2: #0369a1;
+  --neon-glow: rgba(2, 132, 199, 0.35);
+  --neon-border: rgba(2, 132, 199, 0.4);
+}
+[data-theme="light"] .neon-theme-cyan svg {
+  filter: drop-shadow(0 2px 4px rgba(2, 132, 199, 0.45));
+}
+
+/* 3. Amber (비용/예산/돈) */
+.neon-theme-amber {
+  --neon-color-1: #fbbf24;
+  --neon-color-2: #d97706;
+  --neon-glow: rgba(245, 158, 11, 0.45);
+  --neon-border: rgba(251, 191, 36, 0.4);
+}
+.neon-theme-amber.neon-icon-badge {
+  border-color: var(--neon-border);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 16px var(--neon-glow);
+}
+.neon-theme-amber svg {
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.75));
+}
+
+[data-theme="light"] .neon-theme-amber {
+  --neon-color-1: #d97706;
+  --neon-color-2: #b45309;
+  --neon-glow: rgba(217, 119, 6, 0.35);
+  --neon-border: rgba(217, 119, 6, 0.4);
+}
+[data-theme="light"] .neon-theme-amber svg {
+  filter: drop-shadow(0 2px 4px rgba(217, 119, 6, 0.45));
+}
+
+/* 4. Violet (정비 장비/리프트/기술) */
+.neon-theme-violet {
+  --neon-color-1: #c084fc;
+  --neon-color-2: #7c3aed;
+  --neon-glow: rgba(139, 92, 246, 0.45);
+  --neon-border: rgba(192, 132, 252, 0.4);
+}
+.neon-theme-violet.neon-icon-badge {
+  border-color: var(--neon-border);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 16px var(--neon-glow);
+}
+.neon-theme-violet svg {
+  filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.75));
+}
+
+[data-theme="light"] .neon-theme-violet {
+  --neon-color-1: #7c3aed;
+  --neon-color-2: #6d28d9;
+  --neon-glow: rgba(124, 58, 237, 0.35);
+  --neon-border: rgba(124, 58, 237, 0.4);
+}
+[data-theme="light"] .neon-theme-violet svg {
+  filter: drop-shadow(0 2px 4px rgba(124, 58, 237, 0.45));
+}
+
+/* 5. Blue (일정/캘린더/계약) */
+.neon-theme-blue {
+  --neon-color-1: #60a5fa;
+  --neon-color-2: #2563eb;
+  --neon-glow: rgba(59, 130, 246, 0.45);
+  --neon-border: rgba(96, 165, 250, 0.4);
+}
+.neon-theme-blue.neon-icon-badge {
+  border-color: var(--neon-border);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 16px var(--neon-glow);
+}
+.neon-theme-blue svg {
+  filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.75));
+}
+
+[data-theme="light"] .neon-theme-blue {
+  --neon-color-1: #2563eb;
+  --neon-color-2: #1d4ed8;
+  --neon-glow: rgba(37, 99, 235, 0.35);
+  --neon-border: rgba(37, 99, 235, 0.4);
+}
+[data-theme="light"] .neon-theme-blue svg {
+  filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.45));
+}
+
+/* 6. Coral (협력업체/파트너) */
+.neon-theme-coral {
+  --neon-color-1: #fb923c;
+  --neon-color-2: #ea580c;
+  --neon-glow: rgba(249, 115, 22, 0.45);
+  --neon-border: rgba(251, 146, 60, 0.4);
+}
+.neon-theme-coral.neon-icon-badge {
+  border-color: var(--neon-border);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 16px var(--neon-glow);
+}
+.neon-theme-coral svg {
+  filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.75));
+}
+
+[data-theme="light"] .neon-theme-coral {
+  --neon-color-1: #ea580c;
+  --neon-color-2: #c2410c;
+  --neon-glow: rgba(234, 88, 12, 0.35);
+  --neon-border: rgba(234, 88, 12, 0.4);
+}
+[data-theme="light"] .neon-theme-coral svg {
+  filter: drop-shadow(0 2px 4px rgba(234, 88, 12, 0.45));
+}
+
+/* 7. Rose (현장 일지/사진/기록) */
+.neon-theme-rose {
+  --neon-color-1: #f472b6;
+  --neon-color-2: #db2777;
+  --neon-glow: rgba(236, 72, 153, 0.45);
+  --neon-border: rgba(244, 114, 182, 0.4);
+}
+.neon-theme-rose.neon-icon-badge {
+  border-color: var(--neon-border);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 16px var(--neon-glow);
+}
+.neon-theme-rose svg {
+  filter: drop-shadow(0 0 6px rgba(244, 114, 182, 0.75));
+}
+
+[data-theme="light"] .neon-theme-rose {
+  --neon-color-1: #db2777;
+  --neon-color-2: #be185d;
+  --neon-glow: rgba(219, 39, 119, 0.35);
+  --neon-border: rgba(219, 39, 119, 0.4);
+}
+[data-theme="light"] .neon-theme-rose svg {
+  filter: drop-shadow(0 2px 4px rgba(219, 39, 119, 0.45));
+}
+
+/* 8. Danger (경고/위험/초과) */
+.neon-theme-danger {
+  --neon-color-1: #f87171;
+  --neon-color-2: #dc2626;
+  --neon-glow: rgba(239, 68, 68, 0.45);
+  --neon-border: rgba(248, 113, 113, 0.4);
+}
+.neon-theme-danger.neon-icon-badge {
+  border-color: var(--neon-border);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 16px var(--neon-glow);
+}
+.neon-theme-danger svg {
+  filter: drop-shadow(0 0 6px rgba(248, 113, 113, 0.75));
+}
+
+[data-theme="light"] .neon-theme-danger {
+  --neon-color-1: #dc2626;
+  --neon-color-2: #b91c1c;
+  --neon-glow: rgba(220, 38, 38, 0.35);
+  --neon-border: rgba(220, 38, 38, 0.4);
+}
+[data-theme="light"] .neon-theme-danger svg {
+  filter: drop-shadow(0 2px 4px rgba(220, 38, 38, 0.45));
+}
