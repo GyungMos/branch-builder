@@ -66,7 +66,7 @@ export function useBranches() {
       status: 'planning',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-      createdBy: user.uid,
+      createdBy: user?.uid || 'anonymous',
     });
   };
 
@@ -215,13 +215,32 @@ export function useSchedules(branchId) {
       setSchedules(updated);
       return { id: newSchedule.id };
     }
-    return addDoc(collection(db, 'branches', branchId, 'schedules'), {
-      ...scheduleData,
-      startDate: Timestamp.fromDate(new Date(scheduleData.startDate)),
-      endDate: scheduleData.endDate ? Timestamp.fromDate(new Date(scheduleData.endDate)) : null,
-      createdBy: user.uid,
-      createdAt: serverTimestamp(),
-    });
+    try {
+      return await addDoc(collection(db, 'branches', branchId, 'schedules'), {
+        ...scheduleData,
+        startDate: Timestamp.fromDate(new Date(scheduleData.startDate)),
+        endDate: scheduleData.endDate ? Timestamp.fromDate(new Date(scheduleData.endDate)) : null,
+        createdBy: user?.uid || 'anonymous',
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.warn('Firestore addSchedule failed, fallback to local storage:', err);
+      const newSchedule = {
+        ...scheduleData,
+        id: generateId(),
+        startDate: scheduleData.startDate,
+        endDate: scheduleData.endDate || scheduleData.startDate,
+        createdBy: user?.uid || 'anonymous',
+        createdAt: new Date().toISOString(),
+        _offline: true,
+      };
+      const updated = [...schedules, newSchedule].sort((a, b) =>
+        new Date(a.startDate) - new Date(b.startDate)
+      );
+      setLocalData(`schedules_${branchId}`, updated);
+      setSchedules(updated);
+      return { id: newSchedule.id, fallback: true };
+    }
   };
 
   const updateSchedule = async (scheduleId, data) => {
@@ -291,13 +310,30 @@ export function useCosts(branchId) {
       setCosts(updated);
       return { id: newCost.id };
     }
-    return addDoc(collection(db, 'branches', branchId, 'costs'), {
-      ...costData,
-      amount: Number(costData.amount),
-      date: Timestamp.fromDate(new Date(costData.date)),
-      createdBy: user.uid,
-      createdAt: serverTimestamp(),
-    });
+    try {
+      return await addDoc(collection(db, 'branches', branchId, 'costs'), {
+        ...costData,
+        amount: Number(costData.amount),
+        date: Timestamp.fromDate(new Date(costData.date)),
+        createdBy: user?.uid || 'anonymous',
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.warn('Firestore addCost failed, fallback to local storage:', err);
+      const newCost = {
+        ...costData,
+        id: generateId(),
+        amount: Number(costData.amount),
+        date: costData.date,
+        createdBy: user?.uid || 'anonymous',
+        createdAt: new Date().toISOString(),
+        _offline: true,
+      };
+      const updated = [newCost, ...costs];
+      setLocalData(`costs_${branchId}`, updated);
+      setCosts(updated);
+      return { id: newCost.id, fallback: true };
+    }
   };
 
   const updateCost = async (costId, data) => {
@@ -410,7 +446,7 @@ export function useDocuments(branchId) {
             fileName: file.name,
             fileSize: file.size,
             fileType: file.type,
-            createdBy: user.uid,
+            createdBy: user?.uid || 'anonymous',
             createdAt: serverTimestamp(),
           });
           resolve(docRef);

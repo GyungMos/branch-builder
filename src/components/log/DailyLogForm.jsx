@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import NeonIcon from '../common/NeonIcon';
 import ModalPortal from '../common/ModalPortal';
 
@@ -9,6 +9,36 @@ const WEATHER_OPTIONS = [
   { id: 'snow', icon: '❄️', label: '강설' },
 ];
 
+const DRAFT_KEY = 'bb_dailylog_draft';
+
+// 모바일 고용량 사진 자동 압축 헬퍼 (Firestore 1MB 한도 및 전송 속도 최적화)
+const compressImage = (file, maxWidth = 1000, quality = 0.7) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function DailyLogForm({ onSubmit, onClose }) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [weather, setWeather] = useState('sunny');
@@ -18,27 +48,94 @@ export default function DailyLogForm({ onSubmit, onClose }) {
   const [issues, setIssues] = useState('');
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [restoredDraft, setRestoredDraft] = useState(false);
 
-  const handlePhotoUpload = (e) => {
-    const files = Array.from(e.target.files);
+  const summaryRef = useRef(null);
+
+  // 1. 임시 보관본(Draft) 복원
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const draft = JSON.parse(saved);
+        if (draft.summary || draft.workersCount || draft.equipmentUsed || draft.issues) {
+          if (draft.date) setDate(draft.date);
+          if (draft.weather) setWeather(draft.weather);
+          if (draft.summary) setSummary(draft.summary);
+          if (draft.workersCount) setWorkersCount(draft.workersCount);
+          if (draft.equipmentUsed) setEquipmentUsed(draft.equipmentUsed);
+          if (draft.issues) setIssues(draft.issues);
+          if (Array.isArray(draft.photos)) setPhotos(draft.photos);
+          setRestoredDraft(true);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // 2. 작성 중인 내용 실시간 임시 보관
+  useEffect(() => {
+    if (!summary && !workersCount && !equipmentUsed && !issues) return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        date,
+        weather,
+        summary,
+        workersCount,
+        equipmentUsed,
+        issues,
+        photos,
+        updatedAt: Date.now(),
+      }));
+    } catch {
+      // quota exceeded ignore
+    }
+  }, [date, weather, summary, workersCount, equipmentUsed, issues, photos]);
+
+  const handlePhotoUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPhotos(prev => [...prev, reader.result]);
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of files) {
+      try {
+        const compressed = await compressImage(file);
+        if (compressed) {
+          setPhotos(prev => [...prev, compressed]);
+        }
+      } catch (err) {
+        console.warn('사진 압축 실패:', err);
+      }
+    }
+    e.target.value = '';
   };
 
   const handleRemovePhoto = (index) => {
     setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
+  // 닫기 시 안전 확인 (실수로 닫혀 내용이 날아가는 현상 방지)
+  const handleSafeClose = () => {
+    if (summary.trim() || workersCount || equipmentUsed || issues) {
+      const confirmed = window.confirm(
+        '작성 중인 일지 내용이 있습니다. 창을 닫으시겠습니까?\n\n(작성하신 내용은 임시 보관되어 다시 열 때 복원됩니다)'
+      );
+      if (!confirmed) return;
+    }
+    onClose();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!summary.trim()) return;
+    setErrorMessage('');
+
+    // 필수 항목 검사 및 명확한 피드백
+    if (!summary.trim()) {
+      setErrorMessage('오늘 진행한 주요 공정 내용을 작성해 주세요.');
+      summaryRef.current?.focus();
+      return;
+    }
 
     setLoading(true);
     try {
@@ -51,27 +148,93 @@ export default function DailyLogForm({ onSubmit, onClose }) {
         issues: issues.trim(),
         photos,
       });
+
+      // 저장 성공 시 임시 보관본 청소
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        // ignore
+      }
     } catch (err) {
-      console.error(err);
+      console.error('일지 저장 오류:', err);
+      setErrorMessage('일지 저장 중 오류가 발생했습니다: ' + (err.message || '다시 시도해 주세요.'));
+      alert('일지 저장 중 오류가 발생했습니다: ' + (err.message || '다시 시도해 주세요.'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ModalPortal onClose={onClose}>
-      <div className="modal-backdrop" onClick={onClose} />
+    <ModalPortal onClose={handleSafeClose}>
+      <div className="modal-backdrop" onClick={handleSafeClose} />
       <div className="modal" style={{ maxWidth: 520 }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <NeonIcon name="log" color="rose" size="sm" />
             <h2 className="modal-title">현장 일일 작업일지 작성</h2>
           </div>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button type="button" className="modal-close" onClick={handleSafeClose} aria-label="닫기">✕</button>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
+            {/* 임시 보관본 복원 안내 */}
+            {restoredDraft && (
+              <div style={{
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                borderRadius: 'var(--radius-md)',
+                padding: '8px 12px',
+                fontSize: 12,
+                color: '#34d399',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span>💾 이전에 작성 중이던 일지 내용이 복원되었습니다.</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem(DRAFT_KEY);
+                    setSummary('');
+                    setWorkersCount('');
+                    setEquipmentUsed('');
+                    setIssues('');
+                    setPhotos([]);
+                    setRestoredDraft(false);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-text-secondary)',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  초기화
+                </button>
+              </div>
+            )}
+
+            {/* 에러 메시지 알림 */}
+            {errorMessage && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: 'var(--radius-md)',
+                padding: '10px 14px',
+                fontSize: 13,
+                color: '#f87171',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}>
+                <span>⚠️ {errorMessage}</span>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="form-group">
                 <label htmlFor="log-date">작업 일자 *</label>
@@ -105,9 +268,13 @@ export default function DailyLogForm({ onSubmit, onClose }) {
             <div className="form-group">
               <label htmlFor="log-summary">오늘 진행한 주요 공정 내용 *</label>
               <textarea
+                ref={summaryRef}
                 id="log-summary"
                 value={summary}
-                onChange={(e) => setSummary(e.target.value)}
+                onChange={(e) => {
+                  setSummary(e.target.value);
+                  if (errorMessage) setErrorMessage('');
+                }}
                 placeholder="예: 2주식 리프트 바닥 앙카 타설 완료, 천장 LED 조명 배선 작업 진행"
                 rows={3}
                 required
@@ -185,9 +352,23 @@ export default function DailyLogForm({ onSubmit, onClose }) {
           </div>
 
           <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>취소</button>
-            <button type="submit" className="btn btn-primary" disabled={loading || !summary.trim()}>
-              {loading ? '등록 중...' : '일지 저장'}
+            <button type="button" className="btn btn-secondary" onClick={handleSafeClose} disabled={loading}>
+              취소
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+              style={{ minWidth: 120 }}
+            >
+              {loading ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                  저장 중...
+                </span>
+              ) : (
+                '일지 저장'
+              )}
             </button>
           </div>
         </form>

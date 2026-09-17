@@ -58,11 +58,25 @@ export function usePartners(branchId) {
       setPartners(updated);
       return { id: newPartner.id };
     }
-    return addDoc(collection(db, 'branches', branchId, 'partners'), {
-      ...data,
-      createdAt: serverTimestamp(),
-      createdBy: user?.uid,
-    });
+    try {
+      return await addDoc(collection(db, 'branches', branchId, 'partners'), {
+        ...data,
+        createdAt: serverTimestamp(),
+        createdBy: user?.uid || 'anonymous',
+      });
+    } catch (err) {
+      console.warn('Firestore addPartner failed, fallback to local:', err);
+      const newPartner = {
+        ...data,
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+        _offline: true,
+      };
+      const updated = [newPartner, ...partners];
+      setLocalData(`partners_${branchId}`, updated);
+      setPartners(updated);
+      return { id: newPartner.id, fallback: true };
+    }
   };
 
   const updatePartner = async (partnerId, data) => {
@@ -167,11 +181,25 @@ export function useCompliance(branchId) {
       setComplianceItems(updated);
       return { id: newItem.id };
     }
-    return addDoc(collection(db, 'branches', branchId, 'compliance'), {
-      ...data,
-      createdAt: serverTimestamp(),
-      createdBy: user?.uid,
-    });
+    try {
+      return await addDoc(collection(db, 'branches', branchId, 'compliance'), {
+        ...data,
+        createdAt: serverTimestamp(),
+        createdBy: user?.uid || 'anonymous',
+      });
+    } catch (err) {
+      console.warn('Firestore compliance addItem failed, fallback to local:', err);
+      const newItem = {
+        ...data,
+        id: generateId(),
+        status: data.status || 'waiting',
+        _offline: true,
+      };
+      const updated = [...complianceItems, newItem];
+      setLocalData(`compliance_${branchId}`, updated);
+      setComplianceItems(updated);
+      return { id: newItem.id, fallback: true };
+    }
   };
 
   const deleteItem = async (itemId) => {
@@ -229,13 +257,29 @@ export function useEquipments(branchId) {
       setEquipments(updated);
       return { id: newEquip.id };
     }
-    return addDoc(collection(db, 'branches', branchId, 'equipments'), {
-      ...data,
-      installed: false,
-      tested: false,
-      createdAt: serverTimestamp(),
-      createdBy: user?.uid,
-    });
+    try {
+      return await addDoc(collection(db, 'branches', branchId, 'equipments'), {
+        ...data,
+        installed: false,
+        tested: false,
+        createdAt: serverTimestamp(),
+        createdBy: user?.uid || 'anonymous',
+      });
+    } catch (err) {
+      console.warn('Firestore addEquipment failed, fallback to local:', err);
+      const newEquip = {
+        ...data,
+        id: generateId(),
+        installed: false,
+        tested: false,
+        createdAt: new Date().toISOString(),
+        _offline: true,
+      };
+      const updated = [newEquip, ...equipments];
+      setLocalData(`equipments_${branchId}`, updated);
+      setEquipments(updated);
+      return { id: newEquip.id, fallback: true };
+    }
   };
 
   const updateEquipment = async (equipId, data) => {
@@ -290,34 +334,66 @@ export function useDailyLogs(branchId) {
   }, [branchId, demoMode]);
 
   const addDailyLog = async (data) => {
-    if (demoMode) {
+    const sanitizedData = {
+      date: data.date || new Date().toISOString().split('T')[0],
+      weather: data.weather || 'sunny',
+      summary: (data.summary || '').trim(),
+      workersCount: Number(data.workersCount) || 0,
+      equipmentUsed: (data.equipmentUsed || '').trim(),
+      issues: (data.issues || '').trim(),
+      photos: Array.isArray(data.photos) ? data.photos : [],
+      author: user?.displayName || user?.email || '현장 관리자',
+    };
+
+    if (demoMode || !db) {
       const newLog = {
-        ...data,
+        ...sanitizedData,
         id: generateId(),
         createdAt: new Date().toISOString(),
-        author: user?.displayName || '현장 관리자',
       };
       const updated = [newLog, ...dailyLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
       setLocalData(`dailyLogs_${branchId}`, updated);
       setDailyLogs(updated);
       return { id: newLog.id };
     }
-    return addDoc(collection(db, 'branches', branchId, 'dailyLogs'), {
-      ...data,
-      createdAt: serverTimestamp(),
-      author: user?.displayName || user?.email || '현장 관리자',
-      createdBy: user?.uid,
-    });
+
+    try {
+      const docRef = await addDoc(collection(db, 'branches', branchId, 'dailyLogs'), {
+        ...sanitizedData,
+        createdAt: serverTimestamp(),
+        createdBy: user?.uid || 'anonymous',
+      });
+      return { id: docRef.id };
+    } catch (err) {
+      console.warn('Firestore addDailyLog failed, falling back to localStorage:', err);
+      const fallbackLog = {
+        ...sanitizedData,
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+        _offline: true,
+      };
+      const updated = [fallbackLog, ...dailyLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+      setLocalData(`dailyLogs_${branchId}`, updated);
+      setDailyLogs(updated);
+      return { id: fallbackLog.id, fallback: true };
+    }
   };
 
   const deleteDailyLog = async (logId) => {
-    if (demoMode) {
+    if (demoMode || !db) {
       const updated = dailyLogs.filter(l => l.id !== logId);
       setLocalData(`dailyLogs_${branchId}`, updated);
       setDailyLogs(updated);
       return;
     }
-    return deleteDoc(doc(db, 'branches', branchId, 'dailyLogs', logId));
+    try {
+      await deleteDoc(doc(db, 'branches', branchId, 'dailyLogs', logId));
+    } catch (err) {
+      console.warn('Firestore deleteDailyLog failed, removing from local state:', err);
+      const updated = dailyLogs.filter(l => l.id !== logId);
+      setLocalData(`dailyLogs_${branchId}`, updated);
+      setDailyLogs(updated);
+    }
   };
 
   return { dailyLogs, loading, addDailyLog, deleteDailyLog };

@@ -341,6 +341,13 @@ label {
   transform: scale(0.97);
 }
 
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 .btn-primary {
   background: var(--gradient-accent);
   color: white;
