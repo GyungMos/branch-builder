@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { DOCUMENT_CATEGORIES } from '../../utils/constants';
+import ModalPortal from '../common/ModalPortal';
 import './DocumentUpload.css';
 
 export default function DocumentUpload({ stages, onUpload, onClose }) {
@@ -17,13 +18,16 @@ export default function DocumentUpload({ stages, onUpload, onClose }) {
     const selected = e.target.files?.[0];
     if (selected) {
       setFile(selected);
-      if (!name) setName(selected.name.replace(/\.[^/.]+$/, ''));
+      if (!name) {
+        setName(selected.name.replace(/\.[^/.]+$/, ''));
+      }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) return;
+
     setUploading(true);
     try {
       await onUpload(file, {
@@ -32,15 +36,15 @@ export default function DocumentUpload({ stages, onUpload, onClose }) {
         stageId: stageId || null,
         memo: memo.trim(),
       }, (p) => setProgress(p));
-      onClose();
     } catch (err) {
-      console.error('Upload error:', err);
+      console.error(err);
+    } finally {
       setUploading(false);
     }
   };
 
   return (
-    <>
+    <ModalPortal onClose={onClose}>
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal" id="document-upload-modal">
         <div className="modal-header">
@@ -168,6 +172,6 @@ export default function DocumentUpload({ stages, onUpload, onClose }) {
           </div>
         </form>
       </div>
-    </>
+    </ModalPortal>
   );
 }

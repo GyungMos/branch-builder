@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import NeonIcon from '../common/NeonIcon';
+import ModalPortal from '../common/ModalPortal';
 
 const CATEGORIES = [
   { id: 'construction', label: '건축 / 토목' },
@@ -52,7 +53,7 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
   };
 
   return (
-    <>
+    <ModalPortal onClose={onClose}>
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal" id="partner-form-modal" style={{ maxWidth: 540 }}>
         <div className="modal-header">
@@ -64,7 +65,7 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+          <div className="modal-body">
             <div className="form-group">
               <label>공종 구분 *</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -207,6 +208,6 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
           </div>
         </form>
       </div>
-    </>
+    </ModalPortal>
   );
 }

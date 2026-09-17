@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { COST_CATEGORIES } from '../../utils/constants';
+import ModalPortal from '../common/ModalPortal';
 
 export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
   const isEdit = Boolean(cost);
@@ -50,7 +51,7 @@ export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
   };
 
   return (
-    <>
+    <ModalPortal onClose={onClose}>
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal" id="cost-form-modal">
         <div className="modal-header">
@@ -197,6 +198,6 @@ export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
           </div>
         </form>
       </div>
-    </>
+    </ModalPortal>
   );
 }

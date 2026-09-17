@@ -109,8 +109,14 @@
     display: none;
   }
 
+  .tab-header {
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
   .tab-header .btn {
-    display: none;
+    font-size: var(--font-size-xs);
+    padding: 6px 12px;
   }
 
   .branch-detail-header-top {

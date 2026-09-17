@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import NeonIcon from '../common/NeonIcon';
+import ModalPortal from '../common/ModalPortal';
 
 export default function BranchForm({ branch, onSubmit, onClose }) {
   const [name, setName] = useState(branch?.name || '');
@@ -54,7 +55,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
   };
 
   return (
-    <>
+    <ModalPortal onClose={onClose}>
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal" id="branch-form-modal" style={{ maxWidth: 540 }}>
         <div className="modal-header">
@@ -65,7 +66,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+          <div className="modal-body">
             <div className="form-group">
               <label htmlFor="branch-name">지점명 *</label>
               <input
@@ -226,7 +227,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
           </div>
         </form>
       </div>
-    </>
+    </ModalPortal>
   );
 }
 

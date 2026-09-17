@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ModalPortal from '../common/ModalPortal';
 
 export default function QuickScheduleForm({ schedule, stages, onSubmit, onClose }) {
   const isEdit = Boolean(schedule);
@@ -39,7 +40,7 @@ export default function QuickScheduleForm({ schedule, stages, onSubmit, onClose 
   };
 
   return (
-    <>
+    <ModalPortal onClose={onClose}>
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal" id="schedule-form-modal">
         <div className="modal-header">
@@ -126,6 +127,6 @@ export default function QuickScheduleForm({ schedule, stages, onSubmit, onClose 
           </div>
         </form>
       </div>
-    </>
+    </ModalPortal>
   );
 }

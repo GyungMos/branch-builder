@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import NeonIcon from '../common/NeonIcon';
+import ModalPortal from '../common/ModalPortal';
 import { formatCurrency } from '../../utils/formatters';
 import { COST_CATEGORIES } from '../../utils/constants';
 import './BudgetManager.css';
@@ -138,7 +139,7 @@ export default function BudgetManager({ budget, totalCost, costs = [], onUpdateB
 
       {/* 예산 설정 모달 */}
       {showModal && (
-        <>
+        <ModalPortal onClose={() => setShowModal(false)}>
           <div className="modal-backdrop" onClick={() => setShowModal(false)} />
           <div className="modal" style={{ maxWidth: 500 }}>
             <div className="modal-header">
@@ -150,7 +151,7 @@ export default function BudgetManager({ budget, totalCost, costs = [], onUpdateB
             </div>
 
             <form onSubmit={handleSave}>
-              <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <div className="modal-body">
                 <div className="form-group">
                   <label htmlFor="total-budget">총 목표 예산 (원) *</label>
                   <input
@@ -191,7 +192,7 @@ export default function BudgetManager({ budget, totalCost, costs = [], onUpdateB
               </div>
             </form>
           </div>
-        </>
+        </ModalPortal>
       )}
     </div>
   );

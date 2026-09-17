@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { STAGE_STATUS, DEFAULT_STAGES } from '../../utils/constants';
+import ModalPortal from '../common/ModalPortal';
 import './StageManager.css';
 
 export default function StageManager({ stages, onAdd, onUpdate, onDelete }) {
@@ -169,7 +170,7 @@ export default function StageManager({ stages, onAdd, onUpdate, onDelete }) {
       )}
 
       {showTemplates && (
-        <>
+        <ModalPortal onClose={() => setShowTemplates(false)}>
           <div className="modal-backdrop" onClick={() => setShowTemplates(false)} />
           <div className="modal">
             <div className="modal-header">
@@ -192,7 +193,7 @@ export default function StageManager({ stages, onAdd, onUpdate, onDelete }) {
               <button className="btn btn-primary" onClick={handleLoadTemplate}>불러오기</button>
             </div>
           </div>
-        </>
+        </ModalPortal>
       )}
 
       <div className="stage-add-area">

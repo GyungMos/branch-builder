@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import NeonIcon from '../common/NeonIcon';
+import ModalPortal from '../common/ModalPortal';
 import DailyLogForm from './DailyLogForm';
 import { formatDate } from '../../utils/formatters';
 import './DailyLogList.css';
@@ -120,12 +121,14 @@ export default function DailyLogList({ dailyLogs, onAdd, onDelete }) {
 
       {/* 사진 확대 모달 */}
       {selectedPhoto && (
-        <div className="lightbox-overlay" onClick={() => setSelectedPhoto(null)}>
-          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
-            <img src={selectedPhoto} alt="확대 사진" style={{ maxWidth: '90vw', maxHeight: '85vh', borderRadius: 8 }} />
-            <button className="lightbox-close" onClick={() => setSelectedPhoto(null)}>✕</button>
+        <ModalPortal onClose={() => setSelectedPhoto(null)}>
+          <div className="lightbox-overlay" onClick={() => setSelectedPhoto(null)}>
+            <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+              <img src={selectedPhoto} alt="확대 사진" style={{ maxWidth: '90vw', maxHeight: '85vh', borderRadius: 8 }} />
+              <button className="lightbox-close" onClick={() => setSelectedPhoto(null)}>✕</button>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

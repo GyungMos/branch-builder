@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import NeonIcon from '../common/NeonIcon';
+import ModalPortal from '../common/ModalPortal';
 
 const WEATHER_OPTIONS = [
   { id: 'sunny', icon: '☀️', label: '맑음' },
@@ -58,7 +59,7 @@ export default function DailyLogForm({ onSubmit, onClose }) {
   };
 
   return (
-    <>
+    <ModalPortal onClose={onClose}>
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal" style={{ maxWidth: 520 }}>
         <div className="modal-header">
@@ -70,7 +71,7 @@ export default function DailyLogForm({ onSubmit, onClose }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+          <div className="modal-body">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="form-group">
                 <label htmlFor="log-date">작업 일자 *</label>
@@ -191,6 +192,6 @@ export default function DailyLogForm({ onSubmit, onClose }) {
           </div>
         </form>
       </div>
-    </>
+    </ModalPortal>
   );
 }

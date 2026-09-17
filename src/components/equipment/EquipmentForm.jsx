@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import NeonIcon from '../common/NeonIcon';
+import ModalPortal from '../common/ModalPortal';
 
 export default function EquipmentForm({ equipment, onSubmit, onClose }) {
   const [name, setName] = useState(equipment?.name || '');
@@ -20,19 +21,16 @@ export default function EquipmentForm({ equipment, onSubmit, onClose }) {
 
     setLoading(true);
     try {
-      const q = Number(quantity) || 1;
-      const u = Number(unitPrice) || 0;
       await onSubmit({
         name: name.trim(),
         modelNumber: modelNumber.trim(),
         manufacturer: manufacturer.trim(),
         vendor: vendor.trim(),
-        quantity: q,
-        unitPrice: u,
-        totalPrice: q * u,
+        quantity: Number(quantity) || 1,
+        unitPrice: unitPrice ? Number(unitPrice) : 0,
         orderDate,
         deliveryDate,
-        warrantyPeriod: warrantyPeriod.trim(),
+        warrantyPeriod,
         memo: memo.trim(),
       });
     } catch (err) {
@@ -43,7 +41,7 @@ export default function EquipmentForm({ equipment, onSubmit, onClose }) {
   };
 
   return (
-    <>
+    <ModalPortal onClose={onClose}>
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal" id="equipment-form-modal" style={{ maxWidth: 520 }}>
         <div className="modal-header">
@@ -55,7 +53,7 @@ export default function EquipmentForm({ equipment, onSubmit, onClose }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+          <div className="modal-body">
             <div className="form-group">
               <label htmlFor="eq-name">장비명 *</label>
               <input
@@ -185,6 +183,6 @@ export default function EquipmentForm({ equipment, onSubmit, onClose }) {
           </div>
         </form>
       </div>
-    </>
+    </ModalPortal>
   );
 }
