@@ -32,6 +32,7 @@ import ComplianceManager from '../components/compliance/ComplianceManager';
 import EquipmentList from '../components/equipment/EquipmentList';
 import DailyLogList from '../components/log/DailyLogList';
 import MobileNav from '../components/layout/MobileNav';
+import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
 import { formatCurrency } from '../utils/formatters';
 import './BranchDetailPage.css';
 
@@ -244,6 +245,7 @@ export default function BranchDetailPage() {
 
   return (
     <div className="page branch-detail" id="branch-detail-page">
+      <LocalDataSyncBanner />
       {/* 지점 헤더 */}
       <div className="branch-detail-header animate-fade-in-up">
         <div className="branch-detail-header-top">
