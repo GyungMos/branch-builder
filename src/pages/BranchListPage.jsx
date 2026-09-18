@@ -4,6 +4,7 @@ import { useBranches } from '../hooks/useFirestore';
 import BranchCard from '../components/branch/BranchCard';
 import BranchForm from '../components/branch/BranchForm';
 import NeonIcon from '../components/common/NeonIcon';
+import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
 import './BranchListPage.css';
 
 export default function BranchListPage() {
@@ -46,6 +47,7 @@ export default function BranchListPage() {
 
   return (
     <div className="page" id="branch-list-page">
+      <LocalDataSyncBanner />
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -6,6 +6,7 @@ import { formatCurrency, formatDate, getDDay, formatRelativeTime } from '../util
 import { BRANCH_STATUS, COST_CATEGORIES } from '../utils/constants';
 import BranchForm from '../components/branch/BranchForm';
 import NeonIcon from '../components/common/NeonIcon';
+import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
 import './DashboardPage.css';
 
 export default function DashboardPage() {
@@ -64,6 +65,7 @@ export default function DashboardPage() {
 
   return (
     <div className="page dashboard-page animate-fade-in" id="dashboard-page">
+      <LocalDataSyncBanner onSynced={refetch} />
       {/* 상단 타이틀 & 컨트롤 */}
       <div className="dashboard-header">
         <div className="dashboard-title-group">

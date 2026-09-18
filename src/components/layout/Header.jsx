@@ -6,7 +6,7 @@ import './Header.css';
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, demoMode } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -69,6 +69,24 @@ export default function Header() {
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
           
+          {demoMode ? (
+            <span
+              className="sync-status-badge badge-demo"
+              title="Firebase 미설정 - 현재 기기(로컬)에만 저장됩니다"
+              style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '12px', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', border: '1px solid rgba(234, 179, 8, 0.3)', display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'default' }}
+            >
+              🟡 로컬 저장
+            </span>
+          ) : (
+            <span
+              className="sync-status-badge badge-cloud"
+              title="Firebase 클라우드 연동 완료 - 모든 기기에서 실시간 동기화됩니다"
+              style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'default' }}
+            >
+              🟢 클라우드 연동
+            </span>
+          )}
+
           {user && (
             <div className="header-user">
               <span className="header-user-name">{user.displayName || user.email?.split('@')[0]}</span>
