@@ -50,36 +50,30 @@ export default function DailyLogEntryForm({
 
   const summaryRef = useRef(null);
 
-  // 모바일 사진 안전 업로드 핸들러
+  // 모바일 사진 초고속 병렬 업로드 핸들러
   const handlePhotoUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
     setUploadingPhotos(true);
     setErrorMessage('');
+    setUploadProgressText(`📸 사진 ${files.length}장 최적화 처리 중...`);
 
-    const newUploadedUrls = [];
+    try {
+      const uploadPromises = files.map((file) => uploadDailyLogPhoto(file, branchId));
+      const results = await Promise.all(uploadPromises);
+      const validUrls = results.filter((url) => Boolean(url));
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      setUploadProgressText(`📸 사진 업로드 및 최적화 중 (${i + 1} / ${files.length})...`);
-      try {
-        const uploadedUrl = await uploadDailyLogPhoto(file, branchId);
-        if (uploadedUrl) {
-          newUploadedUrls.push(uploadedUrl);
-        }
-      } catch (err) {
-        console.warn('사진 업로드 실패:', err);
+      if (validUrls.length > 0) {
+        setPhotos((prev) => [...prev, ...validUrls]);
       }
+    } catch (err) {
+      console.warn('사진 처리 오류:', err);
+    } finally {
+      setUploadingPhotos(false);
+      setUploadProgressText('');
+      e.target.value = '';
     }
-
-    if (newUploadedUrls.length > 0) {
-      setPhotos(prev => [...prev, ...newUploadedUrls]);
-    }
-
-    setUploadingPhotos(false);
-    setUploadProgressText('');
-    e.target.value = '';
   };
 
   const handleRemovePhoto = (index) => {

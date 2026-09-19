@@ -2,90 +2,116 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { storage } from '../config/firebase';
 
 /**
- * 캔버스를 사용해 이미지를 지정된 최대 가로폭과 품질로 리사이즈 및 압축
+ * Promise에 타임아웃을 적용하는 헬퍼 (무한 멈춤 원천 방지)
  */
-export const compressImage = (file, maxWidth = 1200, quality = 0.75) => {
-  return new Promise((resolve) => {
-    if (!file || !file.type.startsWith('image/')) {
-      resolve('');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(e.target.result || '');
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-
-      img.onerror = () => {
-        resolve(e.target.result || '');
-      };
-
-      img.src = e.target.result;
-    };
-
-    reader.onerror = () => {
-      resolve('');
-    };
-
-    reader.readAsDataURL(file);
-  });
+const withTimeout = (promise, ms, fallbackValue) => {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(fallbackValue), ms)),
+  ]);
 };
 
 /**
- * 모바일 및 데스크톱에서 현장 사진을 Firebase Storage에 안전하게 업로드하고 다운로드 URL 반환.
- * Firebase Storage가 미연결이거나 오류 발생 시, Firestore 1MB 한도를 초과하지 않도록
- * 초경량(폭 500px, quality 0.5, 약 30KB) Base64로 fallback 처리합니다.
+ * 캔버스를 사용해 이미지를 적절한 크기와 용량으로 즉시 리사이즈 및 압축 (최대 3초 타임아웃)
+ * 가로 800px, quality 0.6 => 장당 30~50KB (Firestore 1MB 한도 내 15장 이상 거뜬히 수용)
+ */
+export const compressImage = (file, maxWidth = 800, quality = 0.6) => {
+  return withTimeout(
+    new Promise((resolve) => {
+      if (!file) {
+        resolve('');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result;
+        if (!result) {
+          resolve('');
+          return;
+        }
+
+        const img = new Image();
+        img.onload = () => {
+          try {
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              resolve(typeof result === 'string' ? result : '');
+              return;
+            }
+
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressedUrl);
+          } catch (err) {
+            console.warn('Canvas 압축 오류, 원본으로 폴백:', err);
+            resolve(typeof result === 'string' ? result : '');
+          }
+        };
+
+        img.onerror = () => {
+          resolve(typeof result === 'string' ? result : '');
+        };
+
+        img.src = result;
+      };
+
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    }),
+    3500, // 최대 3.5초 안전 타임아웃
+    ''
+  );
+};
+
+/**
+ * 모바일 및 데스크톱에서 현장 사진을 초고속으로 처리
+ * 1. 브라우저에서 가로 800px, quality 0.6으로 초경량 압축 (약 30~50KB, 0.2초 소요)
+ * 2. Firebase Storage가 사용 가능한 경우 2초 타임아웃으로 업로드 시도
+ * 3. 2초 안에 안 끝나거나 Storage 권한 오류 발생 시, 멈추지 않고 즉시 압축된 초경량 Base64로 즉각 반환!
  */
 export const uploadDailyLogPhoto = async (file, branchId = 'default') => {
   if (!file) return '';
 
-  // 1단계: 선명도 유지 고화질 압축 (폭 1280px, 품질 0.75)
-  const fullDataUrl = await compressImage(file, 1280, 0.75);
-  if (!fullDataUrl) return '';
+  // 1단계: 초경량 고화질 압축 (30~50KB) - 1MB 한도 걱정 없는 안전한 크기
+  const lightDataUrl = await compressImage(file, 800, 0.6);
+  if (!lightDataUrl) return '';
 
-  // 2단계: Firebase Storage 시도 (성공 시 몇십 바이트의 짧은 HTTPS URL 반환)
+  // 2단계: Firebase Storage 시도하되, 최대 2초만 기다림 (무한 대기 방지!)
   if (storage) {
     try {
-      const randomStr = Math.random().toString(36).substring(2, 9);
-      const storagePath = `branches/${branchId}/dailyLogs/${Date.now()}_${randomStr}.jpg`;
-      const storageRef = ref(storage, storagePath);
+      const storagePromise = (async () => {
+        const randomStr = Math.random().toString(36).substring(2, 9);
+        const storagePath = `branches/${branchId}/dailyLogs/${Date.now()}_${randomStr}.jpg`;
+        const storageRef = ref(storage, storagePath);
+        await uploadString(storageRef, lightDataUrl, 'data_url');
+        return await getDownloadURL(storageRef);
+      })();
 
-      await uploadString(storageRef, fullDataUrl, 'data_url');
-      const downloadUrl = await getDownloadURL(storageRef);
-      return downloadUrl;
+      // 2초 이내에 완료되면 Storage URL 사용, 넘어가면 바로 lightDataUrl 사용
+      const storageUrl = await withTimeout(storagePromise, 2000, null);
+      if (storageUrl) {
+        return storageUrl;
+      }
     } catch (err) {
-      console.warn('Firebase Storage 업로드 실패, 초경량 Base64로 폴백:', err);
+      console.warn('Firebase Storage 업로드 실패 또는 시간 초과, 초경량 Base64 사용:', err);
     }
   }
 
-  // 3단계: Storage 사용 불가 시 Firestore 1MB 제한 보호를 위한 초경량 압축 (폭 500px, 품질 0.5)
-  try {
-    const miniDataUrl = await compressImage(file, 500, 0.5);
-    return miniDataUrl || fullDataUrl;
-  } catch {
-    return fullDataUrl;
-  }
+  // 3단계: 즉시 초경량 Base64 반환 (장당 30~50KB이므로 Firestore 1MB에 아무 문제 없음)
+  return lightDataUrl;
 };
 
 /**

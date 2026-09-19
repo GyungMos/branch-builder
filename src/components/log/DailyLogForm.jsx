@@ -82,27 +82,23 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
 
     setUploadingPhotos(true);
     setErrorMessage('');
-    const newUploaded = [];
+    setUploadProgressText(`📸 사진 ${files.length}장 최적화 처리 중...`);
 
-    for (let i = 0; i < files.length; i++) {
-      setUploadProgressText(`📸 사진 업로드 및 최적화 중 (${i + 1} / ${files.length})...`);
-      try {
-        const uploadedUrl = await uploadDailyLogPhoto(files[i], branchId);
-        if (uploadedUrl) {
-          newUploaded.push(uploadedUrl);
-        }
-      } catch (err) {
-        console.warn('사진 업로드 실패:', err);
+    try {
+      const uploadPromises = files.map((file) => uploadDailyLogPhoto(file, branchId));
+      const results = await Promise.all(uploadPromises);
+      const validUrls = results.filter((url) => Boolean(url));
+
+      if (validUrls.length > 0) {
+        setPhotos((prev) => [...prev, ...validUrls]);
       }
+    } catch (err) {
+      console.warn('사진 처리 오류:', err);
+    } finally {
+      setUploadingPhotos(false);
+      setUploadProgressText('');
+      e.target.value = '';
     }
-
-    if (newUploaded.length > 0) {
-      setPhotos(prev => [...prev, ...newUploaded]);
-    }
-
-    setUploadingPhotos(false);
-    setUploadProgressText('');
-    e.target.value = '';
   };
 
   const handleRemovePhoto = (index) => {
