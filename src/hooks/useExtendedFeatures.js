@@ -7,7 +7,7 @@ import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/formatters';
 import { COMPLIANCE_TEMPLATES } from '../utils/complianceTemplates';
-import { sanitizeEntriesForFirestore } from '../utils/photoUpload';
+import { sanitizeEntriesForFirestore, dietDailyLogPhotos } from '../utils/photoUpload';
 
 function getLocalData(key, defaultVal = []) {
   try {
@@ -335,15 +335,16 @@ export function useDailyLogs(branchId) {
   }, [branchId, demoMode]);
 
   const addDailyLog = async (data) => {
+    const slimData = await dietDailyLogPhotos(data);
     const sanitizedData = {
-      date: data.date || new Date().toISOString().split('T')[0],
-      weather: data.weather || 'sunny',
-      summary: (data.summary || '').trim(),
-      workersCount: Number(data.workersCount) || 0,
-      equipmentUsed: (data.equipmentUsed || '').trim(),
-      issues: (data.issues || '').trim(),
-      photos: Array.isArray(data.photos) ? data.photos : [],
-      entries: Array.isArray(data.entries) ? data.entries : [],
+      date: slimData.date || new Date().toISOString().split('T')[0],
+      weather: slimData.weather || 'sunny',
+      summary: (slimData.summary || '').trim(),
+      workersCount: Number(slimData.workersCount) || 0,
+      equipmentUsed: (slimData.equipmentUsed || '').trim(),
+      issues: (slimData.issues || '').trim(),
+      photos: Array.isArray(slimData.photos) ? slimData.photos : [],
+      entries: sanitizeEntriesForFirestore(Array.isArray(slimData.entries) ? slimData.entries : []),
       author: user?.displayName || user?.email || '현장 관리자',
     };
 
@@ -383,15 +384,18 @@ export function useDailyLogs(branchId) {
 
   const updateDailyLog = async (logId, data) => {
     const existingLog = dailyLogs.find(l => l.id === logId);
+    // 문서 내의 모든 사진(기존 사진 포함)을 20~30KB 수준으로 안전하게 압축
+    const slimData = await dietDailyLogPhotos(data);
+
     const sanitizedData = {
-      date: data.date || existingLog?.date || new Date().toISOString().split('T')[0],
-      weather: data.weather || existingLog?.weather || 'sunny',
-      summary: (data.summary !== undefined ? data.summary : (existingLog?.summary || '')).trim(),
-      workersCount: data.workersCount !== undefined ? Number(data.workersCount) : (existingLog?.workersCount || 0),
-      equipmentUsed: (data.equipmentUsed !== undefined ? data.equipmentUsed : (existingLog?.equipmentUsed || '')).trim(),
-      issues: (data.issues !== undefined ? data.issues : (existingLog?.issues || '')).trim(),
-      photos: Array.isArray(data.photos) ? data.photos : (existingLog?.photos || []),
-      entries: sanitizeEntriesForFirestore(Array.isArray(data.entries) ? data.entries : (existingLog?.entries || [])),
+      date: slimData.date || existingLog?.date || new Date().toISOString().split('T')[0],
+      weather: slimData.weather || existingLog?.weather || 'sunny',
+      summary: (slimData.summary !== undefined ? slimData.summary : (existingLog?.summary || '')).trim(),
+      workersCount: slimData.workersCount !== undefined ? Number(slimData.workersCount) : (existingLog?.workersCount || 0),
+      equipmentUsed: (slimData.equipmentUsed !== undefined ? slimData.equipmentUsed : (existingLog?.equipmentUsed || '')).trim(),
+      issues: (slimData.issues !== undefined ? slimData.issues : (existingLog?.issues || '')).trim(),
+      photos: Array.isArray(slimData.photos) ? slimData.photos : (existingLog?.photos || []),
+      entries: sanitizeEntriesForFirestore(Array.isArray(slimData.entries) ? slimData.entries : (existingLog?.entries || [])),
       updatedAt: new Date().toISOString(),
     };
 

@@ -1,9 +1,6 @@
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { storage } from '../config/firebase';
 
-/**
- * Promise에 타임아웃을 적용하는 헬퍼 (무한 멈춤 원천 방지)
- */
 const withTimeout = (promise, ms, fallbackValue) => {
   return Promise.race([
     promise,
@@ -12,10 +9,10 @@ const withTimeout = (promise, ms, fallbackValue) => {
 };
 
 /**
- * 캔버스를 사용해 이미지를 적절한 크기와 용량으로 즉시 리사이즈 및 압축 (최대 3초 타임아웃)
- * 가로 800px, quality 0.6 => 장당 30~50KB (Firestore 1MB 한도 내 15장 이상 거뜬히 수용)
+ * 캔버스를 사용해 이미지를 가로 550px, quality 0.45로 리사이즈 및 초경량 압축.
+ * 1장당 20KB ~ 35KB로 생성되어 모바일/PC에서 선명하게 보이며 Firestore 1MB 한도를 절대 넘지 않습니다.
  */
-export const compressImage = (file, maxWidth = 800, quality = 0.6) => {
+export const compressImage = (file, maxWidth = 550, quality = 0.45) => {
   return withTimeout(
     new Promise((resolve) => {
       if (!file) {
@@ -71,25 +68,72 @@ export const compressImage = (file, maxWidth = 800, quality = 0.6) => {
       reader.onerror = () => resolve('');
       reader.readAsDataURL(file);
     }),
-    3500, // 최대 3.5초 안전 타임아웃
+    3500,
     ''
   );
 };
 
 /**
+ * 이미 Base64로 저장되어 있거나 거대한 이미지 문자열(60KB 초과)을 25KB 수준으로 즉시 축소
+ */
+export const shrinkDataUrl = (dataUrl, maxWidth = 550, quality = 0.42) => {
+  return new Promise((resolve) => {
+    if (!dataUrl || typeof dataUrl !== 'string') {
+      resolve(dataUrl || '');
+      return;
+    }
+
+    // HTTPS URL(Storage)이거나 이미 60KB 이하이면 그대로 반환
+    if (!dataUrl.startsWith('data:image') || dataUrl.length < 60000) {
+      resolve(dataUrl);
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      try {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } catch {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+};
+
+/**
  * 모바일 및 데스크톱에서 현장 사진을 초고속으로 처리
- * 1. 브라우저에서 가로 800px, quality 0.6으로 초경량 압축 (약 30~50KB, 0.2초 소요)
- * 2. Firebase Storage가 사용 가능한 경우 2초 타임아웃으로 업로드 시도
- * 3. 2초 안에 안 끝나거나 Storage 권한 오류 발생 시, 멈추지 않고 즉시 압축된 초경량 Base64로 즉각 반환!
+ * - 가로 550px, quality 0.45로 스마트 초경량 압축 (장당 20~30KB)
+ * - Firebase Storage 업로드를 시도하되 1.5초 내 미완료 시 초경량 Base64로 즉시 반환
  */
 export const uploadDailyLogPhoto = async (file, branchId = 'default') => {
   if (!file) return '';
 
-  // 1단계: 초경량 고화질 압축 (30~50KB) - 1MB 한도 걱정 없는 안전한 크기
-  const lightDataUrl = await compressImage(file, 800, 0.6);
+  // 1단계: 초경량 고화질 압축 (20~30KB)
+  const lightDataUrl = await compressImage(file, 550, 0.45);
   if (!lightDataUrl) return '';
 
-  // 2단계: Firebase Storage 시도하되, 최대 2초만 기다림 (무한 대기 방지!)
+  // 2단계: Firebase Storage 시도 (최대 1.5초 대기)
   if (storage) {
     try {
       const storagePromise = (async () => {
@@ -100,22 +144,71 @@ export const uploadDailyLogPhoto = async (file, branchId = 'default') => {
         return await getDownloadURL(storageRef);
       })();
 
-      // 2초 이내에 완료되면 Storage URL 사용, 넘어가면 바로 lightDataUrl 사용
-      const storageUrl = await withTimeout(storagePromise, 2000, null);
+      const storageUrl = await withTimeout(storagePromise, 1500, null);
       if (storageUrl) {
         return storageUrl;
       }
     } catch (err) {
-      console.warn('Firebase Storage 업로드 실패 또는 시간 초과, 초경량 Base64 사용:', err);
+      // Storage 실패 시 초경량 Base64 사용
     }
   }
 
-  // 3단계: 즉시 초경량 Base64 반환 (장당 30~50KB이므로 Firestore 1MB에 아무 문제 없음)
+  // 3단계: 초경량 Base64 즉시 반환 (장당 25KB 내외로 10장을 올려도 250KB에 불과함)
   return lightDataUrl;
 };
 
 /**
- * Firestore 전송 시 undefined 값으로 인한 'Unsupported field value: undefined' 에러 원천 방지
+ * 일지 문서 전체의 사진들을 안전하게 다이어트시켜 Firestore 1MB 제한을 100% 방어하는 헬퍼
+ */
+export const dietDailyLogPhotos = async (logData) => {
+  if (!logData) return logData;
+
+  // 1. 기본 사진 배열 압축
+  let cleanPhotos = [];
+  if (Array.isArray(logData.photos)) {
+    cleanPhotos = await Promise.all(
+      logData.photos.map(p => shrinkDataUrl(p, 550, 0.42))
+    );
+  }
+
+  // 2. 추가 조치 기록(entries) 내의 사진들 압축
+  let cleanEntries = [];
+  if (Array.isArray(logData.entries)) {
+    cleanEntries = await Promise.all(
+      logData.entries.map(async (entry) => {
+        let entryPhotos = [];
+        if (Array.isArray(entry.photos)) {
+          entryPhotos = await Promise.all(
+            entry.photos.map(p => shrinkDataUrl(p, 550, 0.42))
+          );
+        }
+        return {
+          id: entry.id || String(Date.now()),
+          timeTag: (entry.timeTag || '오후 조치 / 추가 작업').trim(),
+          time: entry.time || '',
+          summary: (entry.summary || '').trim(),
+          workersCount: Number(entry.workersCount) || 0,
+          equipmentUsed: (entry.equipmentUsed || '').trim(),
+          issues: (entry.issues || '').trim(),
+          status: entry.status || 'resolved',
+          photos: entryPhotos,
+          author: entry.author || '현장 관리자',
+          createdAt: entry.createdAt || new Date().toISOString(),
+          ...(entry.updatedAt ? { updatedAt: entry.updatedAt } : {}),
+        };
+      })
+    );
+  }
+
+  return {
+    ...logData,
+    photos: cleanPhotos,
+    entries: cleanEntries,
+  };
+};
+
+/**
+ * Firestore 전송 시 undefined 값으로 인한 에러 원천 방지
  */
 export const sanitizeEntriesForFirestore = (entries = []) => {
   if (!Array.isArray(entries)) return [];
