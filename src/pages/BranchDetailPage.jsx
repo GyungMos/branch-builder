@@ -393,6 +393,7 @@ export default function BranchDetailPage() {
 
             {/* 현장 일일 작업일지 통합 */}
             <DailyLogList
+              branchId={branchId}
               dailyLogs={dailyLogs}
               onAdd={handleAddDailyLog}
               onUpdate={handleUpdateDailyLog}

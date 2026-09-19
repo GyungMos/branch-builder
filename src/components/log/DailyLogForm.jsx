@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import NeonIcon from '../common/NeonIcon';
 import ModalPortal from '../common/ModalPortal';
+import { uploadDailyLogPhoto } from '../../utils/photoUpload';
 
 const WEATHER_OPTIONS = [
   { id: 'sunny', icon: '☀️', label: '맑음' },
@@ -11,35 +12,7 @@ const WEATHER_OPTIONS = [
 
 const DRAFT_KEY = 'bb_dailylog_draft';
 
-// 모바일 고용량 사진 자동 압축 헬퍼 (Firestore 1MB 한도 및 전송 속도 최적화)
-const compressImage = (file, maxWidth = 1000, quality = 0.7) => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = () => resolve(e.target.result);
-      img.src = e.target.result;
-    };
-    reader.onerror = () => resolve('');
-    reader.readAsDataURL(file);
-  });
-};
-
-export default function DailyLogForm({ onSubmit, onClose, initialData = null }) {
+export default function DailyLogForm({ onSubmit, onClose, initialData = null, branchId = 'default' }) {
   const isEdit = !!initialData;
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [weather, setWeather] = useState(initialData?.weather || 'sunny');
@@ -52,6 +25,8 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null }) 
   const [equipmentUsed, setEquipmentUsed] = useState(initialData?.equipmentUsed || '');
   const [issues, setIssues] = useState(initialData?.issues || '');
   const [photos, setPhotos] = useState(Array.isArray(initialData?.photos) ? [...initialData.photos] : []);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [restoredDraft, setRestoredDraft] = useState(false);
@@ -105,16 +80,28 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null }) 
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    for (const file of files) {
+    setUploadingPhotos(true);
+    setErrorMessage('');
+    const newUploaded = [];
+
+    for (let i = 0; i < files.length; i++) {
+      setUploadProgressText(`📸 사진 업로드 및 최적화 중 (${i + 1} / ${files.length})...`);
       try {
-        const compressed = await compressImage(file);
-        if (compressed) {
-          setPhotos(prev => [...prev, compressed]);
+        const uploadedUrl = await uploadDailyLogPhoto(files[i], branchId);
+        if (uploadedUrl) {
+          newUploaded.push(uploadedUrl);
         }
       } catch (err) {
-        console.warn('사진 압축 실패:', err);
+        console.warn('사진 업로드 실패:', err);
       }
     }
+
+    if (newUploaded.length > 0) {
+      setPhotos(prev => [...prev, ...newUploaded]);
+    }
+
+    setUploadingPhotos(false);
+    setUploadProgressText('');
     e.target.value = '';
   };
 
@@ -150,6 +137,11 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null }) 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+
+    if (uploadingPhotos) {
+      alert('사진 업로드가 진행 중입니다. 잠시만 기다려 주세요.');
+      return;
+    }
 
     // 필수 항목 검사 및 명확한 피드백
     if (!summary.trim()) {
@@ -351,20 +343,41 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null }) 
                 accept="image/*"
                 multiple
                 onChange={handlePhotoUpload}
+                disabled={uploadingPhotos}
                 style={{ fontSize: 12 }}
               />
+
+              {uploadingPhotos && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginTop: 8,
+                  padding: '8px 12px',
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: 12,
+                  color: '#38bdf8'
+                }}>
+                  <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                  <span>{uploadProgressText}</span>
+                </div>
+              )}
+
               {photos.length > 0 && (
                 <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                   {photos.map((src, i) => (
                     <div key={i} style={{ position: 'relative' }}>
-                      <img src={src} alt="현장 미리보기" style={{ width: 60, height: 60, borderRadius: 6, objectFit: 'cover' }} />
+                      <img src={src} alt="현장 미리보기" style={{ width: 64, height: 64, borderRadius: 6, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)' }} />
                       <button
                         type="button"
                         onClick={() => handleRemovePhoto(i)}
                         style={{
-                          position: 'absolute', top: -4, right: -4, background: '#ef4444',
-                          color: 'white', borderRadius: '50%', width: 18, height: 18,
-                          border: 'none', fontSize: 10, cursor: 'pointer', lineHeight: '18px'
+                          position: 'absolute', top: -5, right: -5, background: '#ef4444',
+                          color: 'white', borderRadius: '50%', width: 20, height: 20,
+                          border: 'none', fontSize: 11, cursor: 'pointer', lineHeight: '20px',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.5)'
                         }}
                       >
                         ✕
@@ -377,19 +390,24 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null }) 
           </div>
 
           <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={handleSafeClose} disabled={loading}>
+            <button type="button" className="btn btn-secondary" onClick={handleSafeClose} disabled={loading || uploadingPhotos}>
               취소
             </button>
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={loading}
+              disabled={loading || uploadingPhotos}
               style={{ minWidth: 120 }}
             >
               {loading ? (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
                   저장 중...
+                </span>
+              ) : uploadingPhotos ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                  사진 준비 중...
                 </span>
               ) : (
                 isEdit ? '수정 내용 저장' : '일지 저장'

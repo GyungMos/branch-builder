@@ -7,6 +7,7 @@ import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/formatters';
 import { COMPLIANCE_TEMPLATES } from '../utils/complianceTemplates';
+import { sanitizeEntriesForFirestore } from '../utils/photoUpload';
 
 function getLocalData(key, defaultVal = []) {
   try {
@@ -390,7 +391,7 @@ export function useDailyLogs(branchId) {
       equipmentUsed: (data.equipmentUsed !== undefined ? data.equipmentUsed : (existingLog?.equipmentUsed || '')).trim(),
       issues: (data.issues !== undefined ? data.issues : (existingLog?.issues || '')).trim(),
       photos: Array.isArray(data.photos) ? data.photos : (existingLog?.photos || []),
-      entries: Array.isArray(data.entries) ? data.entries : (existingLog?.entries || []),
+      entries: sanitizeEntriesForFirestore(Array.isArray(data.entries) ? data.entries : (existingLog?.entries || [])),
       updatedAt: new Date().toISOString(),
     };
 
@@ -411,13 +412,13 @@ export function useDailyLogs(branchId) {
       });
       return { id: logId };
     } catch (err) {
-      console.warn('Firestore updateDailyLog failed, falling back to localStorage:', err);
+      console.error('Firestore updateDailyLog failed:', err);
       const updated = dailyLogs
         .map(l => (l.id === logId ? { ...l, ...sanitizedData, _offline: true } : l))
         .sort((a, b) => new Date(b.date) - new Date(a.date));
       setLocalData(`dailyLogs_${branchId}`, updated);
       setDailyLogs(updated);
-      return { id: logId, fallback: true };
+      throw new Error('클라우드 저장 중 오류가 발생했습니다: ' + (err.message || '다시 시도해 주세요.'));
     }
   };
 

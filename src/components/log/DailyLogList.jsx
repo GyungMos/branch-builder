@@ -20,6 +20,7 @@ const STATUS_BADGES = {
 };
 
 export default function DailyLogList({
+  branchId = 'default',
   dailyLogs = [],
   onAdd,
   onUpdate,
@@ -418,6 +419,7 @@ export default function DailyLogList({
       {/* 기본 일지 신규 작성 모달 */}
       {showForm && (
         <DailyLogForm
+          branchId={branchId}
           onSubmit={handleAddSubmit}
           onClose={() => setShowForm(false)}
         />
@@ -426,6 +428,7 @@ export default function DailyLogList({
       {/* 기본 일지 수정 모달 */}
       {editingLog && (
         <DailyLogForm
+          branchId={branchId}
           initialData={editingLog}
           onSubmit={handleEditSubmit}
           onClose={() => setEditingLog(null)}
@@ -435,6 +438,7 @@ export default function DailyLogList({
       {/* 오후 작업 / 조치 사항 등록 및 수정 모달 */}
       {entryModal.isOpen && (
         <DailyLogEntryForm
+          branchId={branchId}
           initialData={entryModal.initialData}
           targetLogDate={entryModal.targetLogDate}
           onSubmit={handleEntrySubmit}
