@@ -342,6 +342,7 @@ export function useDailyLogs(branchId) {
       equipmentUsed: (data.equipmentUsed || '').trim(),
       issues: (data.issues || '').trim(),
       photos: Array.isArray(data.photos) ? data.photos : [],
+      entries: Array.isArray(data.entries) ? data.entries : [],
       author: user?.displayName || user?.email || '현장 관리자',
     };
 
@@ -379,6 +380,120 @@ export function useDailyLogs(branchId) {
     }
   };
 
+  const updateDailyLog = async (logId, data) => {
+    const existingLog = dailyLogs.find(l => l.id === logId);
+    const sanitizedData = {
+      date: data.date || existingLog?.date || new Date().toISOString().split('T')[0],
+      weather: data.weather || existingLog?.weather || 'sunny',
+      summary: (data.summary !== undefined ? data.summary : (existingLog?.summary || '')).trim(),
+      workersCount: data.workersCount !== undefined ? Number(data.workersCount) : (existingLog?.workersCount || 0),
+      equipmentUsed: (data.equipmentUsed !== undefined ? data.equipmentUsed : (existingLog?.equipmentUsed || '')).trim(),
+      issues: (data.issues !== undefined ? data.issues : (existingLog?.issues || '')).trim(),
+      photos: Array.isArray(data.photos) ? data.photos : (existingLog?.photos || []),
+      entries: Array.isArray(data.entries) ? data.entries : (existingLog?.entries || []),
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (demoMode || !db) {
+      const updated = dailyLogs
+        .map(l => (l.id === logId ? { ...l, ...sanitizedData } : l))
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      setLocalData(`dailyLogs_${branchId}`, updated);
+      setDailyLogs(updated);
+      return { id: logId };
+    }
+
+    try {
+      const docRef = doc(db, 'branches', branchId, 'dailyLogs', logId);
+      await updateDoc(docRef, {
+        ...sanitizedData,
+        updatedAt: serverTimestamp(),
+      });
+      return { id: logId };
+    } catch (err) {
+      console.warn('Firestore updateDailyLog failed, falling back to localStorage:', err);
+      const updated = dailyLogs
+        .map(l => (l.id === logId ? { ...l, ...sanitizedData, _offline: true } : l))
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      setLocalData(`dailyLogs_${branchId}`, updated);
+      setDailyLogs(updated);
+      return { id: logId, fallback: true };
+    }
+  };
+
+  // 📝 일지 내 오후 추가 작업 / 조치 사항 (Entry) 추가
+  const addDailyLogEntry = async (logId, entryData) => {
+    const targetLog = dailyLogs.find(l => l.id === logId);
+    if (!targetLog) return;
+
+    const now = new Date();
+    const timeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const newEntry = {
+      id: generateId(),
+      timeTag: (entryData.timeTag || '오후 조치 / 추가 작업').trim(),
+      time: entryData.time || timeString,
+      summary: (entryData.summary || '').trim(),
+      workersCount: Number(entryData.workersCount) || 0,
+      equipmentUsed: (entryData.equipmentUsed || '').trim(),
+      issues: (entryData.issues || '').trim(),
+      status: entryData.status || 'resolved',
+      photos: Array.isArray(entryData.photos) ? entryData.photos : [],
+      author: user?.displayName || user?.email || '현장 관리자',
+      createdAt: now.toISOString(),
+    };
+
+    const currentEntries = Array.isArray(targetLog.entries) ? targetLog.entries : [];
+    const updatedEntries = [...currentEntries, newEntry];
+
+    return await updateDailyLog(logId, {
+      ...targetLog,
+      entries: updatedEntries,
+    });
+  };
+
+  // 📝 일지 내 추가 작업 / 조치 사항 (Entry) 수정
+  const updateDailyLogEntry = async (logId, entryId, entryData) => {
+    const targetLog = dailyLogs.find(l => l.id === logId);
+    if (!targetLog) return;
+
+    const currentEntries = Array.isArray(targetLog.entries) ? targetLog.entries : [];
+    const updatedEntries = currentEntries.map(entry => {
+      if (entry.id !== entryId) return entry;
+      return {
+        ...entry,
+        timeTag: (entryData.timeTag !== undefined ? entryData.timeTag : entry.timeTag).trim(),
+        time: entryData.time || entry.time,
+        summary: (entryData.summary !== undefined ? entryData.summary : entry.summary).trim(),
+        workersCount: entryData.workersCount !== undefined ? Number(entryData.workersCount) : entry.workersCount,
+        equipmentUsed: entryData.equipmentUsed !== undefined ? (entryData.equipmentUsed || '').trim() : entry.equipmentUsed,
+        issues: entryData.issues !== undefined ? (entryData.issues || '').trim() : entry.issues,
+        status: entryData.status || entry.status || 'resolved',
+        photos: Array.isArray(entryData.photos) ? entryData.photos : (entry.photos || []),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    return await updateDailyLog(logId, {
+      ...targetLog,
+      entries: updatedEntries,
+    });
+  };
+
+  // 📝 일지 내 추가 작업 / 조치 사항 (Entry) 삭제
+  const deleteDailyLogEntry = async (logId, entryId) => {
+    const targetLog = dailyLogs.find(l => l.id === logId);
+    if (!targetLog) return;
+
+    const currentEntries = Array.isArray(targetLog.entries) ? targetLog.entries : [];
+    const updatedEntries = currentEntries.filter(entry => entry.id !== entryId);
+
+    return await updateDailyLog(logId, {
+      ...targetLog,
+      entries: updatedEntries,
+    });
+  };
+
   const deleteDailyLog = async (logId) => {
     if (demoMode || !db) {
       const updated = dailyLogs.filter(l => l.id !== logId);
@@ -396,7 +511,16 @@ export function useDailyLogs(branchId) {
     }
   };
 
-  return { dailyLogs, loading, addDailyLog, deleteDailyLog };
+  return {
+    dailyLogs,
+    loading,
+    addDailyLog,
+    updateDailyLog,
+    deleteDailyLog,
+    addDailyLogEntry,
+    updateDailyLogEntry,
+    deleteDailyLogEntry,
+  };
 }
 
 // ==========================================

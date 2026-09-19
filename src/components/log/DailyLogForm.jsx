@@ -39,22 +39,28 @@ const compressImage = (file, maxWidth = 1000, quality = 0.7) => {
   });
 };
 
-export default function DailyLogForm({ onSubmit, onClose }) {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [weather, setWeather] = useState('sunny');
-  const [summary, setSummary] = useState('');
-  const [workersCount, setWorkersCount] = useState('');
-  const [equipmentUsed, setEquipmentUsed] = useState('');
-  const [issues, setIssues] = useState('');
-  const [photos, setPhotos] = useState([]);
+export default function DailyLogForm({ onSubmit, onClose, initialData = null }) {
+  const isEdit = !!initialData;
+  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+  const [weather, setWeather] = useState(initialData?.weather || 'sunny');
+  const [summary, setSummary] = useState(initialData?.summary || '');
+  const [workersCount, setWorkersCount] = useState(
+    initialData?.workersCount !== undefined && initialData?.workersCount !== null
+      ? String(initialData.workersCount)
+      : ''
+  );
+  const [equipmentUsed, setEquipmentUsed] = useState(initialData?.equipmentUsed || '');
+  const [issues, setIssues] = useState(initialData?.issues || '');
+  const [photos, setPhotos] = useState(Array.isArray(initialData?.photos) ? [...initialData.photos] : []);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [restoredDraft, setRestoredDraft] = useState(false);
 
   const summaryRef = useRef(null);
 
-  // 1. 임시 보관본(Draft) 복원
+  // 1. 신규 작성 시에만 임시 보관본(Draft) 복원
   useEffect(() => {
+    if (isEdit) return;
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
@@ -73,10 +79,11 @@ export default function DailyLogForm({ onSubmit, onClose }) {
     } catch {
       // ignore
     }
-  }, []);
+  }, [isEdit]);
 
-  // 2. 작성 중인 내용 실시간 임시 보관
+  // 2. 신규 작성 시에만 작성 중인 내용 실시간 임시 보관
   useEffect(() => {
+    if (isEdit) return;
     if (!summary && !workersCount && !equipmentUsed && !issues) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
@@ -92,7 +99,7 @@ export default function DailyLogForm({ onSubmit, onClose }) {
     } catch {
       // quota exceeded ignore
     }
-  }, [date, weather, summary, workersCount, equipmentUsed, issues, photos]);
+  }, [isEdit, date, weather, summary, workersCount, equipmentUsed, issues, photos]);
 
   const handlePhotoUpload = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -117,7 +124,21 @@ export default function DailyLogForm({ onSubmit, onClose }) {
 
   // 닫기 시 안전 확인 (실수로 닫혀 내용이 날아가는 현상 방지)
   const handleSafeClose = () => {
-    if (summary.trim() || workersCount || equipmentUsed || issues) {
+    if (isEdit) {
+      const isChanged =
+        summary !== (initialData?.summary || '') ||
+        date !== (initialData?.date || '') ||
+        weather !== (initialData?.weather || 'sunny') ||
+        workersCount !== (initialData?.workersCount ? String(initialData.workersCount) : '') ||
+        equipmentUsed !== (initialData?.equipmentUsed || '') ||
+        issues !== (initialData?.issues || '') ||
+        photos.length !== (initialData?.photos?.length || 0);
+
+      if (isChanged) {
+        const confirmed = window.confirm('수정 중인 내용이 있습니다. 저장하지 않고 닫으시겠습니까?');
+        if (!confirmed) return;
+      }
+    } else if (summary.trim() || workersCount || equipmentUsed || issues) {
       const confirmed = window.confirm(
         '작성 중인 일지 내용이 있습니다. 창을 닫으시겠습니까?\n\n(작성하신 내용은 임시 보관되어 다시 열 때 복원됩니다)'
       );
@@ -149,11 +170,13 @@ export default function DailyLogForm({ onSubmit, onClose }) {
         photos,
       });
 
-      // 저장 성공 시 임시 보관본 청소
-      try {
-        localStorage.removeItem(DRAFT_KEY);
-      } catch {
-        // ignore
+      // 저장 성공 시 임시 보관본 청소 (신규 작성인 경우에만)
+      if (!isEdit) {
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch {
+          // ignore
+        }
       }
     } catch (err) {
       console.error('일지 저장 오류:', err);
@@ -171,15 +194,17 @@ export default function DailyLogForm({ onSubmit, onClose }) {
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <NeonIcon name="log" color="rose" size="sm" />
-            <h2 className="modal-title">현장 일일 작업일지 작성</h2>
+            <h2 className="modal-title">
+              {isEdit ? '현장 일일 작업일지 수정' : '현장 일일 작업일지 작성'}
+            </h2>
           </div>
           <button type="button" className="modal-close" onClick={handleSafeClose} aria-label="닫기">✕</button>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
-            {/* 임시 보관본 복원 안내 */}
-            {restoredDraft && (
+            {/* 임시 보관본 복원 안내 (신규 작성 시에만) */}
+            {!isEdit && restoredDraft && (
               <div style={{
                 background: 'rgba(16, 185, 129, 0.12)',
                 border: '1px solid rgba(16, 185, 129, 0.3)',
@@ -367,7 +392,7 @@ export default function DailyLogForm({ onSubmit, onClose }) {
                   저장 중...
                 </span>
               ) : (
-                '일지 저장'
+                isEdit ? '수정 내용 저장' : '일지 저장'
               )}
             </button>
           </div>

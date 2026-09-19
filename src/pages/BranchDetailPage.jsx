@@ -76,7 +76,15 @@ export default function BranchDetailPage() {
     totalEquipmentCost,
     installedCount,
   } = useEquipments(branchId);
-  const { dailyLogs, addDailyLog, deleteDailyLog } = useDailyLogs(branchId);
+  const {
+    dailyLogs,
+    addDailyLog,
+    updateDailyLog,
+    deleteDailyLog,
+    addDailyLogEntry,
+    updateDailyLogEntry,
+    deleteDailyLogEntry,
+  } = useDailyLogs(branchId);
   const { budget, updateBudget } = useBranchBudget(branchId, totalCost);
 
   useEffect(() => {
@@ -221,9 +229,25 @@ export default function BranchDetailPage() {
     await addDailyLog(data);
     addLog('dailylog_add', `현장 일지 작성: ${data.date} (${data.summary})`);
   };
+  const handleUpdateDailyLog = async (logId, data) => {
+    await updateDailyLog(logId, data);
+    addLog('dailylog_update', `현장 일지 수정: ${data.date} (${data.summary})`);
+  };
   const handleDeleteDailyLog = async (logId) => {
     await deleteDailyLog(logId);
     addLog('dailylog_delete', `현장 일지 삭제`);
+  };
+  const handleAddDailyLogEntry = async (logId, entryData) => {
+    await addDailyLogEntry(logId, entryData);
+    addLog('dailylog_entry_add', `현장 일지 추가 작업/조치 등록: ${entryData.summary}`);
+  };
+  const handleUpdateDailyLogEntry = async (logId, entryId, entryData) => {
+    await updateDailyLogEntry(logId, entryId, entryData);
+    addLog('dailylog_entry_update', `현장 일지 추가 작업/조치 수정`);
+  };
+  const handleDeleteDailyLogEntry = async (logId, entryId) => {
+    await deleteDailyLogEntry(logId, entryId);
+    addLog('dailylog_entry_delete', `현장 일지 추가 작업/조치 삭제`);
   };
 
   // 예산 핸들러
@@ -371,7 +395,11 @@ export default function BranchDetailPage() {
             <DailyLogList
               dailyLogs={dailyLogs}
               onAdd={handleAddDailyLog}
+              onUpdate={handleUpdateDailyLog}
               onDelete={handleDeleteDailyLog}
+              onAddEntry={handleAddDailyLogEntry}
+              onUpdateEntry={handleUpdateDailyLogEntry}
+              onDeleteEntry={handleDeleteDailyLogEntry}
             />
           </div>
         )}
