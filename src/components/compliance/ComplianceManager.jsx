@@ -4,19 +4,19 @@ import { COMPLIANCE_TEMPLATES } from '../../utils/complianceTemplates';
 import './ComplianceManager.css';
 
 const STATUS_CONFIG = {
-  fit: { label: '✅ 적합 완료', class: 'active-fit' },
-  in_progress: { label: '🔄 보완/진행중', class: 'active-in_progress' },
-  waiting: { label: '⏳ 점검 대기', class: 'active-waiting' },
-  na: { label: '➖ 해당 없음', class: 'active-na' },
+  fit: { label: '적합 완료', iconName: 'check', color: 'emerald', class: 'active-fit' },
+  in_progress: { label: '보완/진행중', iconName: 'sync', color: 'cyan', class: 'active-in_progress' },
+  waiting: { label: '점검 대기', iconName: 'history', color: 'amber', class: 'active-waiting' },
+  na: { label: '해당 없음', iconName: 'etc', color: 'slate', class: 'active-na' },
 };
 
-const CATEGORY_NAMES = {
-  area: '📐 작업장 면적',
-  equipment: '⚙️ 법정 장비',
-  facility: '⚡ 전기/설비',
-  environment: '🌿 환경/폐기물',
-  safety: '🧯 소방/안전',
-  admin: '🏛️ 인허가 행정',
+const CATEGORY_CONFIG = {
+  area: { label: '작업장 면적', iconName: 'design', color: 'blue' },
+  equipment: { label: '법정 장비', iconName: 'equipment', color: 'violet' },
+  facility: { label: '전기/설비', iconName: 'wrench', color: 'amber' },
+  environment: { label: '환경/폐기물', iconName: 'land', color: 'emerald' },
+  safety: { label: '소방/안전', iconName: 'compliance', color: 'rose' },
+  admin: { label: '인허가 행정', iconName: 'permit', color: 'cyan' },
 };
 
 export default function ComplianceManager({
@@ -177,48 +177,56 @@ export default function ComplianceManager({
 
       {/* 항목 리스트 */}
       <div className="compliance-list">
-        {filteredItems.map(item => (
-          <div key={item.id} className={`compliance-item-card status-${item.status}`}>
-            <div className="compliance-item-top">
-              <div>
-                <div className="compliance-item-title">
-                  <span className="compliance-cat-tag">{CATEGORY_NAMES[item.category] || item.category}</span>
-                  <span>{item.title}</span>
+        {filteredItems.map(item => {
+          const catConf = CATEGORY_CONFIG[item.category] || { label: item.category, iconName: 'compliance', color: 'cyan' };
+          return (
+            <div key={item.id} className={`compliance-item-card status-${item.status}`}>
+              <div className="compliance-item-top">
+                <div>
+                  <div className="compliance-item-title">
+                    <span className="compliance-cat-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <NeonIcon name={catConf.iconName} size="xs" color={catConf.color} badge={false} />
+                      <span>{catConf.label}</span>
+                    </span>
+                    <span>{item.title}</span>
+                  </div>
+                </div>
+
+                {/* 상태 토글 버튼 그룹 */}
+                <div className="compliance-status-buttons">
+                  {Object.entries(STATUS_CONFIG).map(([stKey, stConf]) => (
+                    <button
+                      key={stKey}
+                      type="button"
+                      className={`status-toggle-btn ${item.status === stKey ? stConf.class : ''}`}
+                      onClick={() => onUpdateStatus(item.id, stKey)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <NeonIcon name={stConf.iconName} size="xs" color={stConf.color} badge={false} />
+                      <span>{stConf.label}</span>
+                    </button>
+                  ))}
+                  {onDeleteItem && (
+                    <button
+                      type="button"
+                      className="btn-ghost btn-sm"
+                      onClick={() => onDeleteItem(item.id)}
+                      title="항목 삭제"
+                      style={{ color: 'var(--color-error)', padding: '2px 6px' }}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* 상태 토글 버튼 그룹 */}
-              <div className="compliance-status-buttons">
-                {Object.entries(STATUS_CONFIG).map(([stKey, stConf]) => (
-                  <button
-                    key={stKey}
-                    type="button"
-                    className={`status-toggle-btn ${item.status === stKey ? stConf.class : ''}`}
-                    onClick={() => onUpdateStatus(item.id, stKey)}
-                  >
-                    {stConf.label}
-                  </button>
-                ))}
-                {onDeleteItem && (
-                  <button
-                    type="button"
-                    className="btn-ghost btn-sm"
-                    onClick={() => onDeleteItem(item.id)}
-                    title="항목 삭제"
-                    style={{ color: 'var(--color-error)', padding: '2px 6px' }}
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* 법적 기준 안내문 */}
-            {item.requirement && (
-              <div className="compliance-item-req">
-                ⚖️ <strong>법적 기준:</strong> {item.requirement}
-              </div>
-            )}
+              {/* 법적 기준 안내문 */}
+              {item.requirement && (
+                <div className="compliance-item-req" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <NeonIcon name="compliance" size="xs" color="blue" badge={false} />
+                  <span><strong>법적 기준:</strong> {item.requirement}</span>
+                </div>
+              )}
 
             {/* 현장 메모 및 구청 피드백 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -238,7 +246,8 @@ export default function ComplianceManager({
               />
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
     </div>
   );

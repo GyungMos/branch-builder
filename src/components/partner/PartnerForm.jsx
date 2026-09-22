@@ -1,16 +1,8 @@
 import { useState } from 'react';
 import NeonIcon from '../common/NeonIcon';
 import ModalPortal from '../common/ModalPortal';
-
-const CATEGORIES = [
-  { id: 'construction', label: '건축 / 토목' },
-  { id: 'facility', label: '전기 / 설비' },
-  { id: 'equipment', label: '정비장비 / 리프트' },
-  { id: 'interior', label: '간판 / 인테리어' },
-  { id: 'safety', label: '소방 / 환경' },
-  { id: 'admin', label: '인허가 / 관공서' },
-  { id: 'etc', label: '기타' },
-];
+import { formatNumberWithCommas, parseNumberFromCommas } from '../../utils/formatters';
+import { PARTNER_CATEGORIES, getPartnerCategory } from '../../constants/partnerCategories';
 
 export default function PartnerForm({ partner, onSubmit, onClose }) {
   const [category, setCategory] = useState(partner?.category || 'construction');
@@ -19,7 +11,9 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
   const [position, setPosition] = useState(partner?.position || '');
   const [phone, setPhone] = useState(partner?.phone || '');
   const [email, setEmail] = useState(partner?.email || '');
-  const [contractAmount, setContractAmount] = useState(partner?.contractAmount || '');
+  const [contractAmount, setContractAmount] = useState(
+    partner?.contractAmount ? formatNumberWithCommas(partner.contractAmount) : ''
+  );
   const [bankName, setBankName] = useState(partner?.bankName || '');
   const [accountNumber, setAccountNumber] = useState(partner?.accountNumber || '');
   const [accountHolder, setAccountHolder] = useState(partner?.accountHolder || '');
@@ -39,7 +33,7 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
         position: position.trim(),
         phone: phone.trim(),
         email: email.trim(),
-        contractAmount: contractAmount ? Number(contractAmount) : 0,
+        contractAmount: parseNumberFromCommas(contractAmount),
         bankName: bankName.trim(),
         accountNumber: accountNumber.trim(),
         accountHolder: accountHolder.trim(),
@@ -69,17 +63,28 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
             <div className="form-group">
               <label>공종 구분 *</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {CATEGORIES.map(c => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={`btn btn-sm ${category === c.id ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setCategory(c.id)}
-                    style={{ fontSize: 12, padding: '4px 10px' }}
-                  >
-                    {c.label}
-                  </button>
-                ))}
+                {PARTNER_CATEGORIES.map(c => {
+                  const isSelected = category === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setCategory(c.id)}
+                      style={{
+                        fontSize: 12,
+                        padding: '6px 12px',
+                        background: isSelected ? c.color : undefined,
+                        borderColor: isSelected ? c.color : undefined,
+                        boxShadow: isSelected ? `0 0 12px ${c.glow}` : undefined,
+                        color: isSelected ? '#ffffff' : undefined,
+                      }}
+                    >
+                      <span style={{ marginRight: 4 }}>{c.icon}</span>
+                      {c.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -138,11 +143,11 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
                 <label htmlFor="p-amount">계약 / 견적 금액 (원)</label>
                 <input
                   id="p-amount"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={contractAmount}
-                  onChange={(e) => setContractAmount(e.target.value)}
-                  placeholder="예: 25000000"
-                  min="0"
+                  onChange={(e) => setContractAmount(formatNumberWithCommas(e.target.value))}
+                  placeholder="예: 25,000,000"
                 />
               </div>
 
@@ -160,8 +165,9 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
 
             {/* 계좌 정보 */}
             <div style={{ background: 'var(--color-bg-secondary)', padding: 12, borderRadius: 8, marginTop: 6 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--color-text-secondary)' }}>
-                💳 대금 지급 계좌 정보 (선택)
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <NeonIcon name="bank" size="xs" color="amber" badge={false} />
+                <span>대금 지급 계좌 정보 (선택)</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: 8 }}>
                 <input

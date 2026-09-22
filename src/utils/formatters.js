@@ -23,6 +23,21 @@ export function formatCurrency(amount) {
   return '₩' + Number(amount).toLocaleString('ko-KR');
 }
 
+// 숫자를 천단위 콤마 문자열로 변환 (예: 10000000 -> "10,000,000", "" -> "")
+export function formatNumberWithCommas(val) {
+  if (val === null || val === undefined || val === '') return '';
+  const numStr = String(val).replace(/[^0-9]/g, '');
+  if (!numStr) return '';
+  return Number(numStr).toLocaleString('ko-KR');
+}
+
+// 천단위 콤마 문자열을 순수 숫자로 변환 (예: "10,000,000" -> 10000000)
+export function parseNumberFromCommas(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  const numStr = String(val).replace(/[^0-9]/g, '');
+  return numStr ? Number(numStr) : 0;
+}
+
 // 파일 크기 포맷
 export function formatFileSize(bytes) {
   if (!bytes) return '0 B';

@@ -1,22 +1,22 @@
 // 서류 카테고리
 export const DOCUMENT_CATEGORIES = [
-  { id: 'contract', label: '계약서', icon: '📝' },
-  { id: 'permit', label: '인허가', icon: '📋' },
-  { id: 'blueprint', label: '도면/설계', icon: '📐' },
-  { id: 'photo', label: '사진', icon: '📸' },
-  { id: 'receipt', label: '영수증/세금계산서', icon: '🧾' },
-  { id: 'etc', label: '기타', icon: '📁' },
+  { id: 'contract', label: '계약서', icon: '📝', iconName: 'document', color: 'cyan' },
+  { id: 'permit', label: '인허가', icon: '📋', iconName: 'permit', color: 'violet' },
+  { id: 'blueprint', label: '도면/설계', icon: '📐', iconName: 'design', color: 'blue' },
+  { id: 'photo', label: '사진', icon: '📸', iconName: 'photo', color: 'rose' },
+  { id: 'receipt', label: '영수증/세금계산서', icon: '🧾', iconName: 'money', color: 'emerald' },
+  { id: 'etc', label: '기타', icon: '📁', iconName: 'etc', color: 'slate' },
 ];
 
 // 비용 카테고리
 export const COST_CATEGORIES = [
-  { id: 'land', label: '토지/임대', icon: '🏗️' },
-  { id: 'design', label: '설계', icon: '📐' },
-  { id: 'permit', label: '인허가', icon: '📋' },
-  { id: 'construction', label: '건축/시공', icon: '🔨' },
-  { id: 'equipment', label: '장비/설비', icon: '⚙️' },
-  { id: 'interior', label: '인테리어', icon: '🎨' },
-  { id: 'etc', label: '기타', icon: '📦' },
+  { id: 'land', label: '토지/임대', icon: '🏗️', iconName: 'land', color: 'emerald' },
+  { id: 'design', label: '설계', icon: '📐', iconName: 'design', color: 'blue' },
+  { id: 'permit', label: '인허가', icon: '📋', iconName: 'permit', color: 'violet' },
+  { id: 'construction', label: '건축/시공', icon: '🔨', iconName: 'construction', color: 'amber' },
+  { id: 'equipment', label: '장비/설비', icon: '⚙️', iconName: 'equipment', color: 'cyan' },
+  { id: 'interior', label: '인테리어', icon: '🎨', iconName: 'interior', color: 'rose' },
+  { id: 'etc', label: '기타', icon: '📦', iconName: 'etc', color: 'slate' },
 ];
 
 // 단계 상태

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import NeonIcon from '../common/NeonIcon';
 import ModalPortal from '../common/ModalPortal';
+import DateInput from '../common/DateInput';
+import { formatNumberWithCommas, parseNumberFromCommas } from '../../utils/formatters';
 
 export default function EquipmentForm({ equipment, onSubmit, onClose }) {
   const [name, setName] = useState(equipment?.name || '');
@@ -8,7 +10,9 @@ export default function EquipmentForm({ equipment, onSubmit, onClose }) {
   const [manufacturer, setManufacturer] = useState(equipment?.manufacturer || '');
   const [vendor, setVendor] = useState(equipment?.vendor || '');
   const [quantity, setQuantity] = useState(equipment?.quantity || 1);
-  const [unitPrice, setUnitPrice] = useState(equipment?.unitPrice || '');
+  const [unitPrice, setUnitPrice] = useState(
+    equipment?.unitPrice ? formatNumberWithCommas(equipment.unitPrice) : ''
+  );
   const [orderDate, setOrderDate] = useState(equipment?.orderDate || '');
   const [deliveryDate, setDeliveryDate] = useState(equipment?.deliveryDate || '');
   const [warrantyPeriod, setWarrantyPeriod] = useState(equipment?.warrantyPeriod || '1년');
@@ -27,7 +31,7 @@ export default function EquipmentForm({ equipment, onSubmit, onClose }) {
         manufacturer: manufacturer.trim(),
         vendor: vendor.trim(),
         quantity: Number(quantity) || 1,
-        unitPrice: unitPrice ? Number(unitPrice) : 0,
+        unitPrice: parseNumberFromCommas(unitPrice),
         orderDate,
         deliveryDate,
         warrantyPeriod,
@@ -108,11 +112,11 @@ export default function EquipmentForm({ equipment, onSubmit, onClose }) {
                 <label htmlFor="eq-price">단가 (원)</label>
                 <input
                   id="eq-price"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={unitPrice}
-                  onChange={(e) => setUnitPrice(e.target.value)}
-                  placeholder="예: 12000000"
-                  min="0"
+                  onChange={(e) => setUnitPrice(formatNumberWithCommas(e.target.value))}
+                  placeholder="예: 12,000,000"
                 />
               </div>
             </div>
@@ -144,21 +148,19 @@ export default function EquipmentForm({ equipment, onSubmit, onClose }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="form-group">
                 <label htmlFor="eq-order-date">발주일</label>
-                <input
+                <DateInput
                   id="eq-order-date"
-                  type="date"
                   value={orderDate}
-                  onChange={(e) => setOrderDate(e.target.value)}
+                  onChange={setOrderDate}
                 />
               </div>
 
               <div className="form-group">
                 <label htmlFor="eq-deliv-date">입고 / 설치 예정일</label>
-                <input
+                <DateInput
                   id="eq-deliv-date"
-                  type="date"
                   value={deliveryDate}
-                  onChange={(e) => setDeliveryDate(e.target.value)}
+                  onChange={setDeliveryDate}
                 />
               </div>
             </div>

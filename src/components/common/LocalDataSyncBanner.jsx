@@ -53,8 +53,9 @@ export default function LocalDataSyncBanner({ onSynced }) {
           <NeonIcon name="chart" color="cyan" size="sm" />
         </div>
         <div className="sync-banner-text">
-          <div className="sync-banner-title">
-            📲 이 기기에 저장된 이전 지점 데이터({localCount}개)를 발견했습니다!
+          <div className="sync-banner-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <NeonIcon name="sync" size="xs" color="cyan" badge={false} />
+            <span>이 기기에 저장된 이전 지점 데이터({localCount}개)를 발견했습니다!</span>
           </div>
           <div className="sync-banner-desc">
             모바일에서 등록하셨던 지점과 일정을 클라우드로 동기화하면 <strong>PC와 모바일 어디서나 실시간으로 연동</strong>됩니다.
@@ -68,14 +69,21 @@ export default function LocalDataSyncBanner({ onSynced }) {
           onClick={handleSync}
           disabled={syncing}
         >
-          {syncing ? '동기화 중...' : '🚀 클라우드로 동기화'}
+          {syncing ? '동기화 중...' : (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <NeonIcon name="upload" size="xs" color="emerald" badge={false} />
+              <span>클라우드로 동기화</span>
+            </span>
+          )}
         </button>
         <button
           className="btn btn-secondary btn-sm"
           onClick={downloadLocalBackup}
           title="로컬 데이터를 파일로 저장"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
         >
-          💾 파일 백업
+          <NeonIcon name="download" size="xs" color="cyan" badge={false} />
+          <span>파일 백업</span>
         </button>
         <button
           className="btn-ghost btn-icon sync-close-btn"

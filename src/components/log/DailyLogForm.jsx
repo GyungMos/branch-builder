@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import NeonIcon from '../common/NeonIcon';
 import ModalPortal from '../common/ModalPortal';
+import DateInput from '../common/DateInput';
 import { uploadDailyLogPhoto } from '../../utils/photoUpload';
 
 const WEATHER_OPTIONS = [
-  { id: 'sunny', icon: '☀️', label: '맑음' },
-  { id: 'cloudy', icon: '⛅', label: '흐림' },
-  { id: 'rain', icon: '🌧️', label: '우천' },
-  { id: 'snow', icon: '❄️', label: '강설' },
+  { id: 'sunny', iconName: 'sun', color: 'amber', label: '맑음' },
+  { id: 'cloudy', iconName: 'cloud', color: 'cyan', label: '흐림' },
+  { id: 'rain', iconName: 'rain', color: 'blue', label: '우천' },
+  { id: 'snow', iconName: 'snow', color: 'cyan', label: '강설' },
 ];
 
 const DRAFT_KEY = 'bb_dailylog_draft';
@@ -82,7 +83,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
 
     setUploadingPhotos(true);
     setErrorMessage('');
-    setUploadProgressText(`📸 사진 ${files.length}장 최적화 처리 중...`);
+    setUploadProgressText(`사진 ${files.length}장 최적화 처리 중...`);
 
     try {
       const uploadPromises = files.map((file) => uploadDailyLogPhoto(file, branchId));
@@ -204,7 +205,10 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
-                <span>💾 이전에 작성 중이던 일지 내용이 복원되었습니다.</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <NeonIcon name="document" size="xs" color="emerald" badge={false} />
+                  <span>이전에 작성 중이던 일지 내용이 복원되었습니다.</span>
+                </span>
                 <button
                   type="button"
                   onClick={() => {
@@ -244,18 +248,18 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                 alignItems: 'center',
                 gap: 8,
               }}>
-                <span>⚠️ {errorMessage}</span>
+                <NeonIcon name="alert" size="xs" color="rose" badge={false} />
+                <span>{errorMessage}</span>
               </div>
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="form-group">
                 <label htmlFor="log-date">작업 일자 *</label>
-                <input
+                <DateInput
                   id="log-date"
-                  type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={setDate}
                   required
                 />
               </div>
@@ -269,9 +273,10 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                       type="button"
                       className={`btn btn-sm ${weather === w.id ? 'btn-primary' : 'btn-secondary'}`}
                       onClick={() => setWeather(w.id)}
-                      style={{ flex: 1, padding: '4px 6px', fontSize: 13 }}
+                      style={{ flex: 1, padding: '4px 6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      title={w.label}
                     >
-                      {w.icon}
+                      <NeonIcon name={w.iconName} size="xs" color={w.color} badge={false} />
                     </button>
                   ))}
                 </div>
@@ -321,7 +326,10 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
             </div>
 
             <div className="form-group">
-              <label htmlFor="log-issues" style={{ color: '#f87171' }}>⚠️ 특이사항 / 지연 이슈 (선택)</label>
+              <label htmlFor="log-issues" style={{ color: '#f87171', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <NeonIcon name="alert" size="xs" color="rose" badge={false} />
+                <span>특이사항 / 지연 이슈 (선택)</span>
+              </label>
               <input
                 id="log-issues"
                 type="text"
@@ -333,7 +341,10 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
 
             {/* 현장 사진 첨부 */}
             <div className="form-group">
-              <label>📸 현장 사진 첨부</label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <NeonIcon name="photo" size="xs" color="rose" badge={false} />
+                <span>현장 사진 첨부</span>
+              </label>
               <input
                 type="file"
                 accept="image/*"

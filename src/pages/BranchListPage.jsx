@@ -70,13 +70,17 @@ export default function BranchListPage() {
       </div>
 
       {branches.length > 3 && (
-        <div className="branch-search">
+        <div className="branch-search" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <span style={{ position: 'absolute', left: 14, display: 'flex', pointerEvents: 'none' }}>
+            <NeonIcon name="search" size="xs" color="cyan" badge={false} />
+          </span>
           <input
             type="text"
-            placeholder="🔍 지점 검색..."
+            placeholder="지점 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             id="branch-search-input"
+            style={{ paddingLeft: 40 }}
           />
         </div>
       )}

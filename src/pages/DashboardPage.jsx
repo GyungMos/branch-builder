@@ -77,10 +77,10 @@ export default function DashboardPage() {
         </div>
         <div className="dashboard-actions">
           <button className="btn btn-secondary btn-sm" onClick={() => refetch()} title="데이터 새로고침">
-            🔄 새로고침
+            <NeonIcon name="sync" size="xs" badge={false} /> 새로고침
           </button>
-          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/')}>
-            🏢 지점 목록 보기
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <NeonIcon name="building" size="xs" badge={false} /> 지점 목록 보기
           </button>
           <button className="btn btn-primary btn-sm" onClick={() => setShowAddModal(true)}>
             + 새 지점 추가
@@ -155,8 +155,9 @@ export default function DashboardPage() {
           {/* 1. 지점별 오픈 현황 & 진행률 비교 */}
           <div className="dashboard-section">
             <div className="section-header">
-              <div className="section-title">
-                🏢 지점별 진행 현황
+              <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <NeonIcon name="building" color="emerald" size="xs" badge={true} />
+                <span>지점별 진행 현황</span>
                 <span className="section-badge">{filteredBranches.length}개 지점</span>
               </div>
               <div className="status-filter-group">
@@ -206,7 +207,10 @@ export default function DashboardPage() {
                     <div className="branch-address">{branch.address || '주소 미입력'}</div>
 
                     <div className="branch-stage-info">
-                      <span className="stage-name">📍 {branch.currentStage}</span>
+                      <span className="stage-name" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <NeonIcon name="building" size="xs" color="emerald" badge={false} />
+                        {branch.currentStage}
+                      </span>
                       <span className="progress-pct">{branch.progress}%</span>
                     </div>
 
@@ -222,8 +226,9 @@ export default function DashboardPage() {
                         누적 비용: <span className="branch-cost-highlight">{formatCurrency(branch.totalCost)}</span>
                       </div>
                       {branch.upcomingSchedules.length > 0 ? (
-                        <div className="branch-upcoming-badge">
-                          📅 {branch.upcomingSchedules[0].title}
+                        <div className="branch-upcoming-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <NeonIcon name="calendar" size="xs" color="blue" badge={false} />
+                          <span>{branch.upcomingSchedules[0].title}</span>
                         </div>
                       ) : (
                         <span style={{ color: 'var(--color-text-muted)' }}>일정 없음</span>
@@ -242,8 +247,9 @@ export default function DashboardPage() {
           {/* 2. 지점별 비용 분석 비교 */}
           <div className="dashboard-section">
             <div className="section-header">
-              <div className="section-title">
-                💰 지점별 비용 집행 비교
+              <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <NeonIcon name="money" color="amber" size="xs" badge={true} />
+                <span>지점별 비용 집행 비교</span>
               </div>
               <span className="section-badge">총 {formatCurrency(totalCost)}</span>
             </div>
@@ -282,8 +288,9 @@ export default function DashboardPage() {
 
             {/* 카테고리별 비용 비중 카드 */}
             <div style={{ marginTop: 'var(--space-6)' }}>
-              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 'var(--space-2)' }}>
-                📊 전체 카테고리별 비용 집행 분포
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 'var(--space-2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <NeonIcon name="chart" color="cyan" size="xs" badge={true} />
+                <span>전체 카테고리별 비용 집행 분포</span>
               </div>
               <div className="category-cost-grid">
                 {COST_CATEGORIES.map(cat => {
@@ -291,9 +298,9 @@ export default function DashboardPage() {
                   const share = totalCost > 0 ? Math.round((amount / totalCost) * 100) : 0;
                   return (
                     <div key={cat.id} className="category-cost-card">
-                      <div className="category-cost-card-top">
-                        <span>{cat.icon}</span>
-                        <span>{cat.label}</span>
+                      <div className="category-cost-card-top" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <NeonIcon name={cat.iconName || 'budget'} color={cat.color || 'emerald'} size="xs" badge={true} />
+                        <span style={{ fontWeight: 600 }}>{cat.label}</span>
                       </div>
                       <div className="category-cost-card-amount">{formatCurrency(amount)}</div>
                       <div className="category-cost-card-share">비중 {share}%</div>
@@ -310,8 +317,9 @@ export default function DashboardPage() {
           {/* 3. 통합 다가오는 일정 */}
           <div className="dashboard-section">
             <div className="section-header">
-              <div className="section-title">
-                📅 다가오는 전 지점 일정
+              <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <NeonIcon name="calendar" color="blue" size="xs" badge={true} />
+                <span>다가오는 전 지점 일정</span>
               </div>
               <span className="section-badge">{upcomingSchedules.length}건</span>
             </div>
@@ -336,9 +344,14 @@ export default function DashboardPage() {
                         <span className="branch-tag">{sch.branchName}</span>
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <div className="schedule-item-title">{sch.title}</div>
-                          <div className="schedule-item-date">
-                            {formatDate(sch.startDate?.toDate ? sch.startDate.toDate() : sch.startDate)}
-                            {sch.assignee && ` · 👤 ${sch.assignee}`}
+                          <div className="schedule-item-date" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span>{formatDate(sch.startDate?.toDate ? sch.startDate.toDate() : sch.startDate)}</span>
+                            {sch.assignee && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                · <NeonIcon name="partner" size="xs" color="violet" badge={false} />
+                                <span>{sch.assignee}</span>
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -362,8 +375,9 @@ export default function DashboardPage() {
           {/* 4. 최근 통합 활동 이력 */}
           <div className="dashboard-section">
             <div className="section-header">
-              <div className="section-title">
-                ⚡ 최근 활동 타임라인
+              <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <NeonIcon name="history" color="violet" size="xs" badge={true} />
+                <span>최근 활동 타임라인</span>
               </div>
             </div>
 
@@ -372,10 +386,11 @@ export default function DashboardPage() {
                 {recentActivities.map(act => (
                   <div key={act.id} className="recent-activity-item">
                     <div className="activity-icon-bullet">
-                      {act.type?.includes('cost') ? '💰' :
-                       act.type?.includes('schedule') ? '📅' :
-                       act.type?.includes('stage') ? '📍' :
-                       act.type?.includes('doc') ? '📄' : '📝'}
+                      {act.type?.includes('cost') ? <NeonIcon name="money" color="amber" size="xs" badge={true} /> :
+                       act.type?.includes('schedule') ? <NeonIcon name="calendar" color="blue" size="xs" badge={true} /> :
+                       act.type?.includes('stage') ? <NeonIcon name="building" color="emerald" size="xs" badge={true} /> :
+                       act.type?.includes('doc') ? <NeonIcon name="document" color="violet" size="xs" badge={true} /> :
+                       <NeonIcon name="log" color="cyan" size="xs" badge={true} />}
                     </div>
                     <div className="activity-text-group">
                       <div className="activity-text-line">

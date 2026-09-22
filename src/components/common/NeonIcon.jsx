@@ -66,6 +66,69 @@ export default function NeonIcon({
           </>
         );
 
+      case 'land': // 토지 / 임대 / 부지
+        return (
+          <>
+            <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z" stroke={`url(#${iconId})`} strokeWidth="2" fill={`url(#${iconId}-fill)`} fillOpacity="0.25" strokeLinecap="round" strokeLinejoin="round" />
+            <line x1="9" y1="3" x2="9" y2="18" stroke={`url(#${iconId})`} strokeWidth="1.8" />
+            <line x1="15" y1="6" x2="15" y2="21" stroke={`url(#${iconId})`} strokeWidth="1.8" />
+          </>
+        );
+
+      case 'design': // 설계 / 제도 / 삼각자
+      case 'ruler':
+        return (
+          <>
+            <path d="M2 22h20L2 2v20z" stroke={`url(#${iconId})`} strokeWidth="2.2" fill={`url(#${iconId}-fill)`} fillOpacity="0.2" strokeLinejoin="round" />
+            <path d="M6 18h8L6 10v8z" stroke={`url(#${iconId})`} strokeWidth="2" fill={`url(#${iconId}-fill)`} fillOpacity="0.4" strokeLinejoin="round" />
+            <line x1="2" y1="18" x2="4" y2="18" stroke={`url(#${iconId})`} strokeWidth="1.8" />
+            <line x1="2" y1="14" x2="5" y2="14" stroke={`url(#${iconId})`} strokeWidth="1.8" />
+            <line x1="2" y1="10" x2="4" y2="10" stroke={`url(#${iconId})`} strokeWidth="1.8" />
+          </>
+        );
+
+      case 'permit': // 인허가 / 승인 스탬프
+        return (
+          <>
+            <circle cx="12" cy="9" r="6" stroke={`url(#${iconId})`} strokeWidth="2.2" fill={`url(#${iconId}-fill)`} fillOpacity="0.35" />
+            <path d="m9 9 2 2 4-4" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M8.2 14.5L6 22l6-3 6 3-2.2-7.5" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill={`url(#${iconId}-fill)`} fillOpacity="0.2" />
+          </>
+        );
+
+      case 'construction': // 건축 / 시공
+        return (
+          <>
+            <path d="M2 20h20M5 20V5l7-3 7 3v15" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <line x1="9" y1="9" x2="9.01" y2="9" stroke={`url(#${iconId})`} strokeWidth="3" strokeLinecap="round" />
+            <line x1="15" y1="9" x2="15.01" y2="9" stroke={`url(#${iconId})`} strokeWidth="3" strokeLinecap="round" />
+            <line x1="9" y1="14" x2="9.01" y2="14" stroke={`url(#${iconId})`} strokeWidth="3" strokeLinecap="round" />
+            <line x1="15" y1="14" x2="15.01" y2="14" stroke={`url(#${iconId})`} strokeWidth="3" strokeLinecap="round" />
+            <path d="M12 2v20" stroke={`url(#${iconId})`} strokeWidth="1.6" strokeDasharray="2 2" />
+          </>
+        );
+
+      case 'interior': // 인테리어 / 도장 / 마감
+        return (
+          <>
+            <rect x="3" y="3" width="14" height="6" rx="2" stroke={`url(#${iconId})`} strokeWidth="2.2" fill={`url(#${iconId}-fill)`} fillOpacity="0.4" />
+            <path d="M17 6h3a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-8v4" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <rect x="10" y="16" width="4" height="6" rx="1" stroke={`url(#${iconId})`} strokeWidth="2" fill={`url(#${iconId}-fill)`} fillOpacity="0.5" />
+          </>
+        );
+
+      case 'etc': // 기타 / 패키지
+      case 'package':
+      case 'box':
+        return (
+          <>
+            <path d="M12 2l9 5.2v9.6L12 22l-9-5.2V7.2L12 2z" stroke={`url(#${iconId})`} strokeWidth="2.2" fill={`url(#${iconId}-fill)`} fillOpacity="0.25" strokeLinejoin="round" />
+            <line x1="12" y1="12" x2="21" y2="7.2" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="12" y1="12" x2="12" y2="22" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="12" y1="12" x2="3" y2="7.2" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+          </>
+        );
+
       case 'equipment': // 정비 장비 / 리프트
         return (
           <>
@@ -190,8 +253,160 @@ export default function NeonIcon({
           </>
         );
 
-      case 'history': // 활동 이력
+      case 'download': // 다운로드 / 백업
+        return (
+          <>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="7 10 12 15 17 10" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <line x1="12" y1="15" x2="12" y2="3" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" />
+          </>
+        );
+
+      case 'upload': // 업로드 / 복원
+        return (
+          <>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="17 8 12 3 7 8" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <line x1="12" y1="3" x2="12" y2="15" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" />
+          </>
+        );
+
+      case 'trash': // 삭제 / 휴지통
+        return (
+          <>
+            <polyline points="3 6 5 6 21 6" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill={`url(#${iconId}-fill)`} fillOpacity="0.2" />
+            <line x1="10" y1="11" x2="10" y2="17" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="14" y1="11" x2="14" y2="17" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+          </>
+        );
+
+      case 'sync': // 동기화 / 새로고침
+      case 'refresh':
+        return (
+          <>
+            <polyline points="23 4 23 10 17 10" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="1 20 1 14 7 14" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" stroke={`url(#${iconId})`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          </>
+        );
+
+      case 'arrow-right': // 우측 화살표
+        return (
+          <>
+            <line x1="5" y1="12" x2="19" y2="12" stroke={`url(#${iconId})`} strokeWidth="2.4" strokeLinecap="round" />
+            <polyline points="12 5 19 12 12 19" stroke={`url(#${iconId})`} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+          </>
+        );
+
+      case 'chart': // 차트 / 통계
+        return (
+          <>
+            <line x1="18" y1="20" x2="18" y2="10" stroke={`url(#${iconId})`} strokeWidth="2.4" strokeLinecap="round" />
+            <line x1="12" y1="20" x2="12" y2="4" stroke={`url(#${iconId})`} strokeWidth="2.4" strokeLinecap="round" />
+            <line x1="6" y1="20" x2="6" y2="14" stroke={`url(#${iconId})`} strokeWidth="2.4" strokeLinecap="round" />
+          </>
+        );
+
+      case 'search': // 검색
+      case 'magnifier':
+        return (
+          <>
+            <circle cx="11" cy="11" r="7" stroke={`url(#${iconId})`} strokeWidth="2.2" fill={`url(#${iconId}-fill)`} fillOpacity="0.2" />
+            <line x1="16.5" y1="16.5" x2="21" y2="21" stroke={`url(#${iconId})`} strokeWidth="2.4" strokeLinecap="round" />
+          </>
+        );
+
+      case 'bank': // 은행 / 계좌
+        return (
+          <>
+            <path d="M3 21h18M3 10h18M12 3l9 4.5H3L12 3z" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill={`url(#${iconId}-fill)`} fillOpacity="0.25" />
+            <line x1="5" y1="10" x2="5" y2="21" stroke={`url(#${iconId})`} strokeWidth="2" />
+            <line x1="10" y1="10" x2="10" y2="21" stroke={`url(#${iconId})`} strokeWidth="2" />
+            <line x1="14" y1="10" x2="14" y2="21" stroke={`url(#${iconId})`} strokeWidth="2" />
+            <line x1="19" y1="10" x2="19" y2="21" stroke={`url(#${iconId})`} strokeWidth="2" />
+          </>
+        );
+
+      case 'pin': // 위치 / 핀 / 좌표
+        return (
+          <>
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke={`url(#${iconId})`} strokeWidth="2.2" fill={`url(#${iconId}-fill)`} fillOpacity="0.3" />
+            <circle cx="12" cy="10" r="3" stroke={`url(#${iconId})`} strokeWidth="2.2" fill={`url(#${iconId})`} />
+          </>
+        );
+
+      case 'settings': // 설정 / 톱니바퀴
+      case 'gear':
+        return (
+          <>
+            <circle cx="12" cy="12" r="3" stroke={`url(#${iconId})`} strokeWidth="2.2" fill={`url(#${iconId}-fill)`} fillOpacity="0.3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+              stroke={`url(#${iconId})`}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </>
+        );
+
+      case 'sun': // 해 / 맑음 / 라이트모드
+        return (
+          <>
+            <circle cx="12" cy="12" r="5" stroke={`url(#${iconId})`} strokeWidth="2" fill={`url(#${iconId}-fill)`} fillOpacity="0.3" />
+            <line x1="12" y1="1" x2="12" y2="3" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="12" y1="21" x2="12" y2="23" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="1" y1="12" x2="3" y2="12" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="21" y1="12" x2="23" y2="12" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+          </>
+        );
+
+      case 'moon': // 달 / 다크모드
+        return (
+          <path
+            d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+            stroke={`url(#${iconId})`}
+            strokeWidth="2.2"
+            fill={`url(#${iconId}-fill)`}
+            fillOpacity="0.3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        );
+
+      case 'cloud': // 구름 / 흐림
+        return (
+          <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke={`url(#${iconId})`} strokeWidth="2" fill={`url(#${iconId}-fill)`} fillOpacity="0.3" strokeLinecap="round" strokeLinejoin="round" />
+        );
+
+      case 'rain': // 비 / 우천
+        return (
+          <>
+            <path d="M16 13a4 4 0 0 0-7.78-1.34A5 5 0 0 0 4 16h13a3 3 0 0 0 0-6h-.5" stroke={`url(#${iconId})`} strokeWidth="2" fill={`url(#${iconId}-fill)`} fillOpacity="0.25" strokeLinecap="round" strokeLinejoin="round" />
+            <line x1="8" y1="19" x2="7" y2="22" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="12" y1="19" x2="11" y2="22" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="16" y1="19" x2="15" y2="22" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+          </>
+        );
+
+      case 'snow': // 눈 / 강설
+        return (
+          <>
+            <line x1="12" y1="2" x2="12" y2="22" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="3.34" y1="7" x2="20.66" y2="17" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+            <line x1="3.34" y1="17" x2="20.66" y2="7" stroke={`url(#${iconId})`} strokeWidth="2" strokeLinecap="round" />
+          </>
+        );
+
+      case 'history': // 활동 이력 / 타임라인 / 시간
       case 'activity':
+      case 'timeline':
+      case 'clock':
         return (
           <>
             <circle cx="12" cy="12" r="9" stroke={`url(#${iconId})`} strokeWidth="2" fill={`url(#${iconId}-fill)`} fillOpacity="0.15" />

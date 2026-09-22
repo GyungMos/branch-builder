@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import ModalPortal from '../common/ModalPortal';
+import NeonIcon from '../common/NeonIcon';
+import DateInput from '../common/DateInput';
 
 export default function QuickScheduleForm({ schedule, stages, onSubmit, onClose }) {
   const isEdit = Boolean(schedule);
@@ -44,7 +46,10 @@ export default function QuickScheduleForm({ schedule, stages, onSubmit, onClose 
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal" id="schedule-form-modal">
         <div className="modal-header">
-          <h2 className="modal-title">📅 {isEdit ? '일정 수정' : '일정 추가'}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <NeonIcon name="calendar" color="blue" size="sm" />
+            <h2 className="modal-title">{isEdit ? '일정 수정' : '일정 추가'}</h2>
+          </div>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
@@ -65,21 +70,19 @@ export default function QuickScheduleForm({ schedule, stages, onSubmit, onClose 
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="schedule-start">시작일 *</label>
-                <input
+                <DateInput
                   id="schedule-start"
-                  type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={setStartDate}
                   required
                 />
               </div>
               <div className="form-group">
                 <label htmlFor="schedule-end">종료일</label>
-                <input
+                <DateInput
                   id="schedule-end"
-                  type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={setEndDate}
                   min={startDate}
                 />
               </div>

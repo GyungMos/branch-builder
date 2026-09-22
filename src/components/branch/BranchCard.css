@@ -55,9 +55,40 @@
   color: var(--color-text-tertiary);
 }
 
+.branch-card-progress-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: -2px;
+}
+
+.branch-card-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.branch-card-timeline-btn {
+  border: 1px solid rgba(6, 182, 212, 0.3) !important;
+  background: rgba(6, 182, 212, 0.08) !important;
+  color: #22d3ee !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.branch-card-timeline-btn:hover {
+  background: rgba(6, 182, 212, 0.2) !important;
+  border-color: #22d3ee !important;
+  transform: translateY(-1px);
+}
+
 .branch-card-delete {
-  opacity: 0;
-  transition: opacity var(--transition-fast);
+  opacity: 0.6;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.branch-card-delete:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 .branch-card:hover .branch-card-delete {

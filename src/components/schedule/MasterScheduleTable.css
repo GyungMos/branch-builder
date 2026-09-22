@@ -1,0 +1,356 @@
+/* ===================================================
+   설계사무소 주차별(1~4주) 마스터 업무 공정표 스타일
+   =================================================== */
+
+.architect-gantt-wrapper {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--space-xl);
+}
+
+.architect-gantt-header-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-md);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.architect-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.architect-project-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.architect-project-sub {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-top: 2px;
+}
+
+.architect-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(6, 182, 212, 0.2);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: #38bdf8;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.architect-preset-btn:hover {
+  background: rgba(6, 182, 212, 0.35);
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.3);
+}
+
+/* 테이블 스크롤 컨테이너 */
+.architect-table-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  background: #090e17;
+}
+
+.architect-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: auto;
+  color: #e2e8f0;
+}
+
+/* 테두리 공통 */
+.architect-table th,
+.architect-table td {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 4px 6px;
+  text-align: center;
+}
+
+/* 1단 헤더 */
+.architect-head-row-top th {
+  background: #1e293b;
+  color: #f1f5f9;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 8px 4px;
+}
+
+.col-category-header {
+  min-width: 220px;
+  width: 240px;
+  background: #172033 !important;
+}
+
+.col-month-header {
+  font-size: 12px;
+  letter-spacing: -0.02em;
+  border-left: 2px solid rgba(56, 189, 248, 0.4) !important;
+}
+
+.col-note-header {
+  min-width: 200px;
+  max-width: 260px;
+  background: #172033 !important;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+/* 2단 헤더: 주차 */
+.architect-head-row-bottom th {
+  background: #151f30;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 2px;
+}
+
+.col-sub-type {
+  width: 50px;
+}
+
+.col-sub-name {
+  width: 190px;
+  text-align: left !important;
+  padding-left: 10px !important;
+}
+
+.col-week-cell {
+  width: 32px;
+  min-width: 30px;
+}
+
+.week-month-start {
+  border-left: 2px solid rgba(56, 189, 248, 0.4) !important;
+}
+
+/* 본문 대분류 세로 셀 (Rowspan) */
+.architect-category-cell {
+  width: 48px;
+  min-width: 48px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 12px;
+  vertical-align: middle;
+  padding: 8px 4px;
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.architect-category-cell.theme-coral {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-right: 2px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+.architect-category-cell.theme-sky {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border-right: 2px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+.architect-category-cell.theme-emerald {
+  background: rgba(52, 211, 153, 0.12);
+  color: #4ade80;
+  border-right: 2px solid rgba(52, 211, 153, 0.3) !important;
+}
+
+.architect-vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 4px;
+  margin: 0 auto;
+  display: inline-block;
+}
+
+/* 세부 작업 공정명 셀 */
+.architect-task-name-cell {
+  text-align: left !important;
+  padding-left: 10px !important;
+  font-weight: 500;
+  font-size: 12px;
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  position: relative;
+}
+
+.task-title-text {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.architect-inline-edit-btn {
+  opacity: 0;
+  margin-left: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  vertical-align: middle;
+  transition: opacity 0.2s;
+}
+
+.architect-body-row:hover .architect-inline-edit-btn {
+  opacity: 1;
+}
+
+.architect-inline-edit-btn:hover {
+  color: #38bdf8;
+}
+
+/* 주차별 그리드 셀 */
+.architect-grid-cell {
+  position: relative;
+  padding: 0;
+  height: 28px;
+  width: 32px;
+  min-width: 30px;
+  background: rgba(15, 23, 42, 0.3);
+}
+
+.architect-body-row:hover .architect-grid-cell {
+  background: rgba(30, 41, 59, 0.4);
+}
+
+/* 막대(Bar) */
+.architect-bar {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  border-radius: 4px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.architect-bar:hover {
+  transform: translateY(-1px) scaleY(1.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  z-index: 5;
+}
+
+.architect-bar.theme-coral {
+  background: #ef4444;
+}
+
+.architect-bar.theme-sky {
+  background: #0284c7;
+}
+
+.architect-bar.theme-emerald {
+  background: #84cc16;
+}
+
+.architect-bar-milestone-text {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 비고 컬럼 */
+.architect-note-cell {
+  text-align: left !important;
+  padding: 4px 8px !important;
+  font-size: 11px;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.5);
+  line-height: 1.4;
+  white-space: pre-line;
+  max-width: 260px;
+}
+
+.architect-note-text {
+  display: block;
+}
+
+/* 범례 */
+.architect-gantt-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-md);
+  padding-top: var(--space-sm);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  font-size: 11.5px;
+}
+
+.architect-legend-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.legend-dot.coral {
+  background: #ef4444;
+}
+
+.legend-dot.sky {
+  background: #0284c7;
+}
+
+.legend-dot.emerald {
+  background: #84cc16;
+}
+
+.architect-footer-tip {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+}

@@ -83,8 +83,12 @@ export default function EquipmentList({
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <button className="btn-ghost btn-sm" onClick={() => handleEdit(equip)} title="수정">✏️</button>
-                  <button className="btn-ghost btn-sm" onClick={() => onDelete(equip.id)} title="삭제" style={{ color: 'var(--color-error)' }}>🗑️</button>
+                  <button className="btn-ghost btn-sm" onClick={() => handleEdit(equip)} title="수정" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <NeonIcon name="edit" size="xs" color="cyan" badge={false} />
+                  </button>
+                  <button className="btn-ghost btn-sm" onClick={() => onDelete(equip.id)} title="삭제" style={{ color: 'var(--color-error)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <NeonIcon name="trash" size="xs" color="danger" badge={false} />
+                  </button>
                 </div>
               </div>
 
@@ -117,8 +121,9 @@ export default function EquipmentList({
               </div>
 
               {equip.memo && (
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', background: 'rgba(255,255,255,0.02)', padding: 8, borderRadius: 6, lineHeight: 1.4 }}>
-                  💡 {equip.memo}
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', background: 'rgba(255,255,255,0.02)', padding: 8, borderRadius: 6, lineHeight: 1.4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <NeonIcon name="document" size="xs" color="amber" badge={false} />
+                  <span>{equip.memo}</span>
                 </div>
               )}
 
@@ -130,8 +135,15 @@ export default function EquipmentList({
                     checked={equip.installed || false}
                     onChange={() => handleToggleInstalled(equip)}
                   />
-                  <span style={{ color: equip.installed ? '#10b981' : 'var(--color-text-muted)' }}>
-                    {equip.installed ? '✅ 현장 설치 완료' : '설치 대기'}
+                  <span style={{ color: equip.installed ? '#10b981' : 'var(--color-text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {equip.installed ? (
+                      <>
+                        <NeonIcon name="check" size="xs" color="emerald" badge={false} />
+                        <span>현장 설치 완료</span>
+                      </>
+                    ) : (
+                      '설치 대기'
+                    )}
                   </span>
                 </label>
 
@@ -141,8 +153,15 @@ export default function EquipmentList({
                     checked={equip.tested || false}
                     onChange={() => handleToggleTested(equip)}
                   />
-                  <span style={{ color: equip.tested ? '#06b6d4' : 'var(--color-text-muted)' }}>
-                    {equip.tested ? '⚙️ 시운전 합격' : '시운전 미확인'}
+                  <span style={{ color: equip.tested ? '#06b6d4' : 'var(--color-text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {equip.tested ? (
+                      <>
+                        <NeonIcon name="settings" size="xs" color="cyan" badge={false} />
+                        <span>시운전 합격</span>
+                      </>
+                    ) : (
+                      '시운전 미확인'
+                    )}
                   </span>
                 </label>
               </div>

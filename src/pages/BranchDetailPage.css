@@ -18,6 +18,23 @@
   padding-right: 32px;
 }
 
+/* 공정 지연 스마트 알림 배너 */
+.branch-delay-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 12px 18px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-left: 4px solid #ef4444;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-xl);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.1);
+}
+
 .branch-summary-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -35,6 +52,62 @@
   position: relative;
   overflow: hidden;
   backdrop-filter: blur(var(--glass-blur));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), var(--shadow-sm);
+  transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--shadow-md), 0 0 16px rgba(16, 185, 129, 0.1);
+}
+
+.summary-info {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 원형 네온 프로그레스 도넛 게이지 */
+.radial-kpi-card {
+  gap: var(--space-md);
+}
+
+.radial-kpi-ring {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radial-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.radial-bg-circle {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 4.5;
+}
+
+.radial-progress-circle {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 0 4px var(--color-accent));
+}
+
+.radial-value-text {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-accent-text);
 }
 
 .summary-icon {
@@ -53,10 +126,61 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   font-weight: 500;
+  margin-top: 3px;
 }
 
-.branch-tabs {
+/* 애플 / Linear 스타일 세그먼트 필(Pill) 탭 트랙 */
+.segmented-tab-track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-border);
+  padding: 4px;
+  border-radius: var(--radius-xl);
   margin-bottom: var(--space-xl);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.segmented-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.segmented-tab-btn:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.segmented-tab-btn.active {
+  background: var(--color-bg-elevated);
+  color: #ffffff;
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), 0 0 12px rgba(16, 185, 129, 0.15);
+}
+
+[data-theme="light"] .segmented-tab-track {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .segmented-tab-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: rgba(5, 150, 105, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .branch-tab-content {
@@ -126,5 +250,55 @@
 
   .branch-status-select {
     align-self: flex-start;
+  }
+}
+
+/* ===================================================
+   플로팅 퀵 액션 버튼 (FAB - 현장 일지 1초 즉시 작성)
+   =================================================== */
+.fab-daily-log {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  z-index: var(--z-floating, 500);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.92) 0%, rgba(16, 185, 129, 0.92) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 9999px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(6, 182, 212, 0.45), 0 0 16px rgba(16, 185, 129, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fab-daily-log:hover {
+  transform: translateY(-4px) scale(1.04);
+  box-shadow: 0 12px 32px rgba(6, 182, 212, 0.65), 0 0 24px rgba(16, 185, 129, 0.45);
+  border-color: rgba(255, 255, 255, 0.6);
+  background: linear-gradient(135deg, rgba(6, 182, 212, 1) 0%, rgba(16, 185, 129, 1) 100%);
+}
+
+.fab-daily-log:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+.fab-daily-log .fab-text {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .fab-daily-log {
+    right: 18px;
+    bottom: 84px; /* 모바일 하단 네비게이션바 간섭 방지 */
+    padding: 10px 16px;
+    font-size: 13px;
   }
 }

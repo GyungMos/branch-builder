@@ -6,17 +6,17 @@ import DailyLogEntryForm from './DailyLogEntryForm';
 import { formatDate } from '../../utils/formatters';
 import './DailyLogList.css';
 
-const WEATHER_ICONS = {
-  sunny: '☀️ 맑음',
-  cloudy: '⛅ 흐림',
-  rain: '🌧️ 우천',
-  snow: '❄️ 강설',
+const WEATHER_CONFIG = {
+  sunny: { label: '맑음', iconName: 'sun', color: 'amber' },
+  cloudy: { label: '흐림', iconName: 'cloud', color: 'cyan' },
+  rain: { label: '우천', iconName: 'rain', color: 'blue' },
+  snow: { label: '강설', iconName: 'snow', color: 'cyan' },
 };
 
 const STATUS_BADGES = {
-  resolved: { label: '✅ 조치 완료', className: 'status-resolved' },
-  progress: { label: '🔄 진행 중', className: 'status-progress' },
-  pending: { label: '⏳ 대기 중', className: 'status-pending' },
+  resolved: { label: '조치 완료', iconName: 'check', color: 'emerald', className: 'status-resolved' },
+  progress: { label: '진행 중', iconName: 'sync', color: 'cyan', className: 'status-progress' },
+  pending: { label: '대기 중', iconName: 'history', color: 'amber', className: 'status-pending' },
 };
 
 export default function DailyLogList({
@@ -144,63 +144,91 @@ export default function DailyLogList({
   };
 
   const selectPhoto = (idx) => {
-    setViewer(prev => ({ ...prev, currentIndex: idx }));
+    setViewer(prev => ({
+      ...prev,
+      currentIndex: idx,
+    }));
   };
 
-  // 키보드 방향키 및 ESC 지원
+  // 뷰어 열림 상태에서 키보드 좌우 방향키로 사진 넘기기
   useEffect(() => {
     if (!viewer.isOpen) return;
-
-    const handleKeyDown = (e) => {
+    const handleKeyNav = (e) => {
       if (e.key === 'ArrowLeft') {
-        e.preventDefault();
         prevPhoto();
       } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
         nextPhoto();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        closeViewer();
       }
     };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyNav);
+    return () => window.removeEventListener('keydown', handleKeyNav);
   }, [viewer.isOpen, viewer.items.length]);
 
+  const handleDeleteLog = async (id, dateStr) => {
+    if (window.confirm(`${dateStr} 현장 일지를 삭제하시겠습니까?\n작성된 오후 추가 조치 내역과 현장 사진도 모두 함께 삭제됩니다.`)) {
+      try {
+        await onDelete(id);
+      } catch (err) {
+        alert('삭제 중 오류가 발생했습니다: ' + err.message);
+      }
+    }
+  };
+
+  const handleDeleteEntry = async (logId, entryId) => {
+    if (window.confirm('이 조치 사항 기록을 삭제하시겠습니까?')) {
+      try {
+        await onDeleteEntry(logId, entryId);
+      } catch (err) {
+        alert('조치 사항 삭제 중 오류가 발생했습니다: ' + err.message);
+      }
+    }
+  };
+
   return (
-    <div className="daily-log-section animate-fade-in">
+    <div className="daily-log-section animate-fade-in" id="daily-log-section">
+      {/* 일지 섹션 헤더 */}
       <div className="daily-log-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="daily-log-title-wrap">
           <NeonIcon name="log" color="rose" size="md" />
           <div>
-            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 800 }}>현장 일일 작업일지 & 이슈 노트</h2>
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
+            <h3 className="daily-log-title">현장 일일 작업일지 & 이슈 노트</h3>
+            <p className="daily-log-desc">
               오전에 작성한 작업 내용과 발생 이슈를 보존하면서, 오후에 진행한 조치 사항 및 추가 작업을 이어서 기록합니다.
             </p>
           </div>
         </div>
-
-        <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-          <span>+</span> 오늘 일지 작성
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => {
+            setEditingLog(null);
+            setIsFormOpen(true);
+          }}
+          id="btn-new-daily-log"
+        >
+          + 오늘 일지 작성
         </button>
       </div>
 
+      {/* 일지 목록 피드 */}
       {dailyLogs.length > 0 ? (
-        <div className="daily-log-timeline stagger-children">
+        <div className="daily-log-feed">
           {dailyLogs.map(log => {
             const hasEntries = Array.isArray(log.entries) && log.entries.length > 0;
+            const weatherConf = WEATHER_CONFIG[log.weather] || WEATHER_CONFIG.sunny;
 
             return (
-              <div key={log.id} className="daily-log-card">
-                <div className="daily-log-dot" />
-
+              <div key={log.id} className="daily-log-card" id={`daily-log-${log.id}`}>
                 {/* 카드 상단 날짜 및 기본 액션 */}
                 <div className="daily-log-top">
                   <div className="daily-log-date-badge">
-                    <span>📅 {formatDate(log.date)}</span>
-                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 6 }}>
-                      {WEATHER_ICONS[log.weather] || '☀️ 맑음'}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <NeonIcon name="calendar" size="xs" color="cyan" badge={false} />
+                      {formatDate(log.date)}
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <NeonIcon name={weatherConf.iconName} size="xs" color={weatherConf.color} badge={false} />
+                      <span>{weatherConf.label}</span>
                     </span>
                     {log.updatedAt && (
                       <span className="daily-log-edited-tag" title="수정됨">
@@ -215,8 +243,10 @@ export default function DailyLogList({
                         className="btn-ghost btn-sm daily-log-edit-btn"
                         onClick={() => setEditingLog(log)}
                         title="기본 일지 내용 수정"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
                       >
-                        ✏️ 기본 일지 수정
+                        <NeonIcon name="edit" size="xs" badge={false} />
+                        <span>기본 일지 수정</span>
                       </button>
                     )}
                     {onDelete && (
@@ -228,58 +258,88 @@ export default function DailyLogList({
                           }
                         }}
                         title="일지 전체 삭제"
+                        style={{ color: 'var(--color-error)' }}
                       >
-                        🗑️
+                        <NeonIcon name="trash" size="xs" color="rose" badge={false} />
                       </button>
                     )}
                   </div>
                 </div>
 
                 {/* 1차: 오전 / 기초 작업 현황 블록 */}
-                <div className="daily-log-block base-block">
+                <div className={`daily-log-block base-block ${log.photos && log.photos.length > 0 ? 'has-photos-layout' : ''}`}>
                   <div className="daily-log-block-header">
-                    <span className="daily-log-block-tag morning-tag">
-                      🕒 [오전 / 기본 작업 현황]
+                    <span className="daily-log-block-tag morning-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <NeonIcon name="history" size="xs" color="cyan" badge={false} />
+                      [오전 / 기본 작업 현황]
                     </span>
                   </div>
 
-                  <div className="daily-log-summary">
-                    {log.summary}
-                  </div>
-
-                  <div className="daily-log-meta-bar">
-                    {log.workersCount > 0 && <span>👷 인원: {log.workersCount}명</span>}
-                    {log.equipmentUsed && <span>🚜 장비: {log.equipmentUsed}</span>}
-                    <span>✍️ 작성: {log.author || '현장 관리자'}</span>
-                  </div>
-
-                  {log.issues && (
-                    <div className="daily-log-issue-box">
-                      <strong>⚠️ 발생 특이사항 / 지연:</strong> {log.issues}
-                    </div>
-                  )}
-
-                  {log.photos && log.photos.length > 0 && (
-                    <div className="daily-log-photos-container">
-                      <div className="daily-log-photos-label">
-                        <span>📸 오전 현장 사진 ({log.photos.length}장)</span>
-                        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>* 클릭 시 크게 확대</span>
+                  <div className="daily-log-body-split">
+                    {/* 좌측 컬럼: 작업 내용 & 인포 칩 & 특이사항 */}
+                    <div className="daily-log-info-col">
+                      <div className="daily-log-summary">
+                        {log.summary}
                       </div>
-                      <div className="daily-log-photos-grid">
-                        {log.photos.map((photo, i) => (
-                          <div
-                            key={i}
-                            className="daily-log-photo-item"
-                            onClick={() => openViewer(log, photo)}
-                            title={`사진 ${i + 1} 크게 보기 (클릭)`}
-                          >
-                            <img src={photo} alt={`현장 사진 ${i + 1}`} className="daily-log-photo-thumb" />
-                            <span className="daily-log-photo-overlay-icon">🔍</span>
-                          </div>
-                        ))}
+
+                      <div className="daily-log-meta-bar">
+                        {log.workersCount > 0 && (
+                          <span className="daily-log-meta-chip">
+                            <NeonIcon name="partner" size="xs" color="cyan" badge={false} />
+                            <span>작업 인원: <strong>{log.workersCount}명</strong></span>
+                          </span>
+                        )}
+                        {log.equipmentUsed && (
+                          <span className="daily-log-meta-chip">
+                            <NeonIcon name="equipment" size="xs" color="violet" badge={false} />
+                            <span>투입 장비: <strong>{log.equipmentUsed}</strong></span>
+                          </span>
+                        )}
+                        <span className="daily-log-meta-chip">
+                          <NeonIcon name="edit" size="xs" color="emerald" badge={false} />
+                          <span>작성자: <strong>{log.author || '현장 관리자'}</strong></span>
+                        </span>
                       </div>
+
+                      {log.issues && (
+                        <div className="daily-log-issue-box">
+                          <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                            <NeonIcon name="alert" size="xs" color="amber" badge={false} />
+                            발생 특이사항 / 지연:
+                          </strong>
+                          <span className="daily-log-issue-text">{log.issues}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {/* 우측 컬럼: 현장 사진 와이드 갤러리 프리뷰 */}
+                    {log.photos && log.photos.length > 0 && (
+                      <div className="daily-log-photos-col">
+                        <div className="daily-log-photos-label">
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                            <NeonIcon name="photo" size="xs" color="rose" badge={false} />
+                            오전 현장 사진 ({log.photos.length}장)
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>* 클릭 시 큰 화면 뷰어</span>
+                        </div>
+                        <div className="daily-log-photos-grid">
+                          {log.photos.map((photo, i) => (
+                            <div
+                              key={i}
+                              className="daily-log-photo-item"
+                              onClick={() => openViewer(log, photo)}
+                              title={`사진 ${i + 1} 크게 보기 (클릭)`}
+                            >
+                              <img src={photo} alt={`현장 사진 ${i + 1}`} className="daily-log-photo-thumb" />
+                              <span className="daily-log-photo-overlay-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <NeonIcon name="search" size="xs" color="cyan" badge={false} />
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* 2차: 오후 추가 작업 & 조치 사항 타임라인 (이전 기록 보존 + 누적 갱신) */}
@@ -287,9 +347,10 @@ export default function DailyLogList({
                   <div className="daily-log-entries-timeline">
                     {log.entries.map((entry, idx) => {
                       const statusBadge = STATUS_BADGES[entry.status] || STATUS_BADGES.resolved;
+                      const entryHasPhotos = entry.photos && entry.photos.length > 0;
 
                       return (
-                        <div key={entry.id || idx} className="daily-log-entry-card">
+                        <div key={entry.id || idx} className={`daily-log-entry-card ${entryHasPhotos ? 'has-photos-layout' : ''}`}>
                           <div className="daily-log-entry-line-dot" />
 
                           <div className="daily-log-entry-top">
@@ -298,84 +359,110 @@ export default function DailyLogList({
                                 {entry.timeTag || '오후 조치 / 추가 작업'}
                               </span>
                               {entry.time && (
-                                <span className="daily-log-entry-time">
-                                  🕒 {entry.time}
+                                <span className="daily-log-entry-time" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  <NeonIcon name="history" size="xs" color="cyan" badge={false} />
+                                  {entry.time}
                                 </span>
                               )}
-                              <span className={`daily-log-entry-status-badge ${statusBadge.className}`}>
-                                {statusBadge.label}
+                              <span className={`daily-log-entry-status-badge ${statusBadge.className}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <NeonIcon name={statusBadge.iconName} size="xs" color={statusBadge.color} badge={false} />
+                                <span>{statusBadge.label}</span>
                               </span>
                             </div>
 
                             <div className="daily-log-entry-actions">
-                              {onUpdateEntry && (
-                                <button
-                                  type="button"
-                                  className="btn-ghost btn-sm daily-log-entry-btn edit"
-                                  onClick={() => setEntryModal({
-                                    isOpen: true,
-                                    logId: log.id,
-                                    targetLogDate: log.date,
-                                    initialData: entry,
-                                  })}
-                                  title="이 조치 기록 수정"
-                                >
-                                  ✏️
-                                </button>
-                              )}
-                              {onDeleteEntry && (
-                                <button
-                                  type="button"
-                                  className="btn-ghost btn-sm daily-log-entry-btn delete"
-                                  onClick={() => {
-                                    if (window.confirm('이 추가 조치 기록을 삭제하시겠습니까?')) {
-                                      onDeleteEntry(log.id, entry.id);
-                                    }
-                                  }}
-                                  title="이 조치 기록 삭제"
-                                >
-                                  ✕
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                className="btn-edit-entry"
+                                onClick={() => setEntryModal({
+                                  isOpen: true,
+                                  logId: log.id,
+                                  targetLogDate: log.date,
+                                  initialData: entry,
+                                })}
+                                title="조치 내용 수정"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                              >
+                                <NeonIcon name="edit" size="xs" color="cyan" badge={false} />
+                                <span>수정</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-del-entry"
+                                onClick={() => handleDeleteEntry(log.id, entry.id)}
+                                title="삭제"
+                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                <NeonIcon name="trash" size="xs" color="danger" badge={false} />
+                              </button>
                             </div>
                           </div>
 
-                          <div className="daily-log-entry-summary">
-                            {entry.summary}
-                          </div>
+                          <div className="daily-log-body-split">
+                            {/* 좌측: 작업 요약 및 메타 칩 */}
+                            <div className="daily-log-info-col">
+                              <div className="daily-log-entry-summary">{entry.summary}</div>
 
-                          <div className="daily-log-meta-bar" style={{ marginTop: 4 }}>
-                            {entry.workersCount > 0 && <span>👷 추가 인원: {entry.workersCount}명</span>}
-                            {entry.equipmentUsed && <span>🚜 추가 자재/장비: {entry.equipmentUsed}</span>}
-                            <span>✍️ 작성: {entry.author || '현장 관리자'}</span>
-                          </div>
-
-                          {entry.issues && (
-                            <div className="daily-log-entry-note">
-                              <strong>💡 추가 메모 / 후속 경과:</strong> {entry.issues}
-                            </div>
-                          )}
-
-                          {entry.photos && entry.photos.length > 0 && (
-                            <div className="daily-log-photos-container" style={{ marginTop: 6 }}>
-                              <div className="daily-log-photos-label">
-                                <span>📸 조치 현장 사진 ({entry.photos.length}장)</span>
+                              <div className="daily-log-meta-bar">
+                                {entry.workersCount && (
+                                  <span className="daily-log-meta-chip">
+                                    <NeonIcon name="partner" size="xs" color="cyan" badge={false} />
+                                    <span>추가인원: <strong>{entry.workersCount}명</strong></span>
+                                  </span>
+                                )}
+                                {entry.equipmentUsed && (
+                                  <span className="daily-log-meta-chip">
+                                    <NeonIcon name="equipment" size="xs" color="emerald" badge={false} />
+                                    <span>장비/자재: <strong>{entry.equipmentUsed}</strong></span>
+                                  </span>
+                                )}
+                                {entry.author && (
+                                  <span className="daily-log-meta-chip">
+                                    <NeonIcon name="edit" size="xs" color="amber" badge={false} />
+                                    <span>담당: <strong>{entry.author}</strong></span>
+                                  </span>
+                                )}
                               </div>
-                              <div className="daily-log-photos-grid">
-                                {entry.photos.map((photo, pIdx) => (
-                                  <div
-                                    key={pIdx}
-                                    className="daily-log-photo-item"
-                                    onClick={() => openViewer(log, photo)}
-                                    title={`조치 사진 ${pIdx + 1} 크게 보기 (클릭)`}
-                                  >
-                                    <img src={photo} alt={`조치 사진 ${pIdx + 1}`} className="daily-log-photo-thumb" />
-                                    <span className="daily-log-photo-overlay-icon">🔍</span>
-                                  </div>
-                                ))}
-                              </div>
+
+                              {entry.issues && (
+                                <div className="daily-log-issue-box">
+                                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                    <NeonIcon name="alert" size="xs" color="rose" badge={false} />
+                                    추가 메모:
+                                  </strong>
+                                  <span className="daily-log-issue-text">{entry.issues}</span>
+                                </div>
+                              )}
                             </div>
-                          )}
+
+                            {/* 우측: 조치 현장 사진 */}
+                            {entryHasPhotos && (
+                              <div className="daily-log-photos-col">
+                                <div className="daily-log-photos-label">
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                    <NeonIcon name="photo" size="xs" color="rose" badge={false} />
+                                    조치 현장 사진 ({entry.photos.length}장)
+                                  </span>
+                                  <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>* 클릭 시 큰 화면 뷰어</span>
+                                </div>
+                                <div className="daily-log-photos-grid">
+                                  {entry.photos.map((photo, pIdx) => (
+                                    <div
+                                      key={pIdx}
+                                      className="daily-log-photo-item"
+                                      onClick={() => openViewer(log, photo)}
+                                      title={`조치 사진 ${pIdx + 1} 크게 보기 (클릭)`}
+                                    >
+                                      <img src={photo} alt={`조치 사진 ${pIdx + 1}`} className="daily-log-photo-thumb" />
+                                      <span className="daily-log-photo-overlay-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <NeonIcon name="search" size="xs" color="cyan" badge={false} />
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -393,8 +480,10 @@ export default function DailyLogList({
                       targetLogDate: log.date,
                       initialData: null,
                     })}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                   >
-                    <span>➕</span> 오후 작업 / 문제 조치 사항 이어서 추가
+                    <NeonIcon name="plus" size="xs" color="cyan" badge={false} />
+                    <span>오후 작업 / 문제 조치 사항 이어서 추가</span>
                   </button>
                 </div>
               </div>
@@ -454,7 +543,10 @@ export default function DailyLogList({
               {/* 상단 컨트롤 헤더 */}
               <div className="log-lightbox-header">
                 <div className="log-lightbox-title-wrap">
-                  <span className="log-lightbox-date">📅 {formatDate(viewer.items[viewer.currentIndex]?.date)}</span>
+                  <span className="log-lightbox-date" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <NeonIcon name="calendar" size="xs" color="cyan" badge={false} />
+                    <span>{formatDate(viewer.items[viewer.currentIndex]?.date)}</span>
+                  </span>
                   <span className="log-lightbox-stage-tag">{viewer.items[viewer.currentIndex]?.label}</span>
                   <span className="log-lightbox-summary">{viewer.items[viewer.currentIndex]?.summary}</span>
                 </div>

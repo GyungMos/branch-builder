@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import NeonIcon from '../common/NeonIcon';
 import './MobileNav.css';
 
 export default function MobileNav({ activeTab, onTabChange }) {
@@ -9,13 +10,14 @@ export default function MobileNav({ activeTab, onTabChange }) {
   // 지점 상세 페이지일 때의 탭
   if (isDetailPage && onTabChange) {
     const detailTabs = [
-      { id: 'overview', label: '개요/제원', icon: '🏢' },
-      { id: 'schedule', label: '일정/일지', icon: '📅' },
-      { id: 'cost', label: '비용/예산', icon: '💰' },
-      { id: 'equipment', label: '장비/시설', icon: '⚙️' },
-      { id: 'partner', label: '협력업체', icon: '👥' },
-      { id: 'documents', label: '서류/사진', icon: '📁' },
-      { id: 'log', label: '이력', icon: '⚡' },
+      { id: 'timeline', label: '타임라인', iconName: 'timeline', color: 'cyan' },
+      { id: 'overview', label: '개요/제원', iconName: 'building', color: 'emerald' },
+      { id: 'schedule', label: '일정/일지', iconName: 'calendar', color: 'blue' },
+      { id: 'cost', label: '비용/예산', iconName: 'money', color: 'amber' },
+      { id: 'equipment', label: '장비/시설', iconName: 'equipment', color: 'violet' },
+      { id: 'partner', label: '협력업체', iconName: 'partner', color: 'coral' },
+      { id: 'documents', label: '서류/사진', iconName: 'document', color: 'emerald' },
+      { id: 'log', label: '활동이력', iconName: 'history', color: 'rose' },
     ];
 
     return (
@@ -28,7 +30,9 @@ export default function MobileNav({ activeTab, onTabChange }) {
             id={`mobile-tab-${tab.id}`}
             style={{ minWidth: 54, flexShrink: 0 }}
           >
-            <span className="mobile-nav-icon">{tab.icon}</span>
+            <span className="mobile-nav-icon">
+              <NeonIcon name={tab.iconName} color={tab.color} size="sm" badge={false} />
+            </span>
             <span className="mobile-nav-label" style={{ fontSize: 10 }}>{tab.label}</span>
           </button>
         ))}
@@ -43,8 +47,19 @@ export default function MobileNav({ activeTab, onTabChange }) {
         className={`mobile-nav-item ${location.pathname === '/' ? 'active' : ''}`}
         onClick={() => navigate('/')}
       >
-        <span className="mobile-nav-icon">🏢</span>
-        <span className="mobile-nav-label">지점</span>
+        <span className="mobile-nav-icon">
+          <NeonIcon name="building" color="emerald" size="sm" badge={false} />
+        </span>
+        <span className="mobile-nav-label">지점 목록</span>
+      </button>
+      <button
+        className={`mobile-nav-item ${location.pathname === '/dashboard' ? 'active' : ''}`}
+        onClick={() => navigate('/dashboard')}
+      >
+        <span className="mobile-nav-icon">
+          <NeonIcon name="dashboard" color="cyan" size="sm" badge={false} />
+        </span>
+        <span className="mobile-nav-label">대시보드</span>
       </button>
     </nav>
   );

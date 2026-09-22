@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import NeonIcon from '../components/common/NeonIcon';
 import './LoginPage.css';
 
 export default function LoginPage() {
@@ -26,15 +27,18 @@ export default function LoginPage() {
       }
       navigate('/');
     } catch (err) {
-      const messages = {
-        'auth/user-not-found': '등록되지 않은 이메일입니다.',
-        'auth/wrong-password': '비밀번호가 올바르지 않습니다.',
-        'auth/email-already-in-use': '이미 사용 중인 이메일입니다.',
-        'auth/weak-password': '비밀번호는 6자 이상이어야 합니다.',
-        'auth/invalid-email': '올바른 이메일 형식이 아닙니다.',
-        'auth/invalid-credential': '이메일 또는 비밀번호를 확인해주세요.',
-      };
-      setError(messages[err.code] || '오류가 발생했습니다. 다시 시도해주세요.');
+      console.error('인증 에러:', err);
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('이메일 또는 비밀번호가 일치하지 않습니다.');
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError('이미 등록된 이메일 주소입니다.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('비밀번호를 6자리 이상 입력해주세요.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('올바른 이메일 형식이 아닙니다.');
+      } else {
+        setError(err.message || '인증에 실패했습니다. 다시 시도해주세요.');
+      }
     } finally {
       setLoading(false);
     }
@@ -50,7 +54,9 @@ export default function LoginPage() {
 
       <div className="login-card animate-scale-in">
         <div className="login-header">
-          <span className="login-logo">🏗️</span>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <NeonIcon name="building" size="xl" color="emerald" />
+          </div>
           <h1 className="login-title">Branch Builder</h1>
           <p className="login-subtitle">정비소 지점 오픈 관리 시스템</p>
         </div>
@@ -113,8 +119,9 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="login-error animate-fade-in">
-              <span>⚠️</span> {error}
+            <div className="login-error animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <NeonIcon name="alert" size="xs" color="rose" badge={false} />
+              <span>{error}</span>
             </div>
           )}
 

@@ -17,8 +17,9 @@ export default function PropertySpecs({ property, onEdit }) {
         </div>
 
         {onEdit && (
-          <button className="btn btn-secondary btn-sm" onClick={onEdit} style={{ fontSize: 12 }}>
-            ✏️ 부동산 제원 수정
+          <button className="btn btn-secondary btn-sm" onClick={onEdit} style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <NeonIcon name="edit" size="xs" color="cyan" badge={false} />
+            <span>부동산 제원 수정</span>
           </button>
         )}
       </div>
@@ -26,8 +27,9 @@ export default function PropertySpecs({ property, onEdit }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-md)' }}>
         {/* 1. 건축/부지 제원 */}
         <div style={{ background: 'var(--color-bg-secondary)', padding: 'var(--space-md)', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6 }}>
-            📐 건축 및 시설 제원
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <NeonIcon name="design" size="xs" color="emerald" badge={false} />
+            <span>건축 및 시설 제원</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--font-size-xs)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -51,8 +53,9 @@ export default function PropertySpecs({ property, onEdit }) {
 
         {/* 2. 임대차 조건 */}
         <div style={{ background: 'var(--color-bg-secondary)', padding: 'var(--space-md)', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6 }}>
-            💵 임대차 계약 조건
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <NeonIcon name="money" size="xs" color="amber" badge={false} />
+            <span>임대차 계약 조건</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--font-size-xs)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>

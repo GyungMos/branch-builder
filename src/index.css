@@ -53,24 +53,24 @@
   /* Layout */
   --header-height: 64px;
   --mobile-nav-height: 64px;
-  --max-content-width: 1200px;
+  --max-content-width: 1720px;
   --sidebar-width: 280px;
 }
 
-/* --- Dark Theme (Default) --- */
+/* --- Dark Theme (Default) - Obsidian Tech Dark --- */
 [data-theme="dark"] {
-  --color-bg-primary: #0b1120;
-  --color-bg-secondary: #111827;
-  --color-bg-tertiary: #1e293b;
-  --color-bg-elevated: #1a2332;
-  --color-bg-hover: #243044;
-  --color-bg-active: #2d3d54;
+  --color-bg-primary: #090d16;
+  --color-bg-secondary: #0f172a;
+  --color-bg-tertiary: #162033;
+  --color-bg-elevated: #1a253c;
+  --color-bg-hover: #22304d;
+  --color-bg-active: #2b3b5e;
 
-  --color-surface: rgba(30, 41, 59, 0.7);
-  --color-surface-hover: rgba(45, 61, 84, 0.7);
-  --color-surface-border: rgba(71, 85, 105, 0.4);
+  --color-surface: rgba(15, 23, 42, 0.78);
+  --color-surface-hover: rgba(26, 37, 60, 0.85);
+  --color-surface-border: rgba(99, 115, 140, 0.32);
 
-  --color-text-primary: #f1f5f9;
+  --color-text-primary: #f8fafc;
   --color-text-secondary: #94a3b8;
   --color-text-tertiary: #64748b;
   --color-text-inverse: #0f172a;
@@ -413,12 +413,13 @@ label {
   padding: var(--space-xl);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), var(--shadow-sm);
   transition: all var(--transition-base);
 }
 
 .card:hover {
-  border-color: var(--color-accent);
-  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--shadow-lg), 0 0 20px rgba(16, 185, 129, 0.12);
   transform: translateY(-2px);
 }
 
@@ -429,6 +430,14 @@ label {
   padding: var(--space-xl);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), var(--shadow-sm);
+}
+
+/* 숫자 고정폭 정렬 유틸리티 */
+.tabular-nums, .num-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.01em;
 }
 
 /* --- Badges --- */

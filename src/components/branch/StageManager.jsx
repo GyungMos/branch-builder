@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { STAGE_STATUS, DEFAULT_STAGES } from '../../utils/constants';
 import ModalPortal from '../common/ModalPortal';
+import NeonIcon from '../common/NeonIcon';
 import './StageManager.css';
 
 export default function StageManager({ stages, onAdd, onUpdate, onDelete }) {
@@ -163,8 +164,9 @@ export default function StageManager({ stages, onAdd, onUpdate, onDelete }) {
           <p className="text-secondary text-sm" style={{ marginBottom: 12 }}>
             아직 단계가 없습니다. 직접 추가하거나 기본 템플릿을 불러올 수 있습니다.
           </p>
-          <button className="btn btn-secondary btn-sm" onClick={() => setShowTemplates(true)}>
-            📋 기본 템플릿 불러오기
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowTemplates(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <NeonIcon name="document" size="xs" color="cyan" badge={false} />
+            <span>기본 템플릿 불러오기</span>
           </button>
         </div>
       )}

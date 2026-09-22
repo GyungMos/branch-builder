@@ -37,15 +37,15 @@
 }
 
 .partner-filter-btn:hover {
-  border-color: #f97316;
-  color: #f97316;
+  border-color: var(--color-primary);
+  color: var(--color-text-primary);
 }
 
 .partner-filter-btn.active {
-  background: #ea580c;
-  border-color: #ea580c;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: #ffffff;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 0 12px rgba(14, 165, 233, 0.35);
 }
 
 /* 그리드 */
@@ -65,12 +65,13 @@
   transition: all var(--transition-base);
   box-shadow: var(--shadow-sm);
   position: relative;
+  overflow: hidden;
 }
 
 .partner-card:hover {
-  border-color: #fb923c;
+  border-color: var(--partner-accent, var(--color-primary));
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 .partner-card-header {
@@ -81,13 +82,15 @@
 }
 
 .partner-category-badge {
+  display: inline-flex;
+  align-items: center;
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: var(--radius-full);
-  background: rgba(249, 115, 22, 0.12);
-  color: #f97316;
-  border: 1px solid rgba(249, 115, 22, 0.3);
+  border: 1px solid transparent;
+  letter-spacing: -0.01em;
+  transition: all var(--transition-fast);
 }
 
 .partner-company-name {

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { COST_CATEGORIES } from '../../utils/constants';
+import { formatNumberWithCommas, parseNumberFromCommas } from '../../utils/formatters';
 import ModalPortal from '../common/ModalPortal';
+import NeonIcon from '../common/NeonIcon';
+import DateInput from '../common/DateInput';
 
 export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
   const isEdit = Boolean(cost);
   const [title, setTitle] = useState(cost?.title || '');
-  const [amount, setAmount] = useState(cost?.amount ? String(cost.amount) : '');
+  const [amount, setAmount] = useState(cost?.amount ? formatNumberWithCommas(cost.amount) : '');
   const [category, setCategory] = useState(cost?.category || 'etc');
   const [date, setDate] = useState(
     cost?.date
@@ -24,12 +27,13 @@ export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !amount) return;
+    const numericAmount = parseNumberFromCommas(amount);
+    if (!title.trim() || !numericAmount) return;
     setLoading(true);
     try {
       await onSubmit({
         title: title.trim(),
-        amount: Number(amount),
+        amount: numericAmount,
         category,
         date,
         stageId: stageId || null,
@@ -46,8 +50,9 @@ export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
     }
   };
 
-  const formatInputAmount = (val) => {
-    return val.replace(/[^0-9]/g, '');
+  const handleAmountChange = (e) => {
+    const rawVal = e.target.value.replace(/[^0-9]/g, '');
+    setAmount(rawVal ? Number(rawVal).toLocaleString('ko-KR') : '');
   };
 
   return (
@@ -55,7 +60,10 @@ export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal" id="cost-form-modal">
         <div className="modal-header">
-          <h2 className="modal-title">💰 {isEdit ? '비용 수정' : '비용 추가'}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <NeonIcon name="money" color="amber" size="sm" />
+            <h2 className="modal-title">{isEdit ? '비용 수정' : '비용 추가'}</h2>
+          </div>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
@@ -80,29 +88,41 @@ export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
                   id="cost-amount"
                   type="text"
                   inputMode="numeric"
-                  value={amount ? Number(amount).toLocaleString() : ''}
-                  onChange={(e) => setAmount(formatInputAmount(e.target.value))}
+                  value={amount}
+                  onChange={handleAmountChange}
                   placeholder="0"
                   required
+                  className="tabular-nums"
+                  style={{ fontWeight: 600 }}
                 />
               </div>
               <div className="form-group">
                 <label htmlFor="cost-date">날짜</label>
-                <input
+                <DateInput
                   id="cost-date"
-                  type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={setDate}
                 />
               </div>
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="cost-category">카테고리</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <label htmlFor="cost-category" style={{ margin: 0 }}>카테고리 *</label>
+                  {(() => {
+                    const selectedCat = COST_CATEGORIES.find(c => c.id === category) || COST_CATEGORIES[0];
+                    return (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                        <NeonIcon name={selectedCat.iconName || 'budget'} color={selectedCat.color || 'emerald'} size="xs" badge={true} />
+                        <strong style={{ color: 'var(--color-text-primary)' }}>{selectedCat.label}</strong>
+                      </span>
+                    );
+                  })()}
+                </div>
                 <select id="cost-category" value={category} onChange={(e) => setCategory(e.target.value)}>
                   {COST_CATEGORIES.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.icon} {cat.label}</option>
+                    <option key={cat.id} value={cat.id}>{cat.label}</option>
                   ))}
                 </select>
               </div>
@@ -136,8 +156,10 @@ export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={() => setShowAccount(!showAccount)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
-                🏦 {showAccount ? '계좌 정보 숨기기 ▲' : '상대방 계좌 정보 입력 ▼'}
+                <NeonIcon name="bank" size="xs" color="cyan" badge={false} />
+                <span>{showAccount ? '계좌 정보 숨기기 ▲' : '상대방 계좌 정보 입력 ▼'}</span>
               </button>
             </div>
 

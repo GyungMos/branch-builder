@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import NeonIcon from '../common/NeonIcon';
 import ModalPortal from '../common/ModalPortal';
+import DateInput from '../common/DateInput';
+import { formatNumberWithCommas, parseNumberFromCommas } from '../../utils/formatters';
 
 export default function BranchForm({ branch, onSubmit, onClose }) {
   const [name, setName] = useState(branch?.name || '');
@@ -13,9 +15,9 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
   const [floorHeight, setFloorHeight] = useState(prop.floorHeight || '');
   const [zoning, setZoning] = useState(prop.zoning || '');
   const [parkingSpaces, setParkingSpaces] = useState(prop.parkingSpaces || '');
-  const [deposit, setDeposit] = useState(prop.deposit || '');
-  const [monthlyRent, setMonthlyRent] = useState(prop.monthlyRent || '');
-  const [maintenanceFee, setMaintenanceFee] = useState(prop.maintenanceFee || '');
+  const [deposit, setDeposit] = useState(prop.deposit ? formatNumberWithCommas(prop.deposit) : '');
+  const [monthlyRent, setMonthlyRent] = useState(prop.monthlyRent ? formatNumberWithCommas(prop.monthlyRent) : '');
+  const [maintenanceFee, setMaintenanceFee] = useState(prop.maintenanceFee ? formatNumberWithCommas(prop.maintenanceFee) : '');
   const [rentFreeStart, setRentFreeStart] = useState(prop.rentFreeStart || '');
   const [rentFreeEnd, setRentFreeEnd] = useState(prop.rentFreeEnd || '');
   const [leaseEnd, setLeaseEnd] = useState(prop.leaseEnd || '');
@@ -38,9 +40,9 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
           floorHeight: floorHeight ? Number(floorHeight) : null,
           zoning: zoning.trim(),
           parkingSpaces: parkingSpaces ? Number(parkingSpaces) : null,
-          deposit: deposit ? Number(deposit) : null,
-          monthlyRent: monthlyRent ? Number(monthlyRent) : null,
-          maintenanceFee: maintenanceFee ? Number(maintenanceFee) : null,
+          deposit: parseNumberFromCommas(deposit),
+          monthlyRent: parseNumberFromCommas(monthlyRent),
+          maintenanceFee: parseNumberFromCommas(maintenanceFee),
           rentFreeStart,
           rentFreeEnd,
           leaseEnd,
@@ -108,7 +110,10 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
                 onClick={() => setShowPropertyFields(!showPropertyFields)}
                 style={{ width: '100%', justifyContent: 'space-between', display: 'flex' }}
               >
-                <span>📐 부지 제원 & 임대차/렌트프리 조건 (선택)</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <NeonIcon name="design" size="xs" color="cyan" badge={false} />
+                  <span>부지 제원 & 임대차/렌트프리 조건 (선택)</span>
+                </span>
                 <span>{showPropertyFields ? '▲ 접기' : '▼ 펼치기'}</span>
               </button>
 
@@ -161,24 +166,37 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                     <div className="form-group">
                       <label style={{ fontSize: 11 }}>보증금 (원)</label>
                       <input
-                        type="number"
-                        placeholder="예: 100000000"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="예: 100,000,000"
                         value={deposit}
-                        onChange={(e) => setDeposit(e.target.value)}
+                        onChange={(e) => setDeposit(formatNumberWithCommas(e.target.value))}
                         style={{ fontSize: 12 }}
                       />
                     </div>
                     <div className="form-group">
                       <label style={{ fontSize: 11 }}>월 임대료 (원)</label>
                       <input
-                        type="number"
-                        placeholder="예: 7000000"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="예: 7,000,000"
                         value={monthlyRent}
-                        onChange={(e) => setMonthlyRent(e.target.value)}
+                        onChange={(e) => setMonthlyRent(formatNumberWithCommas(e.target.value))}
+                        style={{ fontSize: 12 }}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontSize: 11 }}>월 관리비 (원)</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="예: 500,000"
+                        value={maintenanceFee}
+                        onChange={(e) => setMaintenanceFee(formatNumberWithCommas(e.target.value))}
                         style={{ fontSize: 12 }}
                       />
                     </div>
@@ -187,19 +205,17 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div className="form-group">
                       <label style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>렌트프리 시작일</label>
-                      <input
-                        type="date"
+                      <DateInput
                         value={rentFreeStart}
-                        onChange={(e) => setRentFreeStart(e.target.value)}
+                        onChange={setRentFreeStart}
                         style={{ fontSize: 12 }}
                       />
                     </div>
                     <div className="form-group">
                       <label style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>렌트프리 종료일 (D-Day)</label>
-                      <input
-                        type="date"
+                      <DateInput
                         value={rentFreeEnd}
-                        onChange={(e) => setRentFreeEnd(e.target.value)}
+                        onChange={setRentFreeEnd}
                         style={{ fontSize: 12 }}
                       />
                     </div>

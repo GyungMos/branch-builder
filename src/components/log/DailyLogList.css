@@ -148,32 +148,103 @@
   display: inline-block;
 }
 
+/* 2열 분할 레이아웃 (좌: 내용/이슈, 우: 사진 갤러리) */
+.daily-log-body-split {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.daily-log-card .has-photos-layout .daily-log-body-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.daily-log-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.daily-log-photos-col {
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
 .daily-log-summary {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  font-weight: 500;
-  line-height: 1.5;
-  margin-bottom: var(--space-sm);
+  font-size: 1.05rem;
+  color: #f8fafc;
+  font-weight: 700;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
 }
 
 .daily-log-meta-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-bottom: var(--space-sm);
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.daily-log-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  transition: all 0.2s ease;
+}
+
+.daily-log-meta-chip strong {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.daily-log-meta-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .daily-log-issue-box {
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  font-size: var(--font-size-xs);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13.5px;
   color: #fca5a5;
-  margin-top: var(--space-xs);
-  margin-bottom: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.5;
+}
+
+.daily-log-issue-box strong {
+  color: #f87171;
+  font-size: 13px;
+}
+
+.daily-log-issue-text {
+  color: #fecaca;
+  font-size: 13.5px;
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .daily-log-card .has-photos-layout .daily-log-body-split {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 
 /* 2차: 오후 추가 작업 & 조치 사항 타임라인 */
@@ -348,35 +419,40 @@
 .daily-log-photos-label {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .daily-log-photos-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+  gap: 12px;
 }
 
 .daily-log-photo-item {
   position: relative;
-  width: 74px;
-  height: 74px;
-  border-radius: var(--radius-sm);
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 110px;
+  border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid var(--color-surface-border);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background: #0f172a;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s, box-shadow 0.25s;
 }
 
 .daily-log-photo-item:hover {
-  transform: translateY(-2px) scale(1.05);
-  border-color: #f472b6;
-  box-shadow: 0 4px 12px rgba(244, 114, 182, 0.3);
+  transform: translateY(-3px) scale(1.03);
+  border-color: #38bdf8;
+  box-shadow: 0 8px 20px rgba(56, 189, 248, 0.35);
 }
 
 .daily-log-photo-thumb {

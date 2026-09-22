@@ -1,12 +1,15 @@
 import { DOCUMENT_CATEGORIES } from '../../utils/constants';
 import { formatDate, formatFileSize } from '../../utils/formatters';
+import NeonIcon from '../common/NeonIcon';
 import './DocumentList.css';
 
 export default function DocumentList({ documents, onDelete }) {
   if (documents.length === 0) {
     return (
       <div className="empty-state">
-        <div className="empty-state-icon">📁</div>
+        <div className="empty-state-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <NeonIcon name="document" size="lg" color="cyan" badge={true} />
+        </div>
         <div className="empty-state-title">서류가 없습니다</div>
         <div className="empty-state-desc">서류를 업로드하면 카테고리별로 관리할 수 있습니다</div>
       </div>
@@ -31,8 +34,8 @@ export default function DocumentList({ documents, onDelete }) {
 
         return (
           <div key={cat.id} className="doc-category-section">
-            <div className="doc-category-header">
-              <span className="doc-category-icon">{cat.icon}</span>
+            <div className="doc-category-header" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <NeonIcon name={cat.iconName || 'document'} size="xs" color={cat.color || 'cyan'} badge={true} />
               <h4>{cat.label}</h4>
               <span className="badge badge-neutral">{docs.length}</span>
             </div>
@@ -44,8 +47,8 @@ export default function DocumentList({ documents, onDelete }) {
                       <img src={doc.fileUrl} alt={doc.name || doc.fileName} loading="lazy" />
                     </div>
                   ) : (
-                    <div className="doc-file-icon">
-                      {doc.fileType?.includes('pdf') ? '📄' : '📎'}
+                    <div className="doc-file-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <NeonIcon name="document" size="xs" color="cyan" badge={false} />
                     </div>
                   )}
                   <div className="doc-info">
@@ -68,8 +71,9 @@ export default function DocumentList({ documents, onDelete }) {
                     className="btn btn-ghost btn-sm doc-delete"
                     onClick={() => { if (window.confirm('이 서류를 삭제하시겠습니까?')) onDelete(doc.id, doc.storagePath); }}
                     aria-label="삭제"
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    🗑️
+                    <NeonIcon name="trash" size="xs" color="danger" badge={false} />
                   </button>
                 </div>
               ))}

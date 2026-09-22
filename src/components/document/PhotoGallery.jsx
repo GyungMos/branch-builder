@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatDate } from '../../utils/formatters';
+import NeonIcon from '../common/NeonIcon';
 import './PhotoGallery.css';
 
 export default function PhotoGallery({ documents }) {
@@ -12,7 +13,9 @@ export default function PhotoGallery({ documents }) {
   if (photos.length === 0) {
     return (
       <div className="empty-state">
-        <div className="empty-state-icon">📷</div>
+        <div className="empty-state-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <NeonIcon name="photo" size="lg" color="rose" badge={true} />
+        </div>
         <div className="empty-state-title">사진이 없습니다</div>
         <div className="empty-state-desc">서류 탭에서 이미지를 업로드하면 여기에 갤러리로 표시됩니다</div>
       </div>
@@ -21,8 +24,11 @@ export default function PhotoGallery({ documents }) {
 
   return (
     <div className="photo-gallery" id="photo-gallery">
-      <div className="gallery-header">
-        <h4>📷 공사 사진</h4>
+      <div className="gallery-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h4 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+          <NeonIcon name="photo" size="xs" color="rose" badge={false} />
+          <span>공사 사진</span>
+        </h4>
         <span className="badge badge-neutral">{photos.length}장</span>
       </div>
 

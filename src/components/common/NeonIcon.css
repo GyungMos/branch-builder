@@ -58,6 +58,16 @@
 }
 
 /* 크기 변형 */
+.neon-icon-xs {
+  width: 20px;
+  height: 20px;
+  padding: 3px;
+}
+.neon-icon-xs svg {
+  width: 14px;
+  height: 14px;
+}
+
 .neon-icon-sm {
   width: 28px;
   height: 28px;
@@ -105,6 +115,7 @@
   border: none;
   box-shadow: none;
 }
+.neon-icon-inline.neon-icon-xs svg { width: 14px; height: 14px; }
 .neon-icon-inline.neon-icon-sm svg { width: 18px; height: 18px; }
 .neon-icon-inline.neon-icon-md svg { width: 22px; height: 22px; }
 .neon-icon-inline.neon-icon-lg svg { width: 28px; height: 28px; }

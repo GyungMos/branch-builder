@@ -133,6 +133,59 @@
   color: var(--color-text-secondary);
 }
 
+/* 지점 빠른 전환 셀렉터 */
+.header-branch-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-surface-border);
+  padding: 3px 8px;
+  border-radius: var(--radius-md);
+}
+
+.header-branch-select {
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  max-width: 130px;
+}
+
+.header-branch-select option {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+/* 데이터 백업 & 복원 도구 */
+.header-backup-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-backup-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.header-backup-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 @media (max-width: 768px) {
   .header-inner {
     padding: 0 var(--space-lg);
@@ -144,5 +197,17 @@
 
   .header-user-name {
     display: none;
+  }
+
+  .header-branch-switcher-label {
+    display: none;
+  }
+
+  .header-backup-btn span {
+    display: none;
+  }
+
+  .header-backup-btn {
+    padding: 4px 6px;
   }
 }

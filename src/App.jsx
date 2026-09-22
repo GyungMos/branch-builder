@@ -75,6 +75,17 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/branch/:branchId/timeline"
+        element={
+          <ProtectedRoute>
+            <>
+              <Header />
+              <BranchDetailPage initialTab="timeline" />
+            </>
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

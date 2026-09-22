@@ -4,16 +4,16 @@ import ModalPortal from '../common/ModalPortal';
 import { uploadDailyLogPhoto } from '../../utils/photoUpload';
 
 const TAG_PRESETS = [
-  { id: 'afternoon', label: '🛠️ 오후 추가 작업', icon: '🛠️' },
-  { id: 'resolved', label: '✅ 문제 조치 / 해결', icon: '✅' },
-  { id: 'night', label: '🌙 야간 / 잔여 공정', icon: '🌙' },
-  { id: 'issue', label: '⚠️ 긴급 추가 이슈', icon: '⚠️' },
+  { id: 'afternoon', label: '오후 추가 작업', iconName: 'wrench', color: 'cyan' },
+  { id: 'resolved', label: '문제 조치 / 해결', iconName: 'check', color: 'emerald' },
+  { id: 'night', label: '야간 / 잔여 공정', iconName: 'moon', color: 'blue' },
+  { id: 'issue', label: '긴급 추가 이슈', iconName: 'alert', color: 'rose' },
 ];
 
 const STATUS_OPTIONS = [
-  { id: 'resolved', label: '✅ 조치 완료 (정상 공정)', color: '#34d399' },
-  { id: 'progress', label: '🔄 진행 / 양생 관찰 중', color: '#38bdf8' },
-  { id: 'pending', label: '⏳ 추가 자재 / 일정 대기', color: '#fbbf24' },
+  { id: 'resolved', label: '조치 완료 (정상 공정)', iconName: 'check', color: '#34d399' },
+  { id: 'progress', label: '진행 / 양생 관찰 중', iconName: 'sync', color: '#38bdf8' },
+  { id: 'pending', label: '추가 자재 / 일정 대기', iconName: 'history', color: '#fbbf24' },
 ];
 
 export default function DailyLogEntryForm({
@@ -28,7 +28,7 @@ export default function DailyLogEntryForm({
   const now = new Date();
   const defaultTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-  const [timeTag, setTimeTag] = useState(initialData?.timeTag || '✅ 문제 조치 / 해결');
+  const [timeTag, setTimeTag] = useState(initialData?.timeTag || '문제 조치 / 해결');
   const [time, setTime] = useState(initialData?.time || defaultTime);
   const [summary, setSummary] = useState(initialData?.summary || '');
   const [workersCount, setWorkersCount] = useState(
@@ -57,7 +57,7 @@ export default function DailyLogEntryForm({
 
     setUploadingPhotos(true);
     setErrorMessage('');
-    setUploadProgressText(`📸 사진 ${files.length}장 최적화 처리 중...`);
+    setUploadProgressText(`사진 ${files.length}장 최적화 처리 중...`);
 
     try {
       const uploadPromises = files.map((file) => uploadDailyLogPhoto(file, branchId));
@@ -128,8 +128,9 @@ export default function DailyLogEntryForm({
                 {isEdit ? '오후 작업 / 조치 사항 수정' : '오후 추가 작업 및 조치 사항 기록'}
               </h2>
               {targetLogDate && (
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                  📅 대상 일지: {targetLogDate}
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <NeonIcon name="calendar" size="xs" color="cyan" badge={false} />
+                  <span>대상 일지: {targetLogDate}</span>
                 </div>
               )}
             </div>
@@ -152,7 +153,8 @@ export default function DailyLogEntryForm({
                 alignItems: 'center',
                 gap: 8,
               }}>
-                <span>⚠️ {errorMessage}</span>
+                <NeonIcon name="alert" size="xs" color="rose" badge={false} />
+                <span>{errorMessage}</span>
               </div>
             )}
 
@@ -165,10 +167,11 @@ export default function DailyLogEntryForm({
                     key={preset.id}
                     type="button"
                     className={`btn btn-sm ${timeTag === preset.label ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ fontSize: 12, padding: '4px 10px' }}
+                    style={{ fontSize: 12, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 5 }}
                     onClick={() => setTimeTag(preset.label)}
                   >
-                    {preset.label}
+                    <NeonIcon name={preset.iconName} size="xs" color={preset.color} badge={false} />
+                    <span>{preset.label}</span>
                   </button>
                 ))}
               </div>
@@ -255,8 +258,9 @@ export default function DailyLogEntryForm({
 
             {/* 추가 특이사항 / 잔여 이슈 */}
             <div className="form-group">
-              <label htmlFor="entry-issues" style={{ color: '#fca5a5' }}>
-                ⚠️ 추가 특이사항 / 후속 메모 (선택)
+              <label htmlFor="entry-issues" style={{ color: '#fca5a5', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <NeonIcon name="alert" size="xs" color="rose" badge={false} />
+                <span>추가 특이사항 / 후속 메모 (선택)</span>
               </label>
               <input
                 id="entry-issues"
@@ -269,7 +273,10 @@ export default function DailyLogEntryForm({
 
             {/* 조치 현장 사진 첨부 */}
             <div className="form-group">
-              <label>📸 조치 현장 사진 첨부</label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <NeonIcon name="photo" size="xs" color="rose" badge={false} />
+                <span>조치 현장 사진 첨부</span>
+              </label>
               <input
                 type="file"
                 accept="image/*"

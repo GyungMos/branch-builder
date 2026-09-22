@@ -1,138 +1,351 @@
-.timeline-container {
+/* ===================================================
+   공정 일정 타임라인 (간트차트) - 주차별(1~4주) 컴팩트 스타일
+   월별 가로 폭(112px, 주차당 28px)을 대폭 슬림화하여 한눈에 조망
+   =================================================== */
+
+.timeline-container.compact-week-timeline {
   position: relative;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md);
 }
 
+/* 상단 컴팩트 안내 바 */
+.compact-timeline-info-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-md);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.compact-timeline-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.compact-timeline-sub {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.compact-timeline-tip {
+  font-size: 11px;
+  font-weight: 600;
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.1);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(167, 139, 250, 0.25);
+}
+
+/* 스크롤 및 차트 컨테이너 */
 .timeline-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: var(--space-md);
 }
 
-.timeline-chart {
+.timeline-chart.compact-chart {
   position: relative;
-  min-height: 200px;
+  min-height: 240px;
 }
 
-.timeline-months {
+/* ===================================================
+   헤더 영역 (좌측 180px 공정명 + 우측 1단 월/2단 주차)
+   =================================================== */
+.timeline-compact-header-wrap {
   display: flex;
-  position: relative;
-  height: 32px;
-  border-bottom: 1px solid var(--color-divider);
-  margin-bottom: var(--space-md);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-bg-primary);
+  border-bottom: 2px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  margin-bottom: var(--space-xs);
 }
 
-.timeline-month {
-  position: absolute;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+.timeline-header-label-col {
+  width: 180px;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  background: var(--color-bg-elevated);
+  border-right: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.12));
+}
+
+.timeline-header-grid-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 1단 월 헤더 행 (각 월 112px = 28px * 4) */
+.timeline-compact-months-row {
+  display: flex;
+  height: 28px;
+  background: #151f30;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.timeline-compact-month-cell {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #38bdf8;
+  border-left: 2px solid rgba(56, 189, 248, 0.4);
+  box-sizing: border-box;
+}
+
+/* 2단 주차 헤더 행 (각 주 28px) */
+.timeline-compact-weeks-row {
+  display: flex;
+  height: 22px;
+  background: #0f172a;
+}
+
+.timeline-month-weeks-group {
+  display: flex;
+  flex-shrink: 0;
+  border-left: 2px solid rgba(56, 189, 248, 0.4);
+  box-sizing: border-box;
+}
+
+.timeline-week-sub-cell {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
   font-weight: 600;
-  padding: var(--space-sm) var(--space-md);
-  border-left: 1px solid var(--color-border-light);
-  white-space: nowrap;
+  color: #94a3b8;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
 }
 
-.timeline-today {
+/* ===================================================
+   오늘 세로선
+   =================================================== */
+.timeline-compact-today-line {
   position: absolute;
   top: 0;
   bottom: 0;
-  z-index: 2;
+  width: 2px;
+  background: #ef4444;
+  z-index: 8;
+  pointer-events: none;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+.timeline-compact-today-badge {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* ===================================================
+   공정 행 (Row) 및 바 (Bar)
+   =================================================== */
+.timeline-bars.compact-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.timeline-row.compact-row {
+  display: flex;
+  align-items: center;
+  height: 50px;
+  position: relative;
+  transition: background 0.15s ease;
+  border-radius: 4px;
+}
+
+.timeline-row.compact-row:hover {
+  background: rgba(30, 41, 59, 0.25);
+}
+
+.timeline-bar-label.compact-label {
+  width: 180px;
+  min-width: 180px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 10px;
+  border-right: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.08));
+}
+
+/* 라이트 모드 / 다크 모드 모두 또렷하게 보이도록 CSS 변수 사용 */
+.timeline-bar-label.compact-label .timeline-bar-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-primary) !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.timeline-bar-label.compact-label .timeline-bar-stage {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-accent, #0284c7);
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* 그리드 영역 및 배경 세로선 */
+.timeline-bar-area.compact-bar-area {
+  position: relative;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+.timeline-grid-background {
+  position: absolute;
+  inset: 0;
+  display: flex;
   pointer-events: none;
 }
 
-.timeline-today-line {
-  position: absolute;
-  top: 32px;
-  bottom: 0;
-  width: 2px;
-  background: var(--color-error);
-  opacity: 0.7;
+.timeline-grid-month-block {
+  display: flex;
+  height: 100%;
+  flex-shrink: 0;
+  border-left: 2px solid rgba(56, 189, 248, 0.25);
+  box-sizing: border-box;
 }
 
-.timeline-today-label {
+.timeline-grid-week-col {
+  height: 100%;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  box-sizing: border-box;
+}
+
+/* 콤팩트 공정 바 */
+.timeline-bar.compact-bar {
   position: absolute;
-  top: 4px;
-  left: -12px;
+  top: 5px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* 막대 가로 중앙 정렬 */
+  padding: 0 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  cursor: default;
+  z-index: 3;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.timeline-bar.compact-bar:hover {
+  transform: translateY(-2px) scaleY(1.1);
+  filter: brightness(1.2);
+  z-index: 6;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.timeline-bar-text.compact-bar-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  text-align: center; /* 텍스트 자체도 가운데 정렬 */
+  width: 100%;
+}
+
+/* ===================================================
+   공정 막대 아래 시작일/종료일 날짜 표기 (2번째 이미지 요청 반영)
+   =================================================== */
+.compact-bar-dates-track {
+  position: absolute;
+  top: 29px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.compact-date-badge {
   font-size: 10px;
   font-weight: 700;
-  color: var(--color-error);
+  font-family: var(--font-family-mono, inherit);
+  color: var(--color-text-secondary);
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-.timeline-bars {
+/* 라이트 모드일 때 날짜 뱃지 대비 강화 */
+[data-theme="light"] .compact-date-badge {
+  background: rgba(241, 245, 249, 0.9);
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #334155;
+}
+
+.compact-date-badge.start-badge {
+  margin-left: 0;
+}
+
+.compact-date-badge.end-badge {
+  margin-right: 0;
+}
+
+.compact-date-badge.center-badge {
+  margin: 0 auto;
+}
+
+/* 우측 액션 버튼 */
+.timeline-bar-actions {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 2px;
+  margin-left: 8px;
+  opacity: 0.25;
+  transition: opacity 0.2s ease;
 }
 
-.timeline-row {
-  display: flex;
-  align-items: center;
-  height: 40px;
-  gap: var(--space-sm);
-}
-
-.timeline-bar-label {
-  width: 160px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  padding-right: var(--space-md);
-}
-
-.timeline-bar-title {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.timeline-bar-stage {
-  font-size: 10px;
-  color: var(--color-text-tertiary);
-}
-
-.timeline-bar-area {
-  position: relative;
-  height: 28px;
-  flex-shrink: 0;
-}
-
-.timeline-bar {
-  position: absolute;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-sm);
-  opacity: 0.85;
-  transition: opacity var(--transition-fast), transform var(--transition-fast);
-  cursor: default;
-}
-
-.timeline-bar:hover {
-  opacity: 1;
-  transform: scaleY(1.15);
-  z-index: 3;
-}
-
-.timeline-bar-text {
-  font-size: 10px;
-  font-weight: 600;
-  color: white;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.timeline-bar-delete {
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.timeline-row:hover .timeline-bar-delete {
+.timeline-row.compact-row:hover .timeline-bar-actions {
   opacity: 1;
 }
 
@@ -141,12 +354,17 @@
   display: none;
   flex-direction: column;
   gap: var(--space-md);
+  margin-top: var(--space-lg);
 }
 
 .timeline-list-item {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
 }
 
 .timeline-list-item-header {
@@ -157,6 +375,7 @@
 
 .timeline-list-item-header h4 {
   font-size: var(--font-size-base);
+  margin: 0;
 }
 
 .timeline-list-item-meta {
@@ -167,6 +386,25 @@
   color: var(--color-text-secondary);
 }
 
+.dday-badge {
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.dday-badge.past {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.dday-badge.soon {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
 @media (max-width: 768px) {
   .timeline-scroll {
     display: none;
@@ -175,4 +413,71 @@
   .timeline-list-mobile {
     display: flex;
   }
+}
+
+/* ===================================================
+   라이트 모드 테마 최적화 (Light Theme Overrides)
+   =================================================== */
+[data-theme="light"] .timeline-container.compact-week-timeline {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+[data-theme="light"] .timeline-compact-header-wrap {
+  background: #ffffff;
+  border-bottom: 2px solid #0284c7;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .timeline-header-label-col {
+  background: #f8fafc;
+  color: #0f172a !important;
+  border-right-color: #cbd5e1;
+}
+
+[data-theme="light"] .timeline-compact-months-row {
+  background: #f1f5f9;
+  border-bottom-color: #cbd5e1;
+}
+
+[data-theme="light"] .timeline-compact-month-cell {
+  color: #0369a1;
+  border-left-color: #38bdf8;
+}
+
+[data-theme="light"] .timeline-compact-weeks-row {
+  background: #ffffff;
+}
+
+[data-theme="light"] .timeline-month-weeks-group {
+  border-left-color: #38bdf8;
+}
+
+[data-theme="light"] .timeline-week-sub-cell {
+  color: #64748b;
+  border-right-color: #f1f5f9;
+}
+
+[data-theme="light"] .timeline-row.compact-row:hover {
+  background: rgba(241, 245, 249, 0.8);
+}
+
+[data-theme="light"] .timeline-bar-label.compact-label {
+  border-right-color: #e2e8f0;
+}
+
+[data-theme="light"] .timeline-bar-label.compact-label .timeline-bar-title {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .timeline-bar-label.compact-label .timeline-bar-stage {
+  color: #0284c7;
+}
+
+[data-theme="light"] .timeline-grid-month-block {
+  border-left-color: rgba(56, 189, 248, 0.35);
+}
+
+[data-theme="light"] .timeline-grid-week-col {
+  border-right-color: rgba(0, 0, 0, 0.04);
 }

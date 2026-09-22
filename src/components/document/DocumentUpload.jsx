@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { DOCUMENT_CATEGORIES } from '../../utils/constants';
 import ModalPortal from '../common/ModalPortal';
+import NeonIcon from '../common/NeonIcon';
 import './DocumentUpload.css';
 
 export default function DocumentUpload({ stages, onUpload, onClose }) {
@@ -15,11 +16,13 @@ export default function DocumentUpload({ stages, onUpload, onClose }) {
   const cameraInputRef = useRef(null);
 
   const handleFileChange = (e) => {
-    const selected = e.target.files?.[0];
+    const selected = e.target.files[0];
     if (selected) {
       setFile(selected);
       if (!name) {
-        setName(selected.name.replace(/\.[^/.]+$/, ''));
+        // 확장자 제거한 파일명을 기본 이름으로
+        const nameWithoutExt = selected.name.replace(/\.[^/.]+$/, '');
+        setName(nameWithoutExt);
       }
     }
   };
@@ -30,14 +33,17 @@ export default function DocumentUpload({ stages, onUpload, onClose }) {
 
     setUploading(true);
     try {
-      await onUpload(file, {
+      await onUpload({
+        file,
         name: name.trim() || file.name,
         category,
         stageId: stageId || null,
         memo: memo.trim(),
       }, (p) => setProgress(p));
-    } catch (err) {
-      console.error(err);
+      onClose();
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('업로드에 실패했습니다: ' + error.message);
     } finally {
       setUploading(false);
     }
@@ -48,7 +54,10 @@ export default function DocumentUpload({ stages, onUpload, onClose }) {
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal" id="document-upload-modal">
         <div className="modal-header">
-          <h2 className="modal-title">📁 서류 업로드</h2>
+          <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <NeonIcon name="document" size="sm" color="cyan" badge={true} />
+            <span>서류 업로드</span>
+          </h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
@@ -62,7 +71,9 @@ export default function DocumentUpload({ stages, onUpload, onClose }) {
                     className="upload-btn"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <span className="upload-btn-icon">📎</span>
+                    <span className="upload-btn-icon">
+                      <NeonIcon name="document" size="xs" color="cyan" badge={false} />
+                    </span>
                     <span>파일 선택</span>
                   </button>
                   <button
@@ -70,7 +81,9 @@ export default function DocumentUpload({ stages, onUpload, onClose }) {
                     className="upload-btn"
                     onClick={() => cameraInputRef.current?.click()}
                   >
-                    <span className="upload-btn-icon">📷</span>
+                    <span className="upload-btn-icon">
+                      <NeonIcon name="photo" size="xs" color="rose" badge={false} />
+                    </span>
                     <span>사진 촬영</span>
                   </button>
                 </div>
@@ -94,8 +107,12 @@ export default function DocumentUpload({ stages, onUpload, onClose }) {
             ) : (
               <div className="upload-preview">
                 <div className="upload-file-info">
-                  <span className="upload-file-icon">
-                    {file.type?.startsWith('image/') ? '🖼️' : '📄'}
+                  <span className="upload-file-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {file.type?.startsWith('image/') ? (
+                      <NeonIcon name="photo" size="xs" color="rose" badge={false} />
+                    ) : (
+                      <NeonIcon name="document" size="xs" color="cyan" badge={false} />
+                    )}
                   </span>
                   <div>
                     <div className="upload-file-name">{file.name}</div>

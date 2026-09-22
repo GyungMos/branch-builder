@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useStages, useSchedules, useCosts, useDocuments, useBranches } from '../hooks/useFirestore';
@@ -19,6 +19,7 @@ import BranchForm from '../components/branch/BranchForm';
 import StageManager from '../components/branch/StageManager';
 import PropertySpecs from '../components/branch/PropertySpecs';
 import Timeline from '../components/schedule/Timeline';
+import { DEFAULT_ARCHITECT_SCHEDULE } from '../components/schedule/MasterScheduleTable';
 import QuickScheduleForm from '../components/schedule/QuickScheduleForm';
 import CostList from '../components/cost/CostList';
 import QuickCostForm from '../components/cost/QuickCostForm';
@@ -31,18 +32,33 @@ import PartnerList from '../components/partner/PartnerList';
 import ComplianceManager from '../components/compliance/ComplianceManager';
 import EquipmentList from '../components/equipment/EquipmentList';
 import DailyLogList from '../components/log/DailyLogList';
+import DailyLogForm from '../components/log/DailyLogForm';
+import BranchTimelineFeed from '../components/branch/BranchTimelineFeed';
 import MobileNav from '../components/layout/MobileNav';
 import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
 import { formatCurrency } from '../utils/formatters';
 import './BranchDetailPage.css';
 
-export default function BranchDetailPage() {
+export default function BranchDetailPage({ initialTab }) {
   const { branchId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  // URL 경로 또는 파라미터 기반 초기 탭 결정
+  const getInitialTab = () => {
+    if (initialTab) return initialTab;
+    if (location.pathname.endsWith('/timeline')) return 'timeline';
+    const queryTab = searchParams.get('tab');
+    if (queryTab) return queryTab;
+    return 'overview';
+  };
+
   const [branch, setBranch] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [showCostForm, setShowCostForm] = useState(false);
+  const [showDailyLogForm, setShowDailyLogForm] = useState(false);
   const [showDocUpload, setShowDocUpload] = useState(false);
   const [showBranchEdit, setShowBranchEdit] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
@@ -111,6 +127,16 @@ export default function BranchDetailPage() {
   const completedStages = stages.filter(s => s.status === 'complete').length;
   const progress = stages.length > 0 ? Math.round((completedStages / stages.length) * 100) : 0;
 
+  // 종료 예정일이 지났는데 완료되지 않은 지연 공정 일정 계산
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  const delayedSchedules = schedules.filter(s => {
+    if (s.status === 'completed') return false;
+    if (!s.endDate) return false;
+    const end = s.endDate?.toDate ? s.endDate.toDate() : new Date(s.endDate);
+    return end < todayDate;
+  });
+
   // --- 핸들러들 ---
   const handleStatusChange = async (newStatus) => {
     await updateBranch(branchId, { status: newStatus });
@@ -161,6 +187,30 @@ export default function BranchDetailPage() {
     const sc = schedules.find(s => s.id === scheduleId);
     await deleteSchedule(scheduleId);
     addLog('schedule_delete', `일정 삭제: ${sc?.title || ''}`);
+  };
+
+  // 설계사 표준 신축공정 19종 일괄 등록 핸들러
+  const handleAddArchitectPreset = async () => {
+    if (window.confirm('설계사무소 표준 19개 신축공정 일정(건축허가 4단계, 착공접수 6단계, 본공사/준공 9단계)을 일괄 등록하시겠습니까?')) {
+      try {
+        for (const item of DEFAULT_ARCHITECT_SCHEDULE) {
+          await addSchedule({
+            title: item.title,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            category: item.category,
+            milestoneText: item.milestoneText,
+            color: item.color,
+            memo: item.note,
+          });
+        }
+        addLog('schedule_add', '설계사 표준 신축공정 19종 일괄 등록 완료');
+        alert('설계사 표준 공정이 성공적으로 등록되었습니다.');
+      } catch (err) {
+        console.error('프리셋 등록 실패:', err);
+        alert('일괄 등록 중 오류가 발생했습니다: ' + err.message);
+      }
+    }
   };
 
   // 비용
@@ -256,10 +306,11 @@ export default function BranchDetailPage() {
     addLog('budget_update', `목표 예산 변경: ${newBudget.totalBudget}원`);
   };
 
-  // 7대 탭 정의 (3D 네온 아이콘 적용)
+  // 8대 탭 정의 (3D 네온 아이콘 및 세그먼트 디자인)
   const tabs = [
-    { id: 'overview', label: '개요/부동산', iconName: 'building', iconColor: 'cyan' },
-    { id: 'schedule', label: '일정/현장일지', iconName: 'calendar', iconColor: 'blue' },
+    { id: 'timeline', label: '건축 타임라인', iconName: 'timeline', iconColor: 'cyan' },
+    { id: 'overview', label: '개요/부동산', iconName: 'building', iconColor: 'emerald' },
+    { id: 'schedule', label: '공정 일정/간트', iconName: 'calendar', iconColor: 'blue' },
     { id: 'cost', label: '비용/예산', iconName: 'money', iconColor: 'amber' },
     { id: 'equipment', label: '장비/시설인허가', iconName: 'equipment', iconColor: 'violet' },
     { id: 'partner', label: '협력업체', iconName: 'partner', iconColor: 'coral' },
@@ -267,22 +318,71 @@ export default function BranchDetailPage() {
     { id: 'log', label: '활동이력', iconName: 'history', iconColor: 'rose' },
   ];
 
+  // 원형 프로그레스 계산 (반경 22, 둘레 138.2)
+  const circleCircumference = 138.2;
+  const strokeOffset = circleCircumference - (circleCircumference * Math.min(progress, 100)) / 100;
+
   return (
     <div className="page branch-detail" id="branch-detail-page">
       <LocalDataSyncBanner />
+
+      {/* 지연 일정 스마트 알림 배너 */}
+      {delayedSchedules.length > 0 && (
+        <div className="branch-delay-alert animate-fade-in">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <NeonIcon name="alert" color="rose" size="sm" />
+            <div>
+              <span style={{ fontWeight: 700, color: '#f87171' }}>공정 지연 주의: </span>
+              기한이 경과한 미완료 일정이 <strong>{delayedSchedules.length}건</strong> 있습니다.
+              <span className="text-secondary text-xs" style={{ marginLeft: 6 }}>
+                ({delayedSchedules.map(s => s.title).slice(0, 2).join(', ')}{delayedSchedules.length > 2 ? ' 외' : ''})
+              </span>
+            </div>
+          </div>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setActiveTab('schedule')}
+            style={{ color: '#f87171', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+          >
+            <span>일정 확인</span>
+            <NeonIcon name="arrow-right" color="rose" size="sm" badge={false} />
+          </button>
+        </div>
+      )}
+
       {/* 지점 헤더 */}
       <div className="branch-detail-header animate-fade-in-up">
         <div className="branch-detail-header-top">
           <div>
             <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <NeonIcon name="building" color="emerald" size="md" />
-              {branch.name}
+              <span>{branch.name}</span>
             </h1>
-            {branch.address && <p className="text-secondary text-sm" style={{ marginTop: 4 }}>📍 {branch.address}</p>}
+            {branch.address && (
+              <p className="text-secondary text-sm" style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <NeonIcon name="pin" size="xs" color="rose" badge={false} />
+                <span>{branch.address}</span>
+              </p>
+            )}
           </div>
           <div className="branch-header-actions">
-            <button className="btn btn-secondary btn-sm" onClick={() => setShowBranchEdit(true)} id="edit-branch-btn">
-              ✏️ 지점/제원 수정
+            <button
+              className={`btn ${activeTab === 'timeline' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+              onClick={() => setActiveTab('timeline')}
+              id="header-timeline-btn"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <NeonIcon name="timeline" color="cyan" size="sm" badge={false} />
+              <span>타임라인 피드</span>
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowBranchEdit(true)}
+              id="edit-branch-btn"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <NeonIcon name="edit" color="emerald" size="sm" badge={false} />
+              <span>지점/제원 수정</span>
             </button>
             <select className="branch-status-select" value={branch.status} onChange={(e) => handleStatusChange(e.target.value)} id="branch-status-select">
               {Object.entries(BRANCH_STATUS).map(([key, val]) => (
@@ -292,54 +392,66 @@ export default function BranchDetailPage() {
           </div>
         </div>
 
-        {/* 3D 네온 KPI 요약 카드 */}
+        {/* 관제 센터 스타일 3D 네온 KPI 요약 카드 */}
         <div className="branch-summary-cards">
-          <div className="summary-card">
-            <NeonIcon name="dashboard" color="cyan" size="sm" badge={false} />
-            <div>
-              <div className="summary-value">{progress}%</div>
-              <div className="summary-label">공정 진행률</div>
+          {/* 공정 진행률 - 원형 네온 도넛 게이지 */}
+          <div className="summary-card radial-kpi-card">
+            <div className="radial-kpi-ring">
+              <svg viewBox="0 0 56 56" className="radial-svg">
+                <circle cx="28" cy="28" r="22" className="radial-bg-circle" />
+                <circle
+                  cx="28"
+                  cy="28"
+                  r="22"
+                  className="radial-progress-circle"
+                  style={{
+                    strokeDasharray: circleCircumference,
+                    strokeDashoffset: strokeOffset,
+                  }}
+                />
+              </svg>
+              <span className="radial-value-text tabular-nums">{progress}%</span>
             </div>
-            <div className="progress-bar" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, borderRadius: 0 }}>
-              <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
-            </div>
-          </div>
-
-          <div className="summary-card">
-            <NeonIcon name="money" color="amber" size="sm" badge={false} />
-            <div>
-              <div className="summary-value">{formatCurrency(totalCost)}</div>
-              <div className="summary-label">총 집행 비용</div>
-            </div>
-          </div>
-
-          <div className="summary-card">
-            <NeonIcon name="equipment" color="violet" size="sm" badge={false} />
-            <div>
-              <div className="summary-value">{equipments.length} <span style={{ fontSize: 13, fontWeight: 400 }}>대</span></div>
-              <div className="summary-label">정비 장비 (설치 {installedCount})</div>
+            <div className="summary-info">
+              <div className="summary-value tabular-nums">{completedStages} / {stages.length} <span style={{ fontSize: 13, fontWeight: 400 }}>단계</span></div>
+              <div className="summary-label">공정 진행 현황</div>
             </div>
           </div>
 
           <div className="summary-card">
-            <NeonIcon name="partner" color="coral" size="sm" badge={false} />
-            <div>
-              <div className="summary-value">{partners.length} <span style={{ fontSize: 13, fontWeight: 400 }}>개사</span></div>
+            <NeonIcon name="money" color="amber" size="md" />
+            <div className="summary-info">
+              <div className="summary-value tabular-nums">{formatCurrency(totalCost)}</div>
+              <div className="summary-label">총 집행 공사비</div>
+            </div>
+          </div>
+
+          <div className="summary-card">
+            <NeonIcon name="equipment" color="violet" size="md" />
+            <div className="summary-info">
+              <div className="summary-value tabular-nums">{equipments.length} <span style={{ fontSize: 13, fontWeight: 400 }}>대</span></div>
+              <div className="summary-label">정비 장비 (설치 {installedCount}대)</div>
+            </div>
+          </div>
+
+          <div className="summary-card">
+            <NeonIcon name="partner" color="coral" size="md" />
+            <div className="summary-info">
+              <div className="summary-value tabular-nums">{partners.length} <span style={{ fontSize: 13, fontWeight: 400 }}>개사</span></div>
               <div className="summary-label">협력업체 연락망</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* PC 탭 바 */}
-      <div className="tabs branch-tabs" id="branch-tabs" style={{ display: 'flex', overflowX: 'auto', gap: 4 }}>
+      {/* PC 세그먼트 필(Pill) 탭 바 */}
+      <div className="segmented-tab-track branch-tabs" id="branch-tabs">
         {tabs.map(tab => (
           <button
             key={tab.id}
-            className={`tab ${activeTab === tab.id ? 'active' : ''}`}
+            className={`segmented-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
             onClick={() => setActiveTab(tab.id)}
             id={`tab-${tab.id}`}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <NeonIcon name={tab.iconName} color={tab.iconColor} size="sm" badge={false} />
             <span>{tab.label}</span>
@@ -349,6 +461,25 @@ export default function BranchDetailPage() {
 
       {/* 탭 내용 영역 */}
       <div className="branch-tab-content animate-fade-in" key={activeTab}>
+        {/* 0. 점포별 건축 통합 타임라인 피드 */}
+        {activeTab === 'timeline' && (
+          <div className="tab-timeline">
+            <BranchTimelineFeed
+              branch={branch}
+              stages={stages}
+              schedules={schedules}
+              dailyLogs={dailyLogs}
+              costs={costs}
+              documents={documents}
+              equipments={equipments}
+              logs={logs}
+              onOpenScheduleForm={() => { setEditingSchedule(null); setShowScheduleForm(true); }}
+              onOpenCostForm={() => { setEditingCost(null); setShowCostForm(true); }}
+              onOpenDailyLogForm={() => setShowDailyLogForm(true)}
+            />
+          </div>
+        )}
+
         {/* 1. 개요 & 부동산 제원 */}
         {activeTab === 'overview' && (
           <div className="tab-overview">
@@ -356,7 +487,10 @@ export default function BranchDetailPage() {
 
             <div className="overview-section">
               <div className="overview-section-header">
-                <h3>📋 7단계 오픈 프로세스 & 체크리스트</h3>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <NeonIcon name="document" size="xs" color="cyan" badge={false} />
+                  <span>7단계 오픈 프로세스 & 체크리스트</span>
+                </h3>
               </div>
               <StageManager
                 stages={stages}
@@ -368,7 +502,10 @@ export default function BranchDetailPage() {
 
             {branch.description && (
               <div className="card-static" style={{ marginTop: 'var(--space-xl)' }}>
-                <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, marginBottom: 6 }}>📝 지점 메모</h4>
+                <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <NeonIcon name="log" size="xs" color="amber" badge={false} />
+                  <span>지점 메모</span>
+                </h4>
                 <p className="text-secondary" style={{ fontSize: 'var(--font-size-xs)' }}>{branch.description}</p>
               </div>
             )}
@@ -388,7 +525,13 @@ export default function BranchDetailPage() {
                   + 일정 추가
                 </button>
               </div>
-              <Timeline schedules={schedules} stages={stages} onEdit={handleEditSchedule} onDelete={handleDeleteSchedule} />
+              <Timeline
+                schedules={schedules}
+                stages={stages}
+                onEdit={handleEditSchedule}
+                onDelete={handleDeleteSchedule}
+                onAddPreset={handleAddArchitectPreset}
+              />
             </div>
 
             {/* 현장 일일 작업일지 통합 */}
@@ -507,6 +650,18 @@ export default function BranchDetailPage() {
         )}
       </div>
 
+      {/* 우측 하단 플로팅 퀵 버튼 (현장 일일 일지 즉시 작성) */}
+      <button
+        type="button"
+        className="fab-daily-log"
+        onClick={() => setShowDailyLogForm(true)}
+        title="현장 일일 일지 즉시 작성 (어디서나 1초 오픈)"
+        id="fab-quick-daily-log"
+      >
+        <NeonIcon name="log" size="sm" color="cyan" badge={false} />
+        <span className="fab-text">+ 일지 작성</span>
+      </button>
+
       {/* 모바일 하단 네비게이션 */}
       <MobileNav activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -542,6 +697,17 @@ export default function BranchDetailPage() {
           stages={stages}
           onUpload={handleUploadDocument}
           onClose={() => setShowDocUpload(false)}
+        />
+      )}
+
+      {showDailyLogForm && (
+        <DailyLogForm
+          branchId={branchId}
+          onSubmit={async (data) => {
+            await handleAddDailyLog(data);
+            setShowDailyLogForm(false);
+          }}
+          onClose={() => setShowDailyLogForm(false)}
         />
       )}
     </div>
