@@ -121,7 +121,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
                 <div style={{ background: 'var(--color-bg-secondary)', padding: 12, borderRadius: 8, marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div className="form-group">
-                      <label style={{ fontSize: 11 }}>대지 면적 (㎡)</label>
+                      <label style={{ fontSize: 12 }}>대지 면적 (㎡)</label>
                       <input
                         type="number"
                         placeholder="예: 450"
@@ -131,7 +131,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
                       />
                     </div>
                     <div className="form-group">
-                      <label style={{ fontSize: 11 }}>건물 층고 (m, 리프트 높이)</label>
+                      <label style={{ fontSize: 12 }}>건물 층고 (m, 리프트 높이)</label>
                       <input
                         type="number"
                         step="0.1"
@@ -145,7 +145,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div className="form-group">
-                      <label style={{ fontSize: 11 }}>용도지역</label>
+                      <label style={{ fontSize: 12 }}>용도지역</label>
                       <input
                         type="text"
                         placeholder="예: 제2종근린생활시설"
@@ -155,7 +155,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
                       />
                     </div>
                     <div className="form-group">
-                      <label style={{ fontSize: 11 }}>주차 가능 대수</label>
+                      <label style={{ fontSize: 12 }}>주차 가능 대수</label>
                       <input
                         type="number"
                         placeholder="예: 8"
@@ -168,7 +168,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                     <div className="form-group">
-                      <label style={{ fontSize: 11 }}>보증금 (원)</label>
+                      <label style={{ fontSize: 12 }}>보증금 (원)</label>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -179,7 +179,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
                       />
                     </div>
                     <div className="form-group">
-                      <label style={{ fontSize: 11 }}>월 임대료 (원)</label>
+                      <label style={{ fontSize: 12 }}>월 임대료 (원)</label>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -190,7 +190,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
                       />
                     </div>
                     <div className="form-group">
-                      <label style={{ fontSize: 11 }}>월 관리비 (원)</label>
+                      <label style={{ fontSize: 12 }}>월 관리비 (원)</label>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -204,7 +204,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div className="form-group">
-                      <label style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>렌트프리 시작일</label>
+                      <label style={{ fontSize: 12, color: '#f59e0b', fontWeight: 700 }}>렌트프리 시작일</label>
                       <DateInput
                         value={rentFreeStart}
                         onChange={setRentFreeStart}
@@ -212,7 +212,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
                       />
                     </div>
                     <div className="form-group">
-                      <label style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>렌트프리 종료일 (D-Day)</label>
+                      <label style={{ fontSize: 12, color: '#f59e0b', fontWeight: 700 }}>렌트프리 종료일 (D-Day)</label>
                       <DateInput
                         value={rentFreeEnd}
                         onChange={setRentFreeEnd}
@@ -222,7 +222,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
                   </div>
 
                   <div className="form-group">
-                    <label style={{ fontSize: 11 }}>임대차 특약사항 (원상복구/간판 등)</label>
+                    <label style={{ fontSize: 12 }}>임대차 특약사항 (원상복구/간판 등)</label>
                     <input
                       type="text"
                       placeholder="예: 간판 설치 지자체 신고 완료, 바닥 에폭시 원상복구 제외"

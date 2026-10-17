@@ -128,7 +128,7 @@ export default function DailyLogEntryForm({
                 {isEdit ? '오후 작업 / 조치 사항 수정' : '오후 추가 작업 및 조치 사항 기록'}
               </h2>
               {targetLogDate && (
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <NeonIcon name="calendar" size="xs" color="cyan" badge={false} />
                   <span>대상 일지: {targetLogDate}</span>
                 </div>
@@ -320,7 +320,7 @@ export default function DailyLogEntryForm({
                         style={{
                           position: 'absolute', top: -5, right: -5, background: '#ef4444',
                           color: 'white', borderRadius: '50%', width: 20, height: 20,
-                          border: 'none', fontSize: 11, cursor: 'pointer', lineHeight: '20px',
+                          border: 'none', fontSize: 12, cursor: 'pointer', lineHeight: '20px',
                           boxShadow: '0 2px 6px rgba(0,0,0,0.5)'
                         }}
                         title="사진 삭제"

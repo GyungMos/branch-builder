@@ -30,6 +30,19 @@ function getWeekIndex(dateObj, minYear, minMonth) {
   return Math.max(0, totalMonths * 4 + weekInMonth);
 }
 
+/**
+ * 일정 카드 배지: 지난 일정은 경과일(D+) 대신 '종료'로, 진행 기간이면 '진행중'으로 표시
+ */
+function getScheduleBadge(item) {
+  if (item.status === 'completed' || item.status === 'complete') return { label: '완료', tone: 'done' };
+  const startDday = getDDay(item.startDate);
+  const endDday = getDDay(item.endDate || item.startDate);
+  if (!startDday || !endDday) return null;
+  if (endDday.isPast) return { label: '종료', tone: 'done' };
+  if (startDday.isPast || startDday.days === 0) return { label: '진행중', tone: 'ongoing' };
+  return { label: startDday.label, tone: startDday.days <= 7 ? 'soon' : 'upcoming' };
+}
+
 export default function Timeline({ schedules = [], stages = [], onEdit, onDelete }) {
   const timelineData = useMemo(() => {
     if (schedules.length === 0) return null;
@@ -291,13 +304,13 @@ export default function Timeline({ schedules = [], stages = [], onEdit, onDelete
       {/* 모바일 리스트 뷰 */}
       <div className="timeline-list-mobile">
         {items.map(item => {
-          const dday = getDDay(item.startDate);
+          const badge = getScheduleBadge(item);
           return (
             <div key={item.id} className="timeline-list-item card-static">
               <div className="timeline-list-item-header">
                 <div>
                   <h4>{item.title}</h4>
-                  {dday && <span className={`dday-badge ${dday.isPast ? 'past' : dday.days <= 7 ? 'soon' : ''}`}>{dday.label}</span>}
+                  {badge && <span className={`schedule-state-badge ${badge.tone}`}>{badge.label}</span>}
                 </div>
                 <div className="timeline-list-item-actions">
                   <button className="btn btn-ghost btn-sm" onClick={() => onEdit(item)} title="수정">

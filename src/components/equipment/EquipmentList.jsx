@@ -54,11 +54,11 @@ export default function EquipmentList({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>총 설비 투자액</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>총 설비 투자액</div>
             <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 800, color: '#c084fc' }}>
               {formatCurrency(totalEquipmentCost)}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
               설치 완료 {installedCount} / 총 {equipments.length}대
             </div>
           </div>
@@ -121,7 +121,7 @@ export default function EquipmentList({
               </div>
 
               {equip.memo && (
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', background: 'rgba(255,255,255,0.02)', padding: 8, borderRadius: 6, lineHeight: 1.4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', background: 'rgba(255,255,255,0.02)', padding: 8, borderRadius: 6, lineHeight: 1.4, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <NeonIcon name="document" size="xs" color="amber" badge={false} />
                   <span>{equip.memo}</span>
                 </div>

@@ -27,7 +27,7 @@ export default function PropertySpecs({ property, onEdit }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-md)' }}>
         {/* 1. 건축/부지 제원 */}
         <div style={{ background: 'var(--color-bg-secondary)', padding: 'var(--space-md)', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
             <NeonIcon name="design" size="xs" color="emerald" badge={false} />
             <span>건축 및 시설 제원</span>
           </div>
@@ -53,7 +53,7 @@ export default function PropertySpecs({ property, onEdit }) {
 
         {/* 2. 임대차 조건 */}
         <div style={{ background: 'var(--color-bg-secondary)', padding: 'var(--space-md)', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
             <NeonIcon name="money" size="xs" color="amber" badge={false} />
             <span>임대차 계약 조건</span>
           </div>
@@ -79,7 +79,7 @@ export default function PropertySpecs({ property, onEdit }) {
 
         {/* 3. 렌트프리 (무상 공사 기간) */}
         <div style={{ background: 'var(--color-bg-secondary)', padding: 'var(--space-md)', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6 }}>
             ⏳ 렌트프리 (무상 공사 기간)
           </div>
           {p.rentFreeEnd ? (
@@ -91,7 +91,7 @@ export default function PropertySpecs({ property, onEdit }) {
                 <span className={`badge ${isRentFreeOver ? 'badge-error' : 'badge-warning'}`}>
                   {rentFreeDDay ? rentFreeDDay.text : ''}
                 </span>
-                <span style={{ fontSize: 11, color: isRentFreeOver ? 'var(--color-error)' : '#10b981' }}>
+                <span style={{ fontSize: 12, color: isRentFreeOver ? 'var(--color-error)' : '#10b981' }}>
                   {isRentFreeOver ? '렌트프리 종료 (월세 발생중)' : '무상 기간 내 오픈 필수'}
                 </span>
               </div>
@@ -103,7 +103,7 @@ export default function PropertySpecs({ property, onEdit }) {
           )}
 
           {p.termsMemo && (
-            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--color-text-secondary)', borderTop: '1px dashed var(--color-surface-border)', paddingTop: 4 }}>
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-secondary)', borderTop: '1px dashed var(--color-surface-border)', paddingTop: 4 }}>
               특약: {p.termsMemo}
             </div>
           )}

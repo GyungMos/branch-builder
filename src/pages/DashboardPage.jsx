@@ -330,7 +330,7 @@ export default function DashboardPage() {
                   const dday = sch.endDate
                     ? getDDay(sch.endDate.toDate ? sch.endDate.toDate() : sch.endDate)
                     : (sch.startDate ? getDDay(sch.startDate.toDate ? sch.startDate.toDate() : sch.startDate) : null);
-                  const isUrgent = dday && (dday.text === 'D-Day' || (dday.days >= 0 && dday.days <= 3));
+                  const isUrgent = dday && !dday.isPast && dday.days <= 3;
 
                   return (
                     <div
@@ -358,7 +358,7 @@ export default function DashboardPage() {
 
                       {dday && (
                         <span className={`badge ${isUrgent ? 'badge-danger' : 'badge-info'}`}>
-                          {dday.text}
+                          {dday.label}
                         </span>
                       )}
                     </div>

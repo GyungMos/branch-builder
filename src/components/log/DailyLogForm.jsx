@@ -224,7 +224,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                     background: 'none',
                     border: 'none',
                     color: 'var(--color-text-secondary)',
-                    fontSize: 11,
+                    fontSize: 12,
                     cursor: 'pointer',
                     textDecoration: 'underline'
                   }}
@@ -383,7 +383,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                         style={{
                           position: 'absolute', top: -5, right: -5, background: '#ef4444',
                           color: 'white', borderRadius: '50%', width: 20, height: 20,
-                          border: 'none', fontSize: 11, cursor: 'pointer', lineHeight: '20px',
+                          border: 'none', fontSize: 12, cursor: 'pointer', lineHeight: '20px',
                           boxShadow: '0 2px 6px rgba(0,0,0,0.5)'
                         }}
                       >

@@ -189,7 +189,7 @@ export default function PartnerList({ partners, onAdd, onUpdate, onDelete }) {
                     <button
                       className="btn-ghost btn-sm"
                       onClick={() => handleCopyAccount(partner)}
-                      style={{ fontSize: 10, padding: '2px 6px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      style={{ fontSize: 12, padding: '2px 6px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                     >
                       {copiedId === partner.id ? (
                         <>

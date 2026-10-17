@@ -113,7 +113,7 @@ export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
                   {(() => {
                     const selectedCat = COST_CATEGORIES.find(c => c.id === category) || COST_CATEGORIES[0];
                     return (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
                         <NeonIcon name={selectedCat.iconName || 'budget'} color={selectedCat.color || 'emerald'} size="xs" badge={true} />
                         <strong style={{ color: 'var(--color-text-primary)' }}>{selectedCat.label}</strong>
                       </span>

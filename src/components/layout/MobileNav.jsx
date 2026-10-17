@@ -33,7 +33,7 @@ export default function MobileNav({ activeTab, onTabChange }) {
             <span className="mobile-nav-icon">
               <NeonIcon name={tab.iconName} color={tab.color} size="sm" badge={false} />
             </span>
-            <span className="mobile-nav-label" style={{ fontSize: 10 }}>{tab.label}</span>
+            <span className="mobile-nav-label" style={{ fontSize: 12 }}>{tab.label}</span>
           </button>
         ))}
       </nav>

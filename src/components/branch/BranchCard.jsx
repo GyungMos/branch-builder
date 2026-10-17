@@ -75,7 +75,7 @@ export default function BranchCard({ branch, onClick, onDelete }) {
             className="btn btn-secondary btn-sm branch-card-timeline-btn"
             onClick={handleTimelineClick}
             title="타임라인 피드로 직행"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', fontSize: 11 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', fontSize: 12 }}
           >
             <NeonIcon name="timeline" color="cyan" size="sm" badge={false} />
             <span>타임라인</span>

@@ -85,7 +85,7 @@ export default function ComplianceManager({
           <div className="compliance-progress-bar-bg">
             <div className="compliance-progress-bar-fill" style={{ width: `${progressPercent}%` }} />
           </div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4, textAlign: 'right' }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4, textAlign: 'right' }}>
             적합 {fitCount} / 총 {complianceItems.length} 항목
           </div>
         </div>
@@ -230,7 +230,7 @@ export default function ComplianceManager({
 
             {/* 현장 메모 및 구청 피드백 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 11, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>실사 메모:</span>
+              <span style={{ fontSize: 12, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>실사 메모:</span>
               <input
                 type="text"
                 className="compliance-memo-input"

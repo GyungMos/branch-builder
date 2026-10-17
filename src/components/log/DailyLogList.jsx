@@ -320,7 +320,7 @@ export default function DailyLogList({
                             <NeonIcon name="photo" size="xs" color="rose" badge={false} />
                             오전 현장 사진 ({log.photos.length}장)
                           </span>
-                          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>* 클릭 시 큰 화면 뷰어</span>
+                          <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>* 클릭 시 큰 화면 뷰어</span>
                         </div>
                         <div className="daily-log-photos-grid">
                           {log.photos.map((photo, i) => (
@@ -443,7 +443,7 @@ export default function DailyLogList({
                                     <NeonIcon name="photo" size="xs" color="rose" badge={false} />
                                     조치 현장 사진 ({entry.photos.length}장)
                                   </span>
-                                  <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>* 클릭 시 큰 화면 뷰어</span>
+                                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>* 클릭 시 큰 화면 뷰어</span>
                                 </div>
                                 <div className="daily-log-photos-grid">
                                   {entry.photos.map((photo, pIdx) => (

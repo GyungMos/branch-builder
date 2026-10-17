@@ -6,8 +6,8 @@
 :root {
   /* Typography */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.8125rem;
+  --font-size-xs: 0.8125rem;
+  --font-size-sm: 0.875rem;
   --font-size-base: 0.9375rem;
   --font-size-md: 1rem;
   --font-size-lg: 1.125rem;
@@ -23,6 +23,19 @@
   --space-xl: 1.5rem;
   --space-2xl: 2rem;
   --space-3xl: 3rem;
+
+  /* 일부 화면에서 쓰던 다른 이름의 토큰 (정의가 없어 색·간격이 빠지던 문제 보완) */
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --text-sm: var(--font-size-sm);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-tertiary);
+  --color-primary: var(--color-accent);
+  --font-family-mono: ui-monospace, 'SFMono-Regular', Consolas, monospace;
 
   /* Radius */
   --radius-sm: 0.375rem;
@@ -72,7 +85,7 @@
 
   --color-text-primary: #f8fafc;
   --color-text-secondary: #94a3b8;
-  --color-text-tertiary: #64748b;
+  --color-text-tertiary: #8391a7;
   --color-text-inverse: #0f172a;
 
   --color-border: rgba(51, 65, 85, 0.6);
@@ -144,7 +157,7 @@
 
   --color-text-primary: #0f172a;
   --color-text-secondary: #475569;
-  --color-text-tertiary: #94a3b8;
+  --color-text-tertiary: #64748b;
   --color-text-inverse: #f8fafc;
 
   --color-border: rgba(203, 213, 225, 0.8);
@@ -697,6 +710,11 @@ label {
 @media (max-width: 768px) {
   :root {
     --header-height: 56px;
+  }
+
+  /* 확대 허용 후 iOS 입력창 자동 확대 방지 */
+  input, textarea, select {
+    font-size: 16px;
   }
 
   .page {

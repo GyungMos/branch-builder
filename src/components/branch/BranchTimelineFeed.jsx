@@ -535,7 +535,7 @@ export default function BranchTimelineFeed({
         {/* 월별 빠른 점프 칩 (월이 2개 이상일 때) */}
         {monthChips.length > 1 && (
           <div className="timeline-month-chips">
-            <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginRight: 4 }}>월별 바로가기:</span>
+            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginRight: 4 }}>월별 바로가기:</span>
             {monthChips.map(m => (
               <button
                 key={m.key}
@@ -762,10 +762,10 @@ function TimelineCard({ item, onPhotoClick }) {
                 <div className="timeline-sub-entry-header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span className="timeline-sub-entry-tag">{entry.timeTag || '오후 조치'}</span>
-                    {entry.workType && <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>[{entry.workType}]</span>}
+                    {entry.workType && <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>[{entry.workType}]</span>}
                   </div>
                   {entry.status && (
-                    <span style={{ fontSize: 11, color: entry.status === 'resolved' ? '#22c55e' : '#f59e0b' }}>
+                    <span style={{ fontSize: 12, color: entry.status === 'resolved' ? '#22c55e' : '#f59e0b' }}>
                       {entry.status === 'resolved' ? '조치 완료' : '진행중'}
                     </span>
                   )}
