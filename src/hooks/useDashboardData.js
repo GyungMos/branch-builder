@@ -26,6 +26,7 @@ export function useDashboardData() {
     stageDistribution: {},
     recentActivities: [],
     scheduledPayments: [],
+    allSchedules: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -218,6 +219,7 @@ export function useDashboardData() {
       const scheduledPayments = allScheduledPayments.sort((a, b) => toTime(a.date) - toTime(b.date));
 
       setDashboardData({
+        allSchedules,
         scheduledPayments,
         branchesSummary,
         upcomingSchedules,

@@ -429,7 +429,8 @@ export default function NeonIcon({
     >
       <svg className="neon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <linearGradient id={iconId} x1="0%" y1="0%" x2="100%" y2="100%">
+          {/* 선 색 그라데이션은 아이콘 전체(24x24) 기준 → 수직·수평 직선도 사라지지 않음 */}
+          <linearGradient id={iconId} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="24" y2="24">
             <stop offset="0%" stopColor="var(--neon-color-1, #34d399)" />
             <stop offset="100%" stopColor="var(--neon-color-2, #059669)" />
           </linearGradient>

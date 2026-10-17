@@ -74,3 +74,59 @@
     display: none;
   }
 }
+
+/* 지점 상세 '더보기' 목록 */
+.mobile-more-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-sticky) - 1);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.mobile-more-sheet {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: calc(var(--mobile-nav-height) + 8px);
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+}
+
+.mobile-more-sheet button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  text-align: left;
+}
+
+.mobile-more-sheet button.active {
+  background: var(--color-bg-hover);
+}
+
+.mobile-nav-more-icon {
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+/* '더보기' 목록이 떠 있을 때는 일지 작성 버튼보다 위에 */
+.mobile-more-backdrop {
+  z-index: calc(var(--z-floating, 500) + 1);
+}
+
+.mobile-more-sheet {
+  z-index: calc(var(--z-floating, 500) + 2);
+}

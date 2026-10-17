@@ -4,8 +4,11 @@ const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('bb-theme');
-    return saved || 'dark';
+    // 직접 고른 적이 없으면 기기 설정(밝은/어두운 화면)을 따름
+    let saved = null;
+    try { saved = localStorage.getItem('bb-theme'); } catch { /* 저장소 사용 불가 */ }
+    if (saved === 'light' || saved === 'dark') return saved;
+    return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   });
 
   useEffect(() => {

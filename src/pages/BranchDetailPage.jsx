@@ -18,6 +18,7 @@ import NeonIcon from '../components/common/NeonIcon';
 import BranchForm from '../components/branch/BranchForm';
 import StageBook from '../components/branch/StageBook';
 import CopyBranchModal from '../components/branch/CopyBranchModal';
+import BranchTabBar from '../components/branch/BranchTabBar';
 import Timeline from '../components/schedule/Timeline';
 import ArchitectPresetModal from '../components/schedule/ArchitectPresetModal';
 import QuickScheduleForm from '../components/schedule/QuickScheduleForm';
@@ -341,18 +342,6 @@ export default function BranchDetailPage({ initialTab }) {
     addLog('budget_update', `목표 예산 변경: ${newBudget.totalBudget}원`);
   };
 
-  // 8대 탭 정의 (3D 네온 아이콘 및 세그먼트 디자인)
-  const tabs = [
-    { id: 'stages', label: '단계별 기록', iconName: 'building', iconColor: 'emerald' },
-    { id: 'timeline', label: '날짜순 타임라인', iconName: 'timeline', iconColor: 'cyan' },
-    { id: 'schedule', label: '공정 일정/간트', iconName: 'calendar', iconColor: 'blue' },
-    { id: 'cost', label: '비용/예산', iconName: 'money', iconColor: 'amber' },
-    { id: 'equipment', label: '장비/시설인허가', iconName: 'equipment', iconColor: 'violet' },
-    { id: 'partner', label: '협력업체', iconName: 'partner', iconColor: 'coral' },
-    { id: 'documents', label: '서류/사진', iconName: 'document', iconColor: 'emerald' },
-    { id: 'log', label: '활동이력', iconName: 'history', iconColor: 'rose' },
-  ];
-
   // 원형 프로그레스 계산 (반경 22, 둘레 138.2)
   const circleCircumference = 138.2;
   const strokeOffset = circleCircumference - (circleCircumference * Math.min(progress, 100)) / 100;
@@ -492,19 +481,7 @@ export default function BranchDetailPage({ initialTab }) {
       </div>
 
       {/* PC 세그먼트 필(Pill) 탭 바 */}
-      <div className="segmented-tab-track branch-tabs" id="branch-tabs">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            className={`segmented-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-            id={`tab-${tab.id}`}
-          >
-            <NeonIcon name={tab.iconName} color={tab.iconColor} size="sm" badge={false} />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
+      <BranchTabBar activeTab={activeTab} onChange={setActiveTab} />
 
       {/* 탭 내용 영역 */}
       <div className="branch-tab-content animate-fade-in" key={activeTab}>

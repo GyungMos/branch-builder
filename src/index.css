@@ -1033,3 +1033,84 @@ body.modal-open .fab {
     text-decoration: none;
   }
 }
+
+/* ===================================================
+   차분한 디자인 (장식 줄이기)
+   - 아이콘의 3D 캡슐·네온 글로우 제거 → 납작한 아이콘
+   - 그라데이션 글자 → 단색 글자, 반짝이는 그림자 제거
+   (이 파일이 다른 화면 CSS보다 나중에 불러와져서 덮어씀)
+   =================================================== */
+:root,
+[data-theme="dark"],
+[data-theme="light"] {
+  --shadow-glow: 0 0 0 transparent;
+}
+
+.neon-icon-wrapper svg,
+[data-theme="light"] .neon-icon-wrapper svg {
+  filter: none !important;
+}
+
+.neon-icon-badge,
+[data-theme="light"] .neon-icon-badge {
+  background: var(--color-bg-tertiary) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.neon-icon-badge:hover,
+[data-theme="light"] .neon-icon-badge:hover {
+  transform: none;
+}
+
+.page-title,
+.header-logo-text,
+.dashboard-title-group h1 {
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+.page-title,
+.dashboard-title-group h1 {
+  color: var(--color-text-primary);
+}
+
+.header-logo-text {
+  color: var(--color-accent);
+}
+
+.header-nav-btn.active,
+[data-theme="light"] .header-nav-btn.active {
+  background: var(--color-accent) !important;
+  box-shadow: none !important;
+}
+
+.fab-daily-log {
+  background: var(--color-accent) !important;
+  border-color: transparent !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.fab-daily-log:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+
+/* 화면 전환 애니메이션은 짧게 (내용이 늦게 뜨는 느낌 줄이기) */
+.animate-fade-in,
+.animate-fade-in-up,
+.stagger-children > * {
+  animation-duration: 0.2s !important;
+  animation-delay: 0s !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
