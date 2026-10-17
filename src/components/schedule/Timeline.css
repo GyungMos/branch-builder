@@ -341,7 +341,7 @@
   align-items: center;
   gap: 2px;
   margin-left: 8px;
-  opacity: 0.25;
+  opacity: 0.7;
   transition: opacity 0.2s ease;
 }
 
@@ -490,4 +490,38 @@
 
 [data-theme="light"] .timeline-grid-week-col {
   border-right-color: rgba(0, 0, 0, 0.04);
+}
+
+/* 일정 완료 표시 버튼 */
+.schedule-done-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.schedule-done-btn:hover {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.schedule-done-btn.active {
+  background: var(--color-success-bg);
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.timeline-bar.compact-bar.is-done {
+  opacity: 0.45;
 }

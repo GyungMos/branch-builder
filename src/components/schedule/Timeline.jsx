@@ -33,8 +33,12 @@ function getWeekIndex(dateObj, minYear, minMonth) {
 /**
  * 일정 카드 배지: 지난 일정은 경과일(D+) 대신 '종료'로, 진행 기간이면 '진행중'으로 표시
  */
+export function isScheduleDone(item) {
+  return item.status === 'completed' || item.status === 'complete';
+}
+
 function getScheduleBadge(item) {
-  if (item.status === 'completed' || item.status === 'complete') return { label: '완료', tone: 'done' };
+  if (isScheduleDone(item)) return { label: '완료', tone: 'done' };
   const startDday = getDDay(item.startDate);
   const endDday = getDDay(item.endDate || item.startDate);
   if (!startDday || !endDday) return null;
@@ -43,7 +47,7 @@ function getScheduleBadge(item) {
   return { label: startDday.label, tone: startDday.days <= 7 ? 'soon' : 'upcoming' };
 }
 
-export default function Timeline({ schedules = [], stages = [], onEdit, onDelete }) {
+export default function Timeline({ schedules = [], stages = [], onEdit, onDelete, onToggleComplete }) {
   const timelineData = useMemo(() => {
     if (schedules.length === 0) return null;
 
@@ -236,7 +240,7 @@ export default function Timeline({ schedules = [], stages = [], onEdit, onDelete
 
                     {/* 공정 막대 (Bar) */}
                     <div
-                      className="timeline-bar compact-bar"
+                      className={`timeline-bar compact-bar ${isScheduleDone(item) ? 'is-done' : ''}`}
                       style={{
                         left: `${leftPx + 2}px`,
                         width: `${widthPx}px`,
@@ -245,7 +249,7 @@ export default function Timeline({ schedules = [], stages = [], onEdit, onDelete
                       title={`${item.title}\n기간: ${formatDate(item.startDate)} ~ ${formatDate(item.endDate)}\n단계: ${item.stageName || '-'}`}
                     >
                       <span className="timeline-bar-text compact-bar-text">
-                        {item.title}
+                        {isScheduleDone(item) && '✓ '}{item.title}
                       </span>
                     </div>
 
@@ -276,6 +280,16 @@ export default function Timeline({ schedules = [], stages = [], onEdit, onDelete
 
                   {/* 우측 액션 버튼 */}
                   <div className="timeline-bar-actions">
+                    {onToggleComplete && (
+                      <button
+                        type="button"
+                        className={`schedule-done-btn ${isScheduleDone(item) ? 'active' : ''}`}
+                        onClick={() => onToggleComplete(item)}
+                        title={isScheduleDone(item) ? '완료 취소' : '완료로 표시'}
+                      >
+                        ✓
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
@@ -313,6 +327,15 @@ export default function Timeline({ schedules = [], stages = [], onEdit, onDelete
                   {badge && <span className={`schedule-state-badge ${badge.tone}`}>{badge.label}</span>}
                 </div>
                 <div className="timeline-list-item-actions">
+                  {onToggleComplete && (
+                    <button
+                      type="button"
+                      className={`schedule-done-btn labeled ${isScheduleDone(item) ? 'active' : ''}`}
+                      onClick={() => onToggleComplete(item)}
+                    >
+                      {isScheduleDone(item) ? '✓ 완료됨' : '완료'}
+                    </button>
+                  )}
                   <button className="btn btn-ghost btn-sm" onClick={() => onEdit(item)} title="수정">
                     <NeonIcon name="edit" size="xs" badge={false} />
                   </button>

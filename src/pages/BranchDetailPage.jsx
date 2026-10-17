@@ -16,8 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
 import NeonIcon from '../components/common/NeonIcon';
 
 import BranchForm from '../components/branch/BranchForm';
-import StageManager from '../components/branch/StageManager';
-import PropertySpecs from '../components/branch/PropertySpecs';
+import StageBook from '../components/branch/StageBook';
 import Timeline from '../components/schedule/Timeline';
 import { DEFAULT_ARCHITECT_SCHEDULE } from '../components/schedule/MasterScheduleTable';
 import QuickScheduleForm from '../components/schedule/QuickScheduleForm';
@@ -50,8 +49,9 @@ export default function BranchDetailPage({ initialTab }) {
     if (initialTab) return initialTab;
     if (location.pathname.endsWith('/timeline')) return 'timeline';
     const queryTab = searchParams.get('tab');
+    if (queryTab === 'overview') return 'stages'; // 예전 주소 호환
     if (queryTab) return queryTab;
-    return 'overview';
+    return 'stages';
   };
 
   const [branch, setBranch] = useState(null);
@@ -63,6 +63,7 @@ export default function BranchDetailPage({ initialTab }) {
   const [showBranchEdit, setShowBranchEdit] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [editingCost, setEditingCost] = useState(null);
+  const [formStageId, setFormStageId] = useState(''); // 단계별 기록에서 + 버튼으로 열 때 미리 고를 단계
   const [loading, setLoading] = useState(true);
 
   const { demoMode } = useAuth();
@@ -131,7 +132,7 @@ export default function BranchDetailPage({ initialTab }) {
   const todayDate = new Date();
   todayDate.setHours(0, 0, 0, 0);
   const delayedSchedules = schedules.filter(s => {
-    if (s.status === 'completed') return false;
+    if (s.status === 'completed' || s.status === 'complete') return false;
     if (!s.endDate) return false;
     const end = s.endDate?.toDate ? s.endDate.toDate() : new Date(s.endDate);
     return end < todayDate;
@@ -182,6 +183,12 @@ export default function BranchDetailPage({ initialTab }) {
     }
     setShowScheduleForm(false);
     setEditingSchedule(null);
+    setFormStageId('');
+  };
+  const handleToggleScheduleComplete = async (schedule) => {
+    const done = schedule.status === 'completed' || schedule.status === 'complete';
+    await updateSchedule(schedule.id, { status: done ? 'pending' : 'completed' });
+    addLog('schedule_update', `일정 ${done ? '완료 취소' : '완료'}: ${schedule.title}`);
   };
   const handleDeleteSchedule = async (scheduleId) => {
     const sc = schedules.find(s => s.id === scheduleId);
@@ -225,6 +232,7 @@ export default function BranchDetailPage({ initialTab }) {
     }
     setShowCostForm(false);
     setEditingCost(null);
+    setFormStageId('');
   };
   const handleDeleteCost = async (costId) => {
     const c = costs.find(x => x.id === costId);
@@ -237,6 +245,7 @@ export default function BranchDetailPage({ initialTab }) {
     await uploadDocument(file, metadata, onProgress);
     addLog('doc_upload', `서류 업로드: ${file.name}`);
     setShowDocUpload(false);
+    setFormStageId('');
   };
   const handleDeleteDocument = async (docId, storagePath) => {
     const d = documents.find(x => x.id === docId);
@@ -308,8 +317,8 @@ export default function BranchDetailPage({ initialTab }) {
 
   // 8대 탭 정의 (3D 네온 아이콘 및 세그먼트 디자인)
   const tabs = [
-    { id: 'timeline', label: '건축 타임라인', iconName: 'timeline', iconColor: 'cyan' },
-    { id: 'overview', label: '개요/부동산', iconName: 'building', iconColor: 'emerald' },
+    { id: 'stages', label: '단계별 기록', iconName: 'building', iconColor: 'emerald' },
+    { id: 'timeline', label: '날짜순 타임라인', iconName: 'timeline', iconColor: 'cyan' },
     { id: 'schedule', label: '공정 일정/간트', iconName: 'calendar', iconColor: 'blue' },
     { id: 'cost', label: '비용/예산', iconName: 'money', iconColor: 'amber' },
     { id: 'equipment', label: '장비/시설인허가', iconName: 'equipment', iconColor: 'violet' },
@@ -366,15 +375,6 @@ export default function BranchDetailPage({ initialTab }) {
             )}
           </div>
           <div className="branch-header-actions">
-            <button
-              className={`btn ${activeTab === 'timeline' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-              onClick={() => setActiveTab('timeline')}
-              id="header-timeline-btn"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-            >
-              <NeonIcon name="timeline" color="cyan" size="sm" badge={false} />
-              <span>타임라인 피드</span>
-            </button>
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => setShowBranchEdit(true)}
@@ -480,36 +480,27 @@ export default function BranchDetailPage({ initialTab }) {
           </div>
         )}
 
-        {/* 1. 개요 & 부동산 제원 */}
-        {activeTab === 'overview' && (
-          <div className="tab-overview">
-            <PropertySpecs property={branch.property} onEdit={() => setShowBranchEdit(true)} />
-
-            <div className="overview-section">
-              <div className="overview-section-header">
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <NeonIcon name="document" size="xs" color="cyan" badge={false} />
-                  <span>7단계 오픈 프로세스 & 체크리스트</span>
-                </h3>
-              </div>
-              <StageManager
-                stages={stages}
-                onAdd={handleAddStage}
-                onUpdate={handleUpdateStage}
-                onDelete={handleDeleteStage}
-              />
-            </div>
-
-            {branch.description && (
-              <div className="card-static" style={{ marginTop: 'var(--space-xl)' }}>
-                <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <NeonIcon name="log" size="xs" color="amber" badge={false} />
-                  <span>지점 메모</span>
-                </h4>
-                <p className="text-secondary" style={{ fontSize: 'var(--font-size-xs)' }}>{branch.description}</p>
-              </div>
-            )}
-          </div>
+        {/* 1. 단계별 기록 (임대차계약 → … → 오픈) */}
+        {activeTab === 'stages' && (
+          <StageBook
+            branch={branch}
+            stages={stages}
+            schedules={schedules}
+            costs={costs}
+            documents={documents}
+            dailyLogs={dailyLogs}
+            equipments={equipments}
+            onAddStage={handleAddStage}
+            onUpdateStage={handleUpdateStage}
+            onDeleteStage={handleDeleteStage}
+            onToggleScheduleComplete={handleToggleScheduleComplete}
+            onEditSchedule={handleEditSchedule}
+            onEditCost={handleEditCost}
+            onAddSchedule={(stageId) => { setEditingSchedule(null); setFormStageId(stageId); setShowScheduleForm(true); }}
+            onAddCost={(stageId) => { setEditingCost(null); setFormStageId(stageId); setShowCostForm(true); }}
+            onAddDocument={(stageId) => { setFormStageId(stageId); setShowDocUpload(true); }}
+            onEditBranch={() => setShowBranchEdit(true)}
+          />
         )}
 
         {/* 2. 일정 타임라인 & 현장 일일 작업일지 */}
@@ -530,6 +521,7 @@ export default function BranchDetailPage({ initialTab }) {
                 stages={stages}
                 onEdit={handleEditSchedule}
                 onDelete={handleDeleteSchedule}
+                onToggleComplete={handleToggleScheduleComplete}
                 onAddPreset={handleAddArchitectPreset}
               />
             </div>
@@ -678,8 +670,9 @@ export default function BranchDetailPage({ initialTab }) {
         <QuickScheduleForm
           schedule={editingSchedule}
           stages={stages}
+          defaultStageId={formStageId}
           onSubmit={handleScheduleSubmit}
-          onClose={() => { setShowScheduleForm(false); setEditingSchedule(null); }}
+          onClose={() => { setShowScheduleForm(false); setEditingSchedule(null); setFormStageId(''); }}
         />
       )}
 
@@ -687,16 +680,18 @@ export default function BranchDetailPage({ initialTab }) {
         <QuickCostForm
           cost={editingCost}
           stages={stages}
+          defaultStageId={formStageId}
           onSubmit={handleCostSubmit}
-          onClose={() => { setShowCostForm(false); setEditingCost(null); }}
+          onClose={() => { setShowCostForm(false); setEditingCost(null); setFormStageId(''); }}
         />
       )}
 
       {showDocUpload && (
         <DocumentUpload
           stages={stages}
+          defaultStageId={formStageId}
           onUpload={handleUploadDocument}
-          onClose={() => setShowDocUpload(false)}
+          onClose={() => { setShowDocUpload(false); setFormStageId(''); }}
         />
       )}
 

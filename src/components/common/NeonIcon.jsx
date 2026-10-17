@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import './NeonIcon.css';
 
 /**
@@ -16,7 +17,9 @@ export default function NeonIcon({
   className = '',
   style = {},
 }) {
-  const iconId = `neon-grad-${name}-${color}`;
+  // 아이콘마다 고유 id (같은 id를 공유하면 숨겨진 아이콘의 그라데이션을 참조해 빈 칸으로 보임)
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const iconId = `neon-grad-${name}-${color}-${uid}`;
 
   const renderPath = () => {
     switch (name) {

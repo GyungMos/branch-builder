@@ -171,42 +171,6 @@
   border: 1px solid var(--color-border-light);
 }
 
-/* D-Day 배지 */
-.dday-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  background: var(--color-accent-subtle);
-  color: var(--color-accent);
-  margin-left: var(--space-sm);
-}
-
-.dday-badge.soon {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
-}
-
-.dday-badge.past {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-}
-
-/* 타임라인 액션 */
-.timeline-bar-actions {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.timeline-row:hover .timeline-bar-actions {
-  opacity: 1;
-}
-
 .timeline-list-item-actions {
   display: flex;
   gap: 2px;
@@ -226,10 +190,6 @@
 
 @media (max-width: 768px) {
   .cost-item-actions {
-    opacity: 1;
-  }
-
-  .timeline-bar-actions {
     opacity: 1;
   }
 

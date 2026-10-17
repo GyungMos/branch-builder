@@ -3,7 +3,7 @@ import ModalPortal from '../common/ModalPortal';
 import NeonIcon from '../common/NeonIcon';
 import DateInput from '../common/DateInput';
 
-export default function QuickScheduleForm({ schedule, stages, onSubmit, onClose }) {
+export default function QuickScheduleForm({ schedule, stages, defaultStageId = '', onSubmit, onClose }) {
   const isEdit = Boolean(schedule);
   const [title, setTitle] = useState(schedule?.title || '');
   const [startDate, setStartDate] = useState(
@@ -16,7 +16,7 @@ export default function QuickScheduleForm({ schedule, stages, onSubmit, onClose 
       ? (typeof schedule.endDate === 'string' ? schedule.endDate : new Date(schedule.endDate).toISOString().split('T')[0])
       : ''
   );
-  const [stageId, setStageId] = useState(schedule?.stageId || '');
+  const [stageId, setStageId] = useState(schedule?.stageId || defaultStageId);
   const [assignee, setAssignee] = useState(schedule?.assignee || '');
   const [memo, setMemo] = useState(schedule?.memo || '');
   const [loading, setLoading] = useState(false);
