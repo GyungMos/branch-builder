@@ -5,7 +5,7 @@ import ModalPortal from '../common/ModalPortal';
 import NeonIcon from '../common/NeonIcon';
 import DateInput from '../common/DateInput';
 
-export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
+export default function QuickCostForm({ cost, stages, defaultStageId = '', onSubmit, onClose }) {
   const isEdit = Boolean(cost);
   const [title, setTitle] = useState(cost?.title || '');
   const [amount, setAmount] = useState(cost?.amount ? formatNumberWithCommas(cost.amount) : '');
@@ -15,7 +15,7 @@ export default function QuickCostForm({ cost, stages, onSubmit, onClose }) {
       ? (typeof cost.date === 'string' ? cost.date : new Date(cost.date).toISOString().split('T')[0])
       : new Date().toISOString().split('T')[0]
   );
-  const [stageId, setStageId] = useState(cost?.stageId || '');
+  const [stageId, setStageId] = useState(cost?.stageId || defaultStageId);
   const [memo, setMemo] = useState(cost?.memo || '');
   const [assignee, setAssignee] = useState(cost?.assignee || '');
   // 상대방 계좌 정보

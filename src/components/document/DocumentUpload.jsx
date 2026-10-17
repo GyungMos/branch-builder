@@ -4,11 +4,11 @@ import ModalPortal from '../common/ModalPortal';
 import NeonIcon from '../common/NeonIcon';
 import './DocumentUpload.css';
 
-export default function DocumentUpload({ stages, onUpload, onClose }) {
+export default function DocumentUpload({ stages, defaultStageId = '', onUpload, onClose }) {
   const [file, setFile] = useState(null);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('etc');
-  const [stageId, setStageId] = useState('');
+  const [stageId, setStageId] = useState(defaultStageId);
   const [memo, setMemo] = useState('');
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);

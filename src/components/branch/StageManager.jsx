@@ -32,7 +32,11 @@ export default function StageManager({ stages, onAdd, onUpdate, onDelete }) {
 
   const handleLoadTemplate = async () => {
     for (const stage of DEFAULT_STAGES) {
-      await onAdd({ name: stage.name, order: stage.order, checklist: [] });
+      await onAdd({
+        name: stage.name,
+        order: stage.order,
+        checklist: (stage.checklist || []).map((text, i) => ({ id: `${Date.now()}-${stage.order}-${i}`, text, done: false })),
+      });
     }
     setShowTemplates(false);
   };
@@ -180,7 +184,7 @@ export default function StageManager({ stages, onAdd, onUpdate, onDelete }) {
               <button className="modal-close" onClick={() => setShowTemplates(false)}>✕</button>
             </div>
             <div className="modal-body">
-              <p className="text-secondary text-sm">아래 7개 단계가 자동으로 추가됩니다:</p>
+              <p className="text-secondary text-sm">아래 {DEFAULT_STAGES.length}개 단계가 기본 체크리스트와 함께 추가됩니다:</p>
               <div className="template-list">
                 {DEFAULT_STAGES.map((s, i) => (
                   <div key={i} className="template-item">

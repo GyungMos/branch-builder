@@ -137,7 +137,8 @@ export function useStages(branchId) {
         status: 'waiting',
         createdAt: new Date().toISOString(),
       };
-      const updated = [...stages, newStage].sort((a, b) => a.order - b.order);
+      // 연속 추가(템플릿 일괄 등록) 시 이전 추가분이 사라지지 않도록 저장소의 최신 목록 기준으로 추가
+      const updated = [...getLocalData(`stages_${branchId}`), newStage].sort((a, b) => a.order - b.order);
       setLocalData(`stages_${branchId}`, updated);
       setStages(updated);
       return { id: newStage.id };
@@ -208,7 +209,7 @@ export function useSchedules(branchId) {
         createdBy: 'demo-user',
         createdAt: new Date().toISOString(),
       };
-      const updated = [...schedules, newSchedule].sort((a, b) =>
+      const updated = [...getLocalData(`schedules_${branchId}`), newSchedule].sort((a, b) =>
         new Date(a.startDate) - new Date(b.startDate)
       );
       setLocalData(`schedules_${branchId}`, updated);

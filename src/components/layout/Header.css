@@ -243,6 +243,11 @@
     min-width: 0;
   }
 
+  /* 지점 상세에서는 로고 글자 대신 지점 선택창에 자리를 내줌 */
+  .header-left:has(.header-branch-switcher) .header-logo-text {
+    display: none;
+  }
+
   .header-branch-switcher-label {
     display: none;
   }

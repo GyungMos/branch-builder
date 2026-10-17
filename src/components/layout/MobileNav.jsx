@@ -10,8 +10,8 @@ export default function MobileNav({ activeTab, onTabChange }) {
   // 지점 상세 페이지일 때의 탭
   if (isDetailPage && onTabChange) {
     const detailTabs = [
-      { id: 'timeline', label: '타임라인', iconName: 'timeline', color: 'cyan' },
-      { id: 'overview', label: '개요/제원', iconName: 'building', color: 'emerald' },
+      { id: 'stages', label: '단계별', iconName: 'building', color: 'emerald' },
+      { id: 'timeline', label: '날짜순', iconName: 'timeline', color: 'cyan' },
       { id: 'schedule', label: '일정/일지', iconName: 'calendar', color: 'blue' },
       { id: 'cost', label: '비용/예산', iconName: 'money', color: 'amber' },
       { id: 'equipment', label: '장비/시설', iconName: 'equipment', color: 'violet' },
