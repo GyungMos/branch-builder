@@ -7,6 +7,7 @@ import { BRANCH_STATUS, COST_CATEGORIES } from '../utils/constants';
 import BranchForm from '../components/branch/BranchForm';
 import NeonIcon from '../components/common/NeonIcon';
 import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
+import { dueLabel, daysUntilDue } from '../utils/costs';
 import './DashboardPage.css';
 
 export default function DashboardPage() {
@@ -19,6 +20,7 @@ export default function DashboardPage() {
     totalCost,
     avgCost,
     recentActivities,
+    scheduledPayments = [],
     refetch,
   } = useDashboardData();
 
@@ -371,6 +373,48 @@ export default function DashboardPage() {
             ) : (
               <div className="dashboard-empty" style={{ padding: 'var(--space-4)' }}>
                 예정된 일정이 없습니다.
+              </div>
+            )}
+          </div>
+
+          {/* 지급 예정 (계약금·중도금·잔금 등) */}
+          <div className="dashboard-section">
+            <div className="section-header">
+              <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <NeonIcon name="bank" color="amber" size="xs" badge={true} />
+                <span>지급 예정</span>
+              </div>
+              <span className="section-badge">
+                {scheduledPayments.length}건 · {formatCurrency(scheduledPayments.reduce((s, c) => s + (Number(c.amount) || 0), 0))}
+              </span>
+            </div>
+            {scheduledPayments.length > 0 ? (
+              <div className="schedule-summary-list">
+                {scheduledPayments.slice(0, 8).map(c => (
+                  <div
+                    key={`${c.branchId}-${c.id}`}
+                    className="schedule-summary-item"
+                    onClick={() => navigate(`/branch/${c.branchId}?tab=cost`)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="schedule-item-main">
+                      <span className="branch-tag">{c.branchName}</span>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div className="schedule-item-title">{c.title}</div>
+                        <div className="schedule-item-date">
+                          {formatDate(c.date?.toDate ? c.date.toDate() : c.date)} · {formatCurrency(Number(c.amount) || 0)}
+                        </div>
+                      </div>
+                    </div>
+                    <span className={`badge ${(daysUntilDue(c) ?? 1) < 0 ? 'badge-danger' : (daysUntilDue(c) ?? 99) <= 7 ? 'badge-warning' : 'badge-info'}`}>
+                      {dueLabel(c).replace('지급 예정 ', '')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="dashboard-empty" style={{ padding: 'var(--space-4)' }}>
+                지급 예정인 비용이 없어요. 비용을 넣을 때 '지급 예정'을 고르면 여기에 모여요.
               </div>
             )}
           </div>

@@ -7,6 +7,8 @@ import StageManager from './StageManager';
 import { isScheduleDone } from '../schedule/Timeline';
 import ModalPortal from '../common/ModalPortal';
 import { planStageStandardization } from '../../utils/stageStandard';
+import { requiredDocStatus } from '../../utils/requiredDocs';
+import { isScheduledCost, sumPaid, sumScheduled, dueLabel } from '../../utils/costs';
 import './StageBook.css';
 
 const UNLINKED = '__unlinked__';
@@ -79,7 +81,8 @@ export default function StageBook({
       g.schedules.sort((a, b) => (a.start || 0) - (b.start || 0));
       g.costs.sort((a, b) => (a.when || 0) - (b.when || 0));
       g.documents.sort((a, b) => (a.when || 0) - (b.when || 0));
-      g.costTotal = g.costs.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+      g.costTotal = sumPaid(g.costs);
+      g.scheduledTotal = sumScheduled(g.costs);
       const starts = g.schedules.map(s => s.start).filter(Boolean);
       const ends = g.schedules.map(s => s.end).filter(Boolean);
       g.periodStart = starts.length ? new Date(Math.min(...starts)) : null;
@@ -158,6 +161,13 @@ export default function StageBook({
         .sort((a, b) => (a.when || 0) - (b.when || 0));
 
   const checklist = stage?.checklist || [];
+  const docStatus = isUnlinked ? [] : requiredDocStatus(stage, group.documents);
+  const docsOk = docStatus.filter(d => d.done || d.notNeeded).length;
+  const toggleNotNeeded = (name) => {
+    const current = new Set(stage.docsNotNeeded || []);
+    if (current.has(name)) current.delete(name); else current.add(name);
+    onUpdateStage(stage.id, { docsNotNeeded: [...current] });
+  };
   const toggleCheck = (itemId) => {
     onUpdateStage(stage.id, {
       checklist: checklist.map(i => (i.id === itemId ? { ...i, done: !i.done } : i)),
@@ -286,6 +296,7 @@ export default function StageBook({
           <div>
             <dt>쓴 비용</dt>
             <dd>{formatCurrency(group.costTotal || 0)}</dd>
+            {group.scheduledTotal > 0 && <span className="stage-fact-sub">지급 예정 {formatCurrency(group.scheduledTotal)}</span>}
           </div>
           <div>
             <dt>일정</dt>
@@ -297,6 +308,12 @@ export default function StageBook({
             <div>
               <dt>체크리스트</dt>
               <dd>{checklist.filter(i => i.done).length} / {checklist.length}</dd>
+            </div>
+          )}
+          {docStatus.length > 0 && (
+            <div>
+              <dt>필수 서류</dt>
+              <dd className={docsOk < docStatus.length ? 'stage-fact-warn' : ''}>{docsOk} / {docStatus.length}</dd>
             </div>
           )}
         </dl>
@@ -329,6 +346,40 @@ export default function StageBook({
                 ))}
               </ul>
             )}
+          </StageSection>
+        )}
+
+        {/* 필수 서류 */}
+        {docStatus.length > 0 && (
+          <StageSection title="필수 서류" count={docStatus.length} extra={docsOk < docStatus.length ? `${docStatus.length - docsOk}개 빠짐` : '모두 갖춤'}>
+            <ul className="stage-required-docs">
+              {docStatus.map(d => (
+                <li key={d.name} className={d.done ? 'done' : d.notNeeded ? 'skip' : 'missing'}>
+                  <span className="req-mark">{d.done ? '✓' : d.notNeeded ? '—' : '!'}</span>
+                  <div className="req-main">
+                    <span className="req-name">{d.name}</span>
+                    {d.done && (
+                      <span className="req-files">
+                        {d.docs.map(f => (
+                          <a key={f.id} href={f.fileUrl} target="_blank" rel="noreferrer">{f.name || f.fileName}</a>
+                        ))}
+                      </span>
+                    )}
+                    {!d.done && d.notNeeded && <span className="req-files">이 지점은 해당 없음</span>}
+                  </div>
+                  {!d.done && (
+                    <div className="req-actions">
+                      {!d.notNeeded && (
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => onAddDocument(stage.id, d.name)}>올리기</button>
+                      )}
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => toggleNotNeeded(d.name)}>
+                        {d.notNeeded ? '되돌리기' : '해당 없음'}
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
           </StageSection>
         )}
 
@@ -383,6 +434,7 @@ export default function StageBook({
                   <button type="button" className="stage-record-main" onClick={() => onEditCost(c)}>
                     <span className="stage-record-title">{c.title}</span>
                     <span className="stage-record-sub">
+                      {isScheduledCost(c) && <span className="cost-due-badge">{dueLabel(c)}</span>}{' '}
                       {c.when ? formatDateShort(c.when) : '날짜 없음'}
                       {c.vendor ? ` · ${c.vendor}` : ''}
                     </span>

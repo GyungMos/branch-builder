@@ -36,7 +36,8 @@ import DailyLogForm from '../components/log/DailyLogForm';
 import BranchTimelineFeed from '../components/branch/BranchTimelineFeed';
 import MobileNav from '../components/layout/MobileNav';
 import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, toDateInputValue } from '../utils/formatters';
+import { isScheduledCost, daysUntilDue } from '../utils/costs';
 import './BranchDetailPage.css';
 
 export default function BranchDetailPage({ initialTab }) {
@@ -65,6 +66,7 @@ export default function BranchDetailPage({ initialTab }) {
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [editingCost, setEditingCost] = useState(null);
   const [formStageId, setFormStageId] = useState('');
+  const [formRequiredDoc, setFormRequiredDoc] = useState(''); // 필수 서류 '올리기'로 열 때 서류 이름
   const [showPresetModal, setShowPresetModal] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false); // 단계별 기록에서 + 버튼으로 열 때 미리 고를 단계
   const [loading, setLoading] = useState(true);
@@ -142,6 +144,9 @@ export default function BranchDetailPage({ initialTab }) {
     const end = s.endDate?.toDate ? s.endDate.toDate() : new Date(s.endDate);
     return end < todayDate;
   });
+
+  // 지급 예정일이 지났는데 아직 지급 완료 처리가 안 된 비용
+  const overduePayments = costs.filter(c => isScheduledCost(c) && (daysUntilDue(c) ?? 1) < 0);
 
   // --- 핸들러들 ---
   const handleStatusChange = async (newStatus) => {
@@ -249,6 +254,10 @@ export default function BranchDetailPage({ initialTab }) {
     setEditingCost(null);
     setFormStageId('');
   };
+  const handleMarkCostPaid = async (cost) => {
+    await updateCost(cost.id, { paymentStatus: 'paid', date: toDateInputValue(new Date()) });
+    addLog('cost_update', `지급 완료 처리: ${cost.title} (${cost.amount}원)`);
+  };
   const handleDeleteCost = async (costId) => {
     const c = costs.find(x => x.id === costId);
     await deleteCost(costId);
@@ -256,11 +265,13 @@ export default function BranchDetailPage({ initialTab }) {
   };
 
   // 서류
-  const handleUploadDocument = async (file, metadata, onProgress) => {
+  // 업로드 창은 { file, ...정보 } 한 덩어리로 넘겨줌 (예전엔 인자 순서가 어긋나 업로드가 실패했음)
+  const handleUploadDocument = async ({ file, ...metadata }, onProgress) => {
     await uploadDocument(file, metadata, onProgress);
-    addLog('doc_upload', `서류 업로드: ${file.name}`);
+    addLog('doc_upload', `서류 업로드: ${metadata.requiredDoc ? `[${metadata.requiredDoc}] ` : ''}${file.name}`);
     setShowDocUpload(false);
     setFormStageId('');
+    setFormRequiredDoc('');
   };
   const handleDeleteDocument = async (docId, storagePath) => {
     const d = documents.find(x => x.id === docId);
@@ -371,6 +382,19 @@ export default function BranchDetailPage({ initialTab }) {
             <span>일정 확인</span>
             <NeonIcon name="arrow-right" color="rose" size="sm" badge={false} />
           </button>
+        </div>
+      )}
+
+      {overduePayments.length > 0 && (
+        <div className="branch-delay-alert animate-fade-in">
+          <div>
+            <span style={{ fontWeight: 700, color: 'var(--color-warning)' }}>지급일 지남: </span>
+            지급 예정일이 지난 비용이 <strong>{overduePayments.length}건</strong> 있어요.
+            <span className="text-secondary text-xs" style={{ marginLeft: 6 }}>
+              ({overduePayments.map(c => c.title).slice(0, 2).join(', ')}{overduePayments.length > 2 ? ' 외' : ''})
+            </span>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={() => setActiveTab('cost')}>비용 확인</button>
         </div>
       )}
 
@@ -522,7 +546,7 @@ export default function BranchDetailPage({ initialTab }) {
             onEditCost={handleEditCost}
             onAddSchedule={(stageId) => { setEditingSchedule(null); setFormStageId(stageId); setShowScheduleForm(true); }}
             onAddCost={(stageId) => { setEditingCost(null); setFormStageId(stageId); setShowCostForm(true); }}
-            onAddDocument={(stageId) => { setFormStageId(stageId); setShowDocUpload(true); }}
+            onAddDocument={(stageId, requiredDoc = '') => { setFormStageId(stageId); setFormRequiredDoc(requiredDoc); setShowDocUpload(true); }}
             onEditBranch={() => setShowBranchEdit(true)}
             onStandardizeStages={handleStandardizeStages}
           />
@@ -591,7 +615,7 @@ export default function BranchDetailPage({ initialTab }) {
                 + 지출 추가
               </button>
             </div>
-            <CostList costs={costs} totalCost={totalCost} onEdit={handleEditCost} onDelete={handleDeleteCost} />
+            <CostList costs={costs} totalCost={totalCost} onEdit={handleEditCost} onDelete={handleDeleteCost} onMarkPaid={handleMarkCostPaid} />
           </div>
         )}
 
@@ -733,8 +757,9 @@ export default function BranchDetailPage({ initialTab }) {
         <DocumentUpload
           stages={stages}
           defaultStageId={formStageId}
+          defaultRequiredDoc={formRequiredDoc}
           onUpload={handleUploadDocument}
-          onClose={() => { setShowDocUpload(false); setFormStageId(''); }}
+          onClose={() => { setShowDocUpload(false); setFormStageId(''); setFormRequiredDoc(''); }}
         />
       )}
 

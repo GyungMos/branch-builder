@@ -222,3 +222,14 @@
     columns: 1;
   }
 }
+
+.report-required {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--space-md);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.report-required .missing { color: var(--color-warning); font-weight: 700; }
+.report-required .skip { color: var(--color-text-tertiary); }

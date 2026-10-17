@@ -4,9 +4,9 @@ import ModalPortal from '../common/ModalPortal';
 import NeonIcon from '../common/NeonIcon';
 import './DocumentUpload.css';
 
-export default function DocumentUpload({ stages, defaultStageId = '', onUpload, onClose }) {
+export default function DocumentUpload({ stages, defaultStageId = '', defaultRequiredDoc = '', onUpload, onClose }) {
   const [file, setFile] = useState(null);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(defaultRequiredDoc);
   const [category, setCategory] = useState('etc');
   const [stageId, setStageId] = useState(defaultStageId);
   const [memo, setMemo] = useState('');
@@ -39,6 +39,7 @@ export default function DocumentUpload({ stages, defaultStageId = '', onUpload, 
         category,
         stageId: stageId || null,
         memo: memo.trim(),
+        ...(defaultRequiredDoc ? { requiredDoc: defaultRequiredDoc } : {}),
       }, (p) => setProgress(p));
       onClose();
     } catch (error) {
@@ -56,7 +57,7 @@ export default function DocumentUpload({ stages, defaultStageId = '', onUpload, 
         <div className="modal-header">
           <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <NeonIcon name="document" size="sm" color="cyan" badge={true} />
-            <span>서류 업로드</span>
+            <span>{defaultRequiredDoc ? `필수 서류 올리기: ${defaultRequiredDoc}` : '서류 업로드'}</span>
           </h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>

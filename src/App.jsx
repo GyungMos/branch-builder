@@ -7,6 +7,7 @@ import BranchListPage from './pages/BranchListPage';
 import BranchDetailPage from './pages/BranchDetailPage';
 import DashboardPage from './pages/DashboardPage';
 import ComparePage from './pages/ComparePage';
+import SearchPage from './pages/SearchPage';
 import BranchReportPage from './pages/BranchReportPage';
 import MobileNav from './components/layout/MobileNav';
 
@@ -64,6 +65,18 @@ function AppRoutes() {
             <>
               <Header />
               <DashboardPage />
+              <MobileNav />
+            </>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/search"
+        element={
+          <ProtectedRoute>
+            <>
+              <Header />
+              <SearchPage />
               <MobileNav />
             </>
           </ProtectedRoute>

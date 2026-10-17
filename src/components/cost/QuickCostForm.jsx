@@ -11,6 +11,7 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
   const [amount, setAmount] = useState(cost?.amount ? formatNumberWithCommas(cost.amount) : '');
   const [category, setCategory] = useState(cost?.category || 'etc');
   const [date, setDate] = useState(toDateInputValue(cost?.date) || toDateInputValue(new Date()));
+  const [paymentStatus, setPaymentStatus] = useState(cost?.paymentStatus === 'scheduled' ? 'scheduled' : 'paid');
   const [stageId, setStageId] = useState(cost?.stageId || defaultStageId);
   const [memo, setMemo] = useState(cost?.memo || '');
   const [assignee, setAssignee] = useState(cost?.assignee || '');
@@ -32,6 +33,7 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
         amount: numericAmount,
         category,
         date,
+        paymentStatus,
         stageId: stageId || null,
         assignee: assignee.trim(),
         memo: memo.trim(),
@@ -65,13 +67,25 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <div className="form-group">
+              <label>지급 상태</label>
+              <div className="payment-status-toggle" role="radiogroup" aria-label="지급 상태">
+                <button type="button" role="radio" aria-checked={paymentStatus === 'paid'}
+                  className={`btn btn-sm ${paymentStatus === 'paid' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setPaymentStatus('paid')}>지급 완료</button>
+                <button type="button" role="radio" aria-checked={paymentStatus === 'scheduled'}
+                  className={`btn btn-sm ${paymentStatus === 'scheduled' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setPaymentStatus('scheduled')}>지급 예정 (계약금·중도금·잔금 등)</button>
+              </div>
+            </div>
+
+            <div className="form-group">
               <label htmlFor="cost-title">항목명 *</label>
               <input
                 id="cost-title"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="예: 토지 임대료, 설계비"
+                placeholder={paymentStatus === 'scheduled' ? '예: 골조 공사 잔금' : '예: 토지 임대료, 설계비'}
                 required
                 autoFocus
               />
@@ -93,7 +107,7 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="cost-date">날짜</label>
+                <label htmlFor="cost-date">{paymentStatus === 'scheduled' ? '지급 예정일' : '지급일'}</label>
                 <DateInput
                   id="cost-date"
                   value={date}

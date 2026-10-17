@@ -57,7 +57,7 @@ export default function DailyLogEntryForm({
 
     setUploadingPhotos(true);
     setErrorMessage('');
-    setUploadProgressText(`사진 ${files.length}장 최적화 처리 중...`);
+    setUploadProgressText(`사진 ${files.length}장 고화질로 올리는 중... (인터넷이 느리면 최대 25초)`);
 
     try {
       const uploadPromises = files.map((file) => uploadDailyLogPhoto(file, branchId));

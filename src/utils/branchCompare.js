@@ -1,4 +1,5 @@
 import { DEFAULT_STAGES } from './constants';
+import { isScheduledCost } from './costs';
 
 const DAY = 86400000;
 
@@ -66,6 +67,7 @@ export function computeBranchStageStats(data) {
   let totalCost = 0;
   let unlinkedCost = 0;
   (data.costs || []).forEach(c => {
+    if (isScheduledCost(c)) return; // 지급 예정은 비교에서 제외
     const amt = Number(c.amount) || 0;
     totalCost += amt;
     const row = stageRow[c.stageId];

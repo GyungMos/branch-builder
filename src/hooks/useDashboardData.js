@@ -4,6 +4,7 @@ import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranches } from './useFirestore';
 import { COST_CATEGORIES } from '../utils/constants';
+import { isScheduledCost } from '../utils/costs';
 
 function getLocalData(key) {
   try {
@@ -24,6 +25,7 @@ export function useDashboardData() {
     avgCost: 0,
     stageDistribution: {},
     recentActivities: [],
+    scheduledPayments: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -41,6 +43,7 @@ export function useDashboardData() {
       const allSchedules = [];
       const allCosts = [];
       const allActivities = [];
+      const allScheduledPayments = [];
 
       for (const branch of branches) {
         let stages = [];
@@ -88,6 +91,10 @@ export function useDashboardData() {
         const currentStageName = currentStageObj ? currentStageObj.name : '단계 미정';
 
         // 지점별 총 비용
+        // 지급 예정 비용은 합계에서 빼고 따로 모음
+        const scheduledCosts = costs.filter(isScheduledCost);
+        costs = costs.filter(c => !isScheduledCost(c));
+        scheduledCosts.forEach(c => allScheduledPayments.push({ ...c, branchId: branch.id, branchName: branch.name }));
         const branchTotalCost = costs.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
         // 지점별 카테고리 비용 집계
@@ -207,7 +214,11 @@ export function useDashboardData() {
         })
         .slice(0, 10);
 
+      const toTime = (v) => { const d = v?.toDate ? v.toDate() : new Date(v || 0); return isNaN(d.getTime()) ? 0 : d.getTime(); };
+      const scheduledPayments = allScheduledPayments.sort((a, b) => toTime(a.date) - toTime(b.date));
+
       setDashboardData({
+        scheduledPayments,
         branchesSummary,
         upcomingSchedules,
         costByCategory,

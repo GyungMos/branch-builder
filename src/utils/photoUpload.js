@@ -9,10 +9,11 @@ const withTimeout = (promise, ms, fallbackValue) => {
 };
 
 /**
- * 캔버스를 사용해 이미지를 가로 550px, quality 0.45로 리사이즈 및 초경량 압축.
- * 1장당 20KB ~ 35KB로 생성되어 모바일/PC에서 선명하게 보이며 Firestore 1MB 한도를 절대 넘지 않습니다.
+ * 캔버스를 사용해 이미지를 지정 가로폭·품질로 리사이즈 및 압축.
+ * 기본값(550px, 0.45)은 1장당 20KB ~ 35KB로 Firestore 문서에 직접 넣어도 1MB 한도를 넘지 않습니다.
+ * timeoutMs 안에 끝나지 않으면 '' (휴대폰 고화소 사진은 디코딩에 몇 초 걸릴 수 있음)
  */
-export const compressImage = (file, maxWidth = 550, quality = 0.45) => {
+export const compressImage = (file, maxWidth = 550, quality = 0.45, timeoutMs = 8000) => {
   return withTimeout(
     new Promise((resolve) => {
       if (!file) {
@@ -68,7 +69,7 @@ export const compressImage = (file, maxWidth = 550, quality = 0.45) => {
       reader.onerror = () => resolve('');
       reader.readAsDataURL(file);
     }),
-    3500,
+    timeoutMs,
     ''
   );
 };
@@ -121,39 +122,43 @@ export const shrinkDataUrl = (dataUrl, maxWidth = 550, quality = 0.42) => {
   });
 };
 
+// 사진 저장소(Storage)에 올리는 고화질 사진: 가로 1600px (장당 약 200~400KB, 확대해도 글씨가 보이는 수준)
+const HIGH_RES_WIDTH = 1600;
+const HIGH_RES_QUALITY = 0.82;
+// 저장소 업로드를 기다리는 최대 시간 (여러 장은 동시에 올라가므로 전체 대기도 이 정도)
+export const STORAGE_UPLOAD_TIMEOUT_MS = 25000;
+
 /**
- * 모바일 및 데스크톱에서 현장 사진을 초고속으로 처리
- * - 가로 550px, quality 0.45로 스마트 초경량 압축 (장당 20~30KB)
- * - Firebase Storage 업로드를 시도하되 1.5초 내 미완료 시 초경량 Base64로 즉시 반환
+ * 현장 사진 처리
+ * 1) 고화질(1600px)로 줄여서 Firebase Storage에 업로드 → 성공하면 그 주소를 사용
+ * 2) 저장소가 없거나 실패·시간 초과면 예전처럼 초경량(550px) 사진을 일지 문서에 직접 저장
+ *    → 네트워크가 나빠도 저장이 멈추지 않음 (예전 '모바일 업로드 멈춤' 문제 방지)
  */
 export const uploadDailyLogPhoto = async (file, branchId = 'default') => {
   if (!file) return '';
 
-  // 1단계: 초경량 고화질 압축 (20~30KB)
   const lightDataUrl = await compressImage(file, 550, 0.45);
-  if (!lightDataUrl) return '';
 
-  // 2단계: Firebase Storage 시도 (최대 1.5초 대기)
   if (storage) {
     try {
-      const storagePromise = (async () => {
-        const randomStr = Math.random().toString(36).substring(2, 9);
-        const storagePath = `branches/${branchId}/dailyLogs/${Date.now()}_${randomStr}.jpg`;
-        const storageRef = ref(storage, storagePath);
-        await uploadString(storageRef, lightDataUrl, 'data_url');
-        return await getDownloadURL(storageRef);
-      })();
-
-      const storageUrl = await withTimeout(storagePromise, 1500, null);
-      if (storageUrl) {
-        return storageUrl;
+      const highDataUrl = await compressImage(file, HIGH_RES_WIDTH, HIGH_RES_QUALITY, 12000);
+      const source = highDataUrl || lightDataUrl;
+      if (source) {
+        const storagePromise = (async () => {
+          const randomStr = Math.random().toString(36).substring(2, 9);
+          const storagePath = `branches/${branchId}/dailyLogs/${Date.now()}_${randomStr}.jpg`;
+          const storageRef = ref(storage, storagePath);
+          await uploadString(storageRef, source, 'data_url');
+          return await getDownloadURL(storageRef);
+        })();
+        const storageUrl = await withTimeout(storagePromise.catch(() => null), STORAGE_UPLOAD_TIMEOUT_MS, null);
+        if (storageUrl) return storageUrl;
       }
-    } catch (err) {
-      // Storage 실패 시 초경량 Base64 사용
+    } catch {
+      // 저장소 실패 시 아래 초경량 사진 사용
     }
   }
 
-  // 3단계: 초경량 Base64 즉시 반환 (장당 25KB 내외로 10장을 올려도 250KB에 불과함)
   return lightDataUrl;
 };
 

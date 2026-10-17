@@ -270,4 +270,13 @@
     padding: 4px 8px;
     font-size: var(--font-size-xs);
   }
+
+  /* 저장 방식 표시는 정보용이라 아주 좁은 화면에선 빼고 지점 선택창에 자리를 줌 */
+  .sync-status-badge {
+    display: none !important;
+  }
+
+  .header-right {
+    gap: 4px;
+  }
 }

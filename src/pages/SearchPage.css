@@ -1,0 +1,121 @@
+.search-page {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.search-form {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.search-form input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-md);
+}
+
+.search-help {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.search-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--color-text-secondary);
+}
+
+.search-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.search-chip {
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.search-chip.on {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  color: var(--color-text-primary);
+}
+
+.search-results {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.search-result {
+  display: block;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.search-result:hover {
+  border-color: var(--color-accent);
+}
+
+.search-result-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--space-sm);
+  font-size: var(--font-size-xs);
+  margin-bottom: 2px;
+}
+
+.search-type {
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
+.search-branch {
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.search-meta {
+  color: var(--color-text-tertiary);
+}
+
+.search-title {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.search-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.search-result mark {
+  background: rgba(245, 158, 11, 0.35);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}

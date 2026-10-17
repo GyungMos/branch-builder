@@ -3,6 +3,7 @@ import NeonIcon from '../common/NeonIcon';
 import ModalPortal from '../common/ModalPortal';
 import { formatCurrency, formatNumberWithCommas, parseNumberFromCommas } from '../../utils/formatters';
 import { COST_CATEGORIES } from '../../utils/constants';
+import { isScheduledCost } from '../../utils/costs';
 import './BudgetManager.css';
 
 export default function BudgetManager({ budget, totalCost, costs = [], onUpdateBudget }) {
@@ -57,6 +58,7 @@ export default function BudgetManager({ budget, totalCost, costs = [], onUpdateB
   COST_CATEGORIES.forEach(c => { actualByCat[c.id] = 0; });
   costs.forEach(c => {
     const cat = c.category || 'etc';
+    if (isScheduledCost(c)) return; // 지급 예정은 실지출에서 제외
     actualByCat[cat] = (actualByCat[cat] || 0) + (Number(c.amount) || 0);
   });
 

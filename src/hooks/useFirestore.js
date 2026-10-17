@@ -5,6 +5,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, isFirebaseConfigured } from '../config/firebase';
+import { sumPaid, sumScheduled } from '../utils/costs';
 import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/formatters';
 
@@ -363,9 +364,10 @@ export function useCosts(branchId) {
     return deleteDoc(doc(db, 'branches', branchId, 'costs', costId));
   };
 
-  const totalCost = costs.reduce((sum, c) => sum + (c.amount || 0), 0);
+  const totalCost = sumPaid(costs); // 지급 예정은 제외
+  const scheduledTotal = sumScheduled(costs);
 
-  return { costs, loading, addCost, updateCost, deleteCost, totalCost };
+  return { costs, loading, addCost, updateCost, deleteCost, totalCost, scheduledTotal };
 }
 
 // ========== Documents ==========

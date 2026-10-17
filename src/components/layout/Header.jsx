@@ -168,6 +168,16 @@ export default function Header() {
           </div>
 
           <button
+            className="btn-ghost btn-icon header-search-btn"
+            onClick={() => navigate('/search')}
+            aria-label="통합 검색"
+            title="통합 검색 (모든 지점의 일정·비용·서류·일지)"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <NeonIcon name="search" size="xs" color="cyan" badge={false} />
+          </button>
+
+          <button
             className="btn-ghost btn-icon theme-toggle"
             onClick={toggleTheme}
             aria-label="테마 전환"

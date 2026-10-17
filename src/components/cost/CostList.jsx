@@ -1,17 +1,19 @@
 import { COST_CATEGORIES } from '../../utils/constants';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import NeonIcon from '../common/NeonIcon';
+import { isScheduledCost, sumScheduled, dueLabel, daysUntilDue } from '../../utils/costs';
 import './CostList.css';
 
 function exportToCSV(costs, totalCost) {
-  const headers = ['항목명', '금액', '카테고리', '날짜', '담당자', '은행명', '예금주', '계좌번호', '메모'];
+  const headers = ['항목명', '금액', '카테고리', '날짜', '지급 상태', '담당자', '은행명', '예금주', '계좌번호', '메모'];
   const rows = costs.map(c => {
     const cat = COST_CATEGORIES.find(ct => ct.id === c.category);
     return [
       c.title,
       c.amount,
       cat?.label || '기타',
-      c.date || '',
+      c.date?.toDate ? c.date.toDate().toISOString().slice(0, 10) : (c.date || ''),
+      isScheduledCost(c) ? '지급 예정' : '지급 완료',
       c.assignee || '',
       c.bankName || '',
       c.accountHolder || '',
@@ -19,8 +21,9 @@ function exportToCSV(costs, totalCost) {
       c.memo || '',
     ];
   });
-  rows.push(['', '', '', '', '', '', '', '', '']);
-  rows.push(['총합계', totalCost, '', '', '', '', '', '', '']);
+  rows.push(['', '', '', '', '', '', '', '', '', '']);
+  rows.push(['지급 완료 합계', totalCost, '', '', '', '', '', '', '', '']);
+  rows.push(['지급 예정 합계', sumScheduled(costs), '', '', '', '', '', '', '', '']);
 
   const BOM = '\uFEFF';
   const csvContent = BOM + [headers, ...rows].map(row =>
@@ -35,7 +38,7 @@ function exportToCSV(costs, totalCost) {
   URL.revokeObjectURL(link.href);
 }
 
-export default function CostList({ costs, totalCost, onEdit, onDelete }) {
+export default function CostList({ costs, totalCost, onEdit, onDelete, onMarkPaid }) {
   if (costs.length === 0) {
     return (
       <div className="empty-state">
@@ -48,8 +51,10 @@ export default function CostList({ costs, totalCost, onEdit, onDelete }) {
     );
   }
 
+  const scheduledCosts = costs.filter(isScheduledCost);
+  const scheduledTotal = sumScheduled(costs);
   const categoryTotals = {};
-  costs.forEach(c => {
+  costs.filter(c => !isScheduledCost(c)).forEach(c => {
     const cat = c.category || 'etc';
     if (!categoryTotals[cat]) categoryTotals[cat] = 0;
     categoryTotals[cat] += c.amount || 0;
@@ -60,7 +65,12 @@ export default function CostList({ costs, totalCost, onEdit, onDelete }) {
       {/* 비용 요약 */}
       <div className="cost-summary card-static">
         <div className="cost-summary-header">
-          <h4>비용 요약</h4>
+          <div>
+            <h4>비용 요약 (지급 완료)</h4>
+            {scheduledCosts.length > 0 && (
+              <div className="cost-scheduled-total">지급 예정 {scheduledCosts.length}건 · {formatCurrency(scheduledTotal)} (합계에서 제외)</div>
+            )}
+          </div>
           <div className="cost-summary-actions">
             <span className="cost-total">{formatCurrency(totalCost)}</span>
             <button
@@ -100,7 +110,7 @@ export default function CostList({ costs, totalCost, onEdit, onDelete }) {
           const category = COST_CATEGORIES.find(c => c.id === cost.category) || { label: '기타', iconName: 'etc', color: 'slate' };
           const hasAccount = cost.bankName || cost.accountNumber;
           return (
-            <div key={cost.id} className="cost-item card-static" id={`cost-${cost.id}`}>
+            <div key={cost.id} className={`cost-item card-static ${isScheduledCost(cost) ? 'is-scheduled' : ''}`} id={`cost-${cost.id}`}>
               <div className="cost-item-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <NeonIcon name={category.iconName || 'budget'} color={category.color || 'emerald'} size="sm" badge={true} />
               </div>
@@ -117,6 +127,9 @@ export default function CostList({ costs, totalCost, onEdit, onDelete }) {
                       <span>{cost.assignee}</span>
                     </span>
                   )}
+                  {isScheduledCost(cost) && (
+                    <span className={`cost-due-badge ${(daysUntilDue(cost) ?? 1) < 0 ? 'overdue' : ''}`}>{dueLabel(cost)}</span>
+                  )}
                   <span className="text-xs text-tertiary">
                     {cost.date ? formatDate(cost.date) : ''}
                   </span>
@@ -132,6 +145,11 @@ export default function CostList({ costs, totalCost, onEdit, onDelete }) {
               <div className="cost-item-right">
                 <div className="cost-item-amount">{formatCurrency(cost.amount)}</div>
                 <div className="cost-item-actions">
+                  {isScheduledCost(cost) && onMarkPaid && (
+                    <button className="btn btn-secondary btn-sm" onClick={() => onMarkPaid(cost)} title="오늘 날짜로 지급 완료 처리">
+                      지급 완료 처리
+                    </button>
+                  )}
                   <button
                     className="btn btn-ghost btn-sm"
                     onClick={() => onEdit(cost)}

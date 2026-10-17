@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import NeonIcon from '../common/NeonIcon';
 import ModalPortal from '../common/ModalPortal';
 import ZoomableImage from '../common/ZoomableImage';
+import { sumPaid } from '../../utils/costs';
 import { formatDate, formatDateShort, formatCurrency, formatFileSize, getDDay } from '../../utils/formatters';
 import './BranchTimelineFeed.css';
 
@@ -218,7 +219,7 @@ export default function BranchTimelineFeed({
       totalPhotos += i.photos.length;
     });
     // 총 집행 비용
-    const totalCostAmount = costs.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const totalCostAmount = sumPaid(costs);
     // 총 일지 수
     const totalDailyLogs = dailyLogs.length;
 

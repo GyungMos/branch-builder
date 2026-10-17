@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { loadBranchData } from '../utils/branchData';
 import { BRANCH_STATUS, STAGE_STATUS } from '../utils/constants';
 import { formatCurrency, formatDate, formatDateShort } from '../utils/formatters';
+import { requiredDocStatus } from '../utils/requiredDocs';
+import { sumPaid, isScheduledCost } from '../utils/costs';
 import './BranchReportPage.css';
 
 const UNLINKED = '__unlinked__';
@@ -63,7 +65,7 @@ export default function BranchReportPage() {
     list.forEach(g => {
       g.schedules.sort((a, b) => (a.start || 0) - (b.start || 0));
       g.costs.sort((a, b) => (a.when || 0) - (b.when || 0));
-      g.costTotal = g.costs.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+      g.costTotal = sumPaid(g.costs);
       const starts = g.schedules.map(s => s.start).filter(Boolean);
       const ends = g.schedules.map(s => s.end).filter(Boolean);
       g.start = starts.length ? new Date(Math.min(...starts)) : null;
@@ -90,7 +92,7 @@ export default function BranchReportPage() {
   }
 
   const shownSections = onlyStage ? sections.filter(g => g.stage?.id === onlyStage) : sections;
-  const totalCost = (data.costs || []).reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const totalCost = sumPaid(data.costs || []);
   const allStarts = sections.map(g => g.start).filter(Boolean);
   const allEnds = sections.map(g => g.end).filter(Boolean);
   const p = branch.property || {};
@@ -129,6 +131,7 @@ export default function BranchReportPage() {
         const checklist = st?.checklist || [];
         const lessons = st?.lessons || {};
         const hasLessons = Object.keys(LESSON_LABELS).some(k => lessons[k]);
+        const reqDocs = st ? requiredDocStatus(st, g.documents) : [];
         return (
           <section key={st?.id || 'unlinked'} className="report-section">
             <h2>
@@ -139,6 +142,17 @@ export default function BranchReportPage() {
               기간 {period(g.start, g.end)} · 비용 {formatCurrency(g.costTotal)} · 일정 {g.schedules.filter(isDone).length}/{g.schedules.length} 완료
               {checklist.length > 0 && ` · 체크리스트 ${checklist.filter(c => c.done).length}/${checklist.length}`}
             </p>
+
+            {reqDocs.length > 0 && (
+              <p className="report-required">
+                <strong>필수 서류</strong>{' '}
+                {reqDocs.map(d => (
+                  <span key={d.name} className={d.done ? 'ok' : d.notNeeded ? 'skip' : 'missing'}>
+                    {d.done ? '✓' : d.notNeeded ? '—' : '✗'} {d.name}
+                  </span>
+                ))}
+              </p>
+            )}
 
             {checklist.length > 0 && (
               <ul className="report-checklist">
@@ -171,7 +185,7 @@ export default function BranchReportPage() {
                   {g.costs.map(c => (
                     <tr key={c.id}>
                       <td className="nowrap">{c.when ? formatDateShort(c.when) : '-'}</td>
-                      <td>{c.title}</td>
+                      <td>{c.title}{isScheduledCost(c) && <span className="report-sub"> (지급 예정 · 합계 제외)</span>}</td>
                       <td>{c.vendor || ''}</td>
                       <td className="right nowrap">{formatCurrency(Number(c.amount) || 0)}</td>
                     </tr>
