@@ -3,8 +3,7 @@ import {
   collection, doc, addDoc, updateDoc, deleteDoc,
   onSnapshot, query, orderBy, serverTimestamp, Timestamp
 } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, storage, isFirebaseConfigured } from '../config/firebase';
+import { db, loadStorage, isFirebaseConfigured } from '../config/firebase';
 import { sumPaid, sumScheduled } from '../utils/costs';
 import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/formatters';
@@ -431,7 +430,10 @@ export function useDocuments(branchId) {
     const fileId = generateId();
     const ext = file.name.split('.').pop();
     const storagePath = `branches/${branchId}/documents/${fileId}.${ext}`;
-    const storageRef = ref(storage, storagePath);
+    const st = await loadStorage();
+    if (!st) throw new Error('사진·서류 저장소에 연결하지 못했습니다.');
+    const { ref, uploadBytesResumable, getDownloadURL } = st;
+    const storageRef = ref(st.storage, storagePath);
     
     const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -470,7 +472,8 @@ export function useDocuments(branchId) {
     }
     if (storagePath) {
       try {
-        await deleteObject(ref(storage, storagePath));
+        const st = await loadStorage();
+        if (st) await st.deleteObject(st.ref(st.storage, storagePath));
       } catch (e) {
         console.warn('Storage delete failed:', e);
       }

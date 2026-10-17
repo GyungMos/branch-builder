@@ -1,4 +1,4 @@
-import { DEFAULT_ARCHITECT_SCHEDULE } from '../components/schedule/MasterScheduleTable';
+import { DEFAULT_ARCHITECT_SCHEDULE } from '../data/architectSchedule';
 import { toDateInputValue } from './formatters';
 
 // 표준 일정표는 수원 이목점 실제 일정(첫 공정 시작일 기준)으로 작성됨 → 이 날짜를 0일로 보고 상대 일수로 변환

@@ -1,7 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 
 // Firebase 설정 - 환경변수에서 읽어옴
 // .env 파일에 아래 값들을 설정하세요:
@@ -31,18 +30,35 @@ export const isFirebaseConfigured = Boolean(
 let app = null;
 let auth = null;
 let db = null;
-let storage = null;
 
 if (isFirebaseConfigured) {
   try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
-    storage = getStorage(app);
   } catch (error) {
     console.warn('Firebase 초기화 실패:', error.message);
   }
 }
 
-export { auth, db, storage };
+/**
+ * 사진·서류 저장소(Storage)는 업로드·삭제할 때만 필요해서 그때 내려받음 (첫 로딩을 가볍게)
+ * Firebase 미설정이면 null
+ */
+let storageModulePromise = null;
+export function loadStorage() {
+  if (!app) return Promise.resolve(null);
+  if (!storageModulePromise) {
+    storageModulePromise = import('firebase/storage')
+      .then(mod => ({ ...mod, storage: mod.getStorage(app) }))
+      .catch(err => {
+        console.warn('Storage 불러오기 실패:', err);
+        storageModulePromise = null;
+        return null;
+      });
+  }
+  return storageModulePromise;
+}
+
+export { auth, db };
 export default app;

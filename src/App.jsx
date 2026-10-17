@@ -1,15 +1,24 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Header from './components/layout/Header';
-import LoginPage from './pages/LoginPage';
-import BranchListPage from './pages/BranchListPage';
-import BranchDetailPage from './pages/BranchDetailPage';
-import DashboardPage from './pages/DashboardPage';
-import ComparePage from './pages/ComparePage';
-import SearchPage from './pages/SearchPage';
-import BranchReportPage from './pages/BranchReportPage';
 import MobileNav from './components/layout/MobileNav';
+
+// 화면별로 나눠서 필요할 때만 내려받음 (첫 접속 시 받는 양을 줄여 빨리 뜨게)
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const BranchListPage = lazy(() => import('./pages/BranchListPage'));
+const BranchDetailPage = lazy(() => import('./pages/BranchDetailPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ComparePage = lazy(() => import('./pages/ComparePage'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
+const BranchReportPage = lazy(() => import('./pages/BranchReportPage'));
+
+const pageLoading = (
+  <div className="loading-overlay">
+    <div className="spinner spinner-lg" />
+  </div>
+);
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -41,6 +50,7 @@ function AppRoutes() {
   }
 
   return (
+    <Suspense fallback={pageLoading}>
     <Routes>
       <Route
         path="/login"
@@ -129,6 +139,7 @@ function AppRoutes() {
       />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </Suspense>
   );
 }
 

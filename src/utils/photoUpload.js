@@ -1,5 +1,4 @@
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { storage } from '../config/firebase';
+import { loadStorage } from '../config/firebase';
 
 const withTimeout = (promise, ms, fallbackValue) => {
   return Promise.race([
@@ -139,7 +138,9 @@ export const uploadDailyLogPhoto = async (file, branchId = 'default') => {
 
   const lightDataUrl = await compressImage(file, 550, 0.45);
 
-  if (storage) {
+  const st = await withTimeout(loadStorage(), 8000, null);
+  if (st) {
+    const { ref, uploadString, getDownloadURL, storage } = st;
     try {
       const highDataUrl = await compressImage(file, HIGH_RES_WIDTH, HIGH_RES_QUALITY, 12000);
       const source = highDataUrl || lightDataUrl;

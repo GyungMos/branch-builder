@@ -525,3 +525,10 @@
 .timeline-bar.compact-bar.is-done {
   opacity: 0.45;
 }
+
+/* 모바일 일정 카드의 완료·수정·삭제 버튼 묶음 */
+.timeline-list-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
