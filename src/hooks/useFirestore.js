@@ -155,7 +155,7 @@ export function useStages(branchId) {
 
   const updateStage = async (stageId, data) => {
     if (demoMode) {
-      const updated = stages.map(s => s.id === stageId ? { ...s, ...data } : s);
+      const updated = getLocalData(`stages_${branchId}`).map(s => s.id === stageId ? { ...s, ...data } : s);
       setLocalData(`stages_${branchId}`, updated);
       setStages(updated);
       return;

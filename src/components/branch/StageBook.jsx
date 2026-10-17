@@ -4,6 +4,8 @@ import { formatCurrency, formatDateShort } from '../../utils/formatters';
 import PropertySpecs from './PropertySpecs';
 import StageManager from './StageManager';
 import { isScheduleDone } from '../schedule/Timeline';
+import ModalPortal from '../common/ModalPortal';
+import { planStageStandardization } from '../../utils/stageStandard';
 import './StageBook.css';
 
 const UNLINKED = '__unlinked__';
@@ -48,6 +50,7 @@ export default function StageBook({
   onAddCost,
   onAddDocument,
   onEditBranch,
+  onStandardizeStages,
 }) {
   const sortedStages = useMemo(
     () => [...stages].sort((a, b) => (a.order || 0) - (b.order || 0)),
@@ -95,6 +98,28 @@ export default function StageBook({
     sortedStages[0]
   )?.id;
   const [selectedId, setSelectedId] = useState(null);
+  const [showStandardize, setShowStandardize] = useState(false);
+  const [standardizing, setStandardizing] = useState(false);
+  const plan = useMemo(() => planStageStandardization(stages), [stages]);
+  const dismissKey = `bb_stage_std_dismissed_${branch.id}`;
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem(dismissKey) === '1'; } catch { return false; }
+  });
+  const dismissStandardize = () => {
+    try { localStorage.setItem(dismissKey, '1'); } catch { /* 저장 불가 시 이번만 숨김 */ }
+    setDismissed(true);
+  };
+  const applyStandardize = async () => {
+    setStandardizing(true);
+    try {
+      await onStandardizeStages(plan);
+      setShowStandardize(false);
+    } catch (err) {
+      alert('단계 맞추기 중 오류가 발생했습니다: ' + err.message);
+    } finally {
+      setStandardizing(false);
+    }
+  };
   const activeId = selectedId && (groups[selectedId] || selectedId === UNLINKED) ? selectedId : defaultStageId;
 
   if (sortedStages.length === 0) {
@@ -119,13 +144,17 @@ export default function StageBook({
   const showProperty = stage && stage.id === leaseStage.id;
   const showEquipment = stage && /장비/.test(stage.name);
 
-  // 현장 일지는 단계와 직접 연결돼 있지 않아서, 단계 일정 기간에 쓴 일지를 모아 보여줌
-  const stageLogs = (!isUnlinked && group.periodStart)
-    ? dailyLogs
+  // 현장 일지: 단계를 직접 고른 일지 + 단계를 안 고른 일지 중 이 단계 일정 기간에 쓴 것
+  const stageIdSet = new Set(sortedStages.map(s => s.id));
+  const inPeriod = (when) => group.periodStart && when
+    && dayStart(when) >= dayStart(group.periodStart)
+    && dayStart(when) <= dayStart(group.periodEnd || group.periodStart);
+  const stageLogs = isUnlinked
+    ? []
+    : dailyLogs
         .map(l => ({ ...l, when: toDate(l.date) }))
-        .filter(l => l.when && dayStart(l.when) >= dayStart(group.periodStart) && dayStart(l.when) <= dayStart(group.periodEnd || group.periodStart))
-        .sort((a, b) => a.when - b.when)
-    : [];
+        .filter(l => (l.stageId && stageIdSet.has(l.stageId) ? l.stageId === stage.id : inPeriod(l.when)))
+        .sort((a, b) => (a.when || 0) - (b.when || 0));
 
   const checklist = stage?.checklist || [];
   const toggleCheck = (itemId) => {
@@ -136,6 +165,58 @@ export default function StageBook({
 
   return (
     <div className="stage-book">
+      {plan.needsChange && !dismissed && onStandardizeStages && (
+        <div className="stage-std-banner">
+          <div>
+            <strong>이 지점의 단계가 표준 {plan.updates.length + plan.adds.length}단계와 달라요.</strong>
+            <p>지점끼리 비교하려면 단계 이름과 순서를 맞추는 게 좋아요. 연결된 일정·비용·서류는 그대로 유지돼요.</p>
+          </div>
+          <div className="stage-std-banner-actions">
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => setShowStandardize(true)}>표준 단계로 맞추기</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={dismissStandardize}>이대로 쓸게요</button>
+          </div>
+        </div>
+      )}
+
+      {showStandardize && (
+        <ModalPortal onClose={() => setShowStandardize(false)}>
+          <div className="modal-backdrop" onClick={() => setShowStandardize(false)} />
+          <div className="modal">
+            <div className="modal-header">
+              <h2 className="modal-title">표준 단계로 맞추기</h2>
+              <button className="modal-close" onClick={() => setShowStandardize(false)}>✕</button>
+            </div>
+            <div className="modal-body stage-std-preview">
+              <p className="text-secondary text-sm">아래처럼 바뀌어요. 지금 단계에 연결된 기록은 모두 그대로 따라가요.</p>
+              <ol>
+                {[...plan.updates.map(u => ({ order: u.order, kind: u.stage.name === u.name ? 'same' : 'rename', from: u.stage.name, name: u.name })),
+                  ...plan.adds.map(a => ({ order: a.order, kind: 'add', name: a.name }))]
+                  .sort((a, b) => a.order - b.order)
+                  .map(row => (
+                    <li key={row.order} className={`std-row ${row.kind}`}>
+                      <span className="std-order">{row.order}</span>
+                      {row.kind === 'rename' && <span><s>{row.from}</s> → <strong>{row.name}</strong></span>}
+                      {row.kind === 'add' && <span><strong>{row.name}</strong> <em>새로 추가 (기본 체크리스트 포함)</em></span>}
+                      {row.kind === 'same' && <span>{row.name} <em>그대로</em></span>}
+                    </li>
+                  ))}
+              </ol>
+              {plan.extras.length > 0 && (
+                <p className="text-secondary text-sm">
+                  표준에 없는 단계 <strong>{plan.extras.map(e => e.stage.name).join(', ')}</strong>은(는) 지우지 않고 맨 뒤로 옮겨요.
+                </p>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowStandardize(false)}>취소</button>
+              <button className="btn btn-primary" onClick={applyStandardize} disabled={standardizing}>
+                {standardizing ? '맞추는 중…' : '이대로 맞추기'}
+              </button>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
       {/* 단계 순서표 */}
       <ol className="stage-steps" aria-label="오픈 단계">
         {sortedStages.map((s, i) => {
@@ -362,10 +443,10 @@ export default function StageBook({
 
         {/* 현장 일지 */}
         {!isUnlinked && (
-          <StageSection title="이 기간의 현장 일지" count={stageLogs.length}>
+          <StageSection title="현장 일지" count={stageLogs.length}>
             {stageLogs.length === 0 ? (
               <p className="stage-empty-line">
-                {group.periodStart ? '이 단계 기간에 쓴 현장 일지가 없어요.' : '단계 일정을 넣으면 그 기간의 현장 일지가 여기에 모여요.'}
+                {group.periodStart ? '이 단계 현장 일지가 없어요.' : '일지를 쓸 때 이 단계를 고르거나, 단계 일정을 넣으면 그 기간의 일지가 여기에 모여요.'}
               </p>
             ) : (
               <ul className="stage-record-list">
@@ -386,6 +467,10 @@ export default function StageBook({
             )}
           </StageSection>
         )}
+        {/* 다음 지점을 위한 메모 (교훈) */}
+        {!isUnlinked && (
+          <StageLessons key={stage.id} stage={stage} onSave={(lessons) => onUpdateStage(stage.id, { lessons })} />
+        )}
       </section>
 
       {/* 단계 추가·삭제·이름 변경 */}
@@ -400,6 +485,63 @@ export default function StageBook({
           <p>{branch.description}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+const LESSON_FIELDS = [
+  { key: 'good', label: '잘된 점', placeholder: '예: 설계사무소를 지역 업체로 정해서 허가 협의가 빨랐음' },
+  { key: 'bad', label: '아쉬운 점', placeholder: '예: 도로점용허가를 늦게 신청해서 착공이 2주 밀림' },
+  { key: 'next', label: '다음 지점에서는', placeholder: '예: 계약 직후 바로 도로점용 협의부터 시작할 것' },
+];
+
+function StageLessons({ stage, onSave }) {
+  const saved = stage.lessons || {};
+  const [draft, setDraft] = useState({ good: saved.good || '', bad: saved.bad || '', next: saved.next || '' });
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState(null);
+  const dirty = LESSON_FIELDS.some(f => (draft[f.key] || '') !== (saved[f.key] || ''));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave({
+        good: draft.good.trim(),
+        bad: draft.bad.trim(),
+        next: draft.next.trim(),
+        updatedAt: new Date().toISOString(),
+      });
+      setSavedAt(new Date());
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="stage-section stage-lessons">
+      <h3 className="stage-section-title">
+        <span>다음 지점을 위한 메모</span>
+      </h3>
+      <p className="stage-lessons-help">이 단계를 겪으며 알게 된 점을 남겨두면, 다음 지점을 열 때 그대로 참고할 수 있어요.</p>
+      <div className="stage-lessons-grid">
+        {LESSON_FIELDS.map(f => (
+          <label key={f.key} className={`stage-lesson-field ${f.key}`}>
+            <span>{f.label}</span>
+            <textarea
+              rows={3}
+              value={draft[f.key]}
+              placeholder={f.placeholder}
+              onChange={(e) => setDraft(d => ({ ...d, [f.key]: e.target.value }))}
+            />
+          </label>
+        ))}
+      </div>
+      <div className="stage-lessons-actions">
+        {savedAt && !dirty && <span className="stage-lessons-saved">저장됨</span>}
+        <button type="button" className="btn btn-primary btn-sm" onClick={handleSave} disabled={!dirty || saving}>
+          {saving ? '저장 중…' : '메모 저장'}
+        </button>
+      </div>
     </div>
   );
 }

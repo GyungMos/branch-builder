@@ -13,10 +13,11 @@ const WEATHER_OPTIONS = [
 
 const DRAFT_KEY = 'bb_dailylog_draft';
 
-export default function DailyLogForm({ onSubmit, onClose, initialData = null, branchId = 'default' }) {
+export default function DailyLogForm({ onSubmit, onClose, initialData = null, branchId = 'default', stages = [], defaultStageId = '' }) {
   const isEdit = !!initialData;
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [weather, setWeather] = useState(initialData?.weather || 'sunny');
+  const [stageId, setStageId] = useState(initialData ? (initialData.stageId || '') : defaultStageId);
   const [summary, setSummary] = useState(initialData?.summary || '');
   const [workersCount, setWorkersCount] = useState(
     initialData?.workersCount !== undefined && initialData?.workersCount !== null
@@ -157,6 +158,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
         equipmentUsed: equipmentUsed.trim(),
         issues: issues.trim(),
         photos,
+        stageId: stageId || null,
       });
 
       // 저장 성공 시 임시 보관본 청소 (신규 작성인 경우에만)
@@ -282,6 +284,18 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                 </div>
               </div>
             </div>
+
+            {stages.length > 0 && (
+              <div className="form-group">
+                <label htmlFor="log-stage">어느 단계 작업인가요?</label>
+                <select id="log-stage" value={stageId} onChange={(e) => setStageId(e.target.value)}>
+                  <option value="">선택 안 함 (날짜로 자동 분류)</option>
+                  {[...stages].sort((a, b) => (a.order || 0) - (b.order || 0)).map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="form-group">
               <label htmlFor="log-summary">오늘 진행한 주요 공정 내용 *</label>

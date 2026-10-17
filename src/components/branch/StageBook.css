@@ -416,3 +416,124 @@ button.stage-record-main:hover .stage-record-title {
     font-size: var(--font-size-xl);
   }
 }
+
+/* --- 표준 단계 맞추기 안내 --- */
+.stage-std-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-info);
+  background: var(--color-info-bg);
+}
+
+.stage-std-banner p {
+  margin-top: 2px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.stage-std-banner-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.stage-std-preview ol {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-md) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stage-std-preview .std-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.stage-std-preview .std-order {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  background: var(--color-bg-tertiary);
+}
+
+.stage-std-preview em {
+  font-style: normal;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin-left: 4px;
+}
+
+.stage-std-preview .std-row.add em {
+  color: var(--color-success);
+}
+
+.stage-std-preview s {
+  color: var(--color-text-tertiary);
+}
+
+/* --- 다음 지점을 위한 메모 --- */
+.stage-lessons {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+}
+
+.stage-lessons-help {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.stage-lessons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-md);
+}
+
+.stage-lesson-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stage-lesson-field > span {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.stage-lesson-field.good > span { color: var(--color-success); }
+.stage-lesson-field.bad > span { color: var(--color-warning); }
+.stage-lesson-field.next > span { color: var(--color-info); }
+
+.stage-lesson-field textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.stage-lessons-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.stage-lessons-saved {
+  font-size: var(--font-size-sm);
+  color: var(--color-success);
+}

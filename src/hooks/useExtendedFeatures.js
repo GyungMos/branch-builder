@@ -345,6 +345,7 @@ export function useDailyLogs(branchId) {
       issues: (slimData.issues || '').trim(),
       photos: Array.isArray(slimData.photos) ? slimData.photos : [],
       entries: sanitizeEntriesForFirestore(Array.isArray(slimData.entries) ? slimData.entries : []),
+      stageId: slimData.stageId || null,
       author: user?.displayName || user?.email || '현장 관리자',
     };
 
@@ -396,6 +397,7 @@ export function useDailyLogs(branchId) {
       issues: (slimData.issues !== undefined ? slimData.issues : (existingLog?.issues || '')).trim(),
       photos: Array.isArray(slimData.photos) ? slimData.photos : (existingLog?.photos || []),
       entries: sanitizeEntriesForFirestore(Array.isArray(slimData.entries) ? slimData.entries : (existingLog?.entries || [])),
+      stageId: slimData.stageId !== undefined ? (slimData.stageId || null) : (existingLog?.stageId || null),
       updatedAt: new Date().toISOString(),
     };
 

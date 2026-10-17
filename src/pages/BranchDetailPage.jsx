@@ -18,7 +18,7 @@ import NeonIcon from '../components/common/NeonIcon';
 import BranchForm from '../components/branch/BranchForm';
 import StageBook from '../components/branch/StageBook';
 import Timeline from '../components/schedule/Timeline';
-import { DEFAULT_ARCHITECT_SCHEDULE } from '../components/schedule/MasterScheduleTable';
+import ArchitectPresetModal from '../components/schedule/ArchitectPresetModal';
 import QuickScheduleForm from '../components/schedule/QuickScheduleForm';
 import CostList from '../components/cost/CostList';
 import QuickCostForm from '../components/cost/QuickCostForm';
@@ -63,7 +63,8 @@ export default function BranchDetailPage({ initialTab }) {
   const [showBranchEdit, setShowBranchEdit] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [editingCost, setEditingCost] = useState(null);
-  const [formStageId, setFormStageId] = useState(''); // 단계별 기록에서 + 버튼으로 열 때 미리 고를 단계
+  const [formStageId, setFormStageId] = useState('');
+  const [showPresetModal, setShowPresetModal] = useState(false); // 단계별 기록에서 + 버튼으로 열 때 미리 고를 단계
   const [loading, setLoading] = useState(true);
 
   const { demoMode } = useAuth();
@@ -126,6 +127,8 @@ export default function BranchDetailPage({ initialTab }) {
   }
 
   const completedStages = stages.filter(s => s.status === 'complete').length;
+  // 새 현장 일지의 기본 단계: 진행중인 단계
+  const currentStageId = [...stages].sort((a, b) => (a.order || 0) - (b.order || 0)).find(s => s.status === 'progress')?.id || '';
   const progress = stages.length > 0 ? Math.round((completedStages / stages.length) * 100) : 0;
 
   // 종료 예정일이 지났는데 완료되지 않은 지연 공정 일정 계산
@@ -164,11 +167,30 @@ export default function BranchDetailPage({ initialTab }) {
     if (data.checklist) {
       addLog('checklist_toggle', `체크리스트 변경`);
     }
+    if (data.lessons) {
+      const st = stages.find(s => s.id === stageId);
+      addLog('stage_update', `다음 지점 메모 저장: ${st?.name || ''}`);
+    }
   };
   const handleDeleteStage = async (stageId) => {
     const st = stages.find(s => s.id === stageId);
     await deleteStage(stageId);
     addLog('stage_delete', `단계 삭제: ${st?.name || ''}`);
+  };
+  // 기존 단계를 표준 단계 이름·순서로 맞춤 (단계 id 유지 → 연결된 기록 그대로)
+  const handleStandardizeStages = async (plan) => {
+    for (const u of plan.updates) {
+      if (u.stage.name !== u.name || u.stage.order !== u.order) {
+        await updateStage(u.stage.id, { name: u.name, order: u.order });
+      }
+    }
+    for (const e of plan.extras) {
+      if (e.stage.order !== e.order) await updateStage(e.stage.id, { order: e.order });
+    }
+    for (const a of plan.adds) {
+      await addStage(a);
+    }
+    addLog('stage_update', `단계를 표준 ${plan.updates.length + plan.adds.length}단계로 맞춤 (이름 변경 ${plan.renames.length}개, 추가 ${plan.adds.length}개)`);
   };
 
   // 일정
@@ -197,26 +219,17 @@ export default function BranchDetailPage({ initialTab }) {
   };
 
   // 설계사 표준 신축공정 19종 일괄 등록 핸들러
-  const handleAddArchitectPreset = async () => {
-    if (window.confirm('설계사무소 표준 19개 신축공정 일정(건축허가 4단계, 착공접수 6단계, 본공사/준공 9단계)을 일괄 등록하시겠습니까?')) {
-      try {
-        for (const item of DEFAULT_ARCHITECT_SCHEDULE) {
-          await addSchedule({
-            title: item.title,
-            startDate: item.startDate,
-            endDate: item.endDate,
-            category: item.category,
-            milestoneText: item.milestoneText,
-            color: item.color,
-            memo: item.note,
-          });
-        }
-        addLog('schedule_add', '설계사 표준 신축공정 19종 일괄 등록 완료');
-        alert('설계사 표준 공정이 성공적으로 등록되었습니다.');
-      } catch (err) {
-        console.error('프리셋 등록 실패:', err);
-        alert('일괄 등록 중 오류가 발생했습니다: ' + err.message);
+  // 설계사 표준 신축공정 일정 일괄 등록 (시작일 기준으로 계산된 일정)
+  const handleAddArchitectPreset = async (items) => {
+    try {
+      for (const item of items) {
+        await addSchedule(item);
       }
+      addLog('schedule_add', `설계사 표준 신축공정 ${items.length}개 일괄 등록 (시작일 ${items[0]?.startDate})`);
+      setShowPresetModal(false);
+    } catch (err) {
+      console.error('프리셋 등록 실패:', err);
+      alert('일괄 등록 중 오류가 발생했습니다: ' + err.message);
     }
   };
 
@@ -500,6 +513,7 @@ export default function BranchDetailPage({ initialTab }) {
             onAddCost={(stageId) => { setEditingCost(null); setFormStageId(stageId); setShowCostForm(true); }}
             onAddDocument={(stageId) => { setFormStageId(stageId); setShowDocUpload(true); }}
             onEditBranch={() => setShowBranchEdit(true)}
+            onStandardizeStages={handleStandardizeStages}
           />
         )}
 
@@ -512,9 +526,14 @@ export default function BranchDetailPage({ initialTab }) {
                   <NeonIcon name="calendar" color="blue" size="sm" />
                   <h3>일정 타임라인 (간트차트)</h3>
                 </div>
-                <button className="btn btn-primary btn-sm" onClick={() => { setEditingSchedule(null); setShowScheduleForm(true); }}>
-                  + 일정 추가
-                </button>
+                <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowPresetModal(true)}>
+                    표준 일정 불러오기
+                  </button>
+                  <button className="btn btn-primary btn-sm" onClick={() => { setEditingSchedule(null); setShowScheduleForm(true); }}>
+                    + 일정 추가
+                  </button>
+                </div>
               </div>
               <Timeline
                 schedules={schedules}
@@ -522,7 +541,6 @@ export default function BranchDetailPage({ initialTab }) {
                 onEdit={handleEditSchedule}
                 onDelete={handleDeleteSchedule}
                 onToggleComplete={handleToggleScheduleComplete}
-                onAddPreset={handleAddArchitectPreset}
               />
             </div>
 
@@ -536,6 +554,8 @@ export default function BranchDetailPage({ initialTab }) {
               onAddEntry={handleAddDailyLogEntry}
               onUpdateEntry={handleUpdateDailyLogEntry}
               onDeleteEntry={handleDeleteDailyLogEntry}
+              stages={stages}
+              defaultStageId={currentStageId}
             />
           </div>
         )}
@@ -686,6 +706,14 @@ export default function BranchDetailPage({ initialTab }) {
         />
       )}
 
+      {showPresetModal && (
+        <ArchitectPresetModal
+          stages={stages}
+          onApply={handleAddArchitectPreset}
+          onClose={() => setShowPresetModal(false)}
+        />
+      )}
+
       {showDocUpload && (
         <DocumentUpload
           stages={stages}
@@ -698,6 +726,8 @@ export default function BranchDetailPage({ initialTab }) {
       {showDailyLogForm && (
         <DailyLogForm
           branchId={branchId}
+          stages={stages}
+          defaultStageId={currentStageId}
           onSubmit={async (data) => {
             await handleAddDailyLog(data);
             setShowDailyLogForm(false);

@@ -29,6 +29,8 @@ export default function DailyLogList({
   onAddEntry,
   onUpdateEntry,
   onDeleteEntry,
+  stages = [],
+  defaultStageId = '',
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
@@ -510,6 +512,8 @@ export default function DailyLogList({
       {showForm && (
         <DailyLogForm
           branchId={branchId}
+          stages={stages}
+          defaultStageId={defaultStageId}
           onSubmit={handleAddSubmit}
           onClose={() => setShowForm(false)}
         />
@@ -519,6 +523,7 @@ export default function DailyLogList({
       {editingLog && (
         <DailyLogForm
           branchId={branchId}
+          stages={stages}
           initialData={editingLog}
           onSubmit={handleEditSubmit}
           onClose={() => setEditingLog(null)}
