@@ -158,3 +158,10 @@
     border-radius: var(--radius-xl) var(--radius-xl) var(--radius-lg) var(--radius-lg);
   }
 }
+
+.login-help {
+  margin-top: var(--space-lg);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}

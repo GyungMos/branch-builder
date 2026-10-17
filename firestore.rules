@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// Firestore 보안 규칙: 아래 목록에 있는 이메일로 로그인한 사람만 읽기/쓰기 가능
+// Firebase 콘솔 → Firestore Database → 규칙(Rules) 탭에 이 내용을 붙여넣고 '게시'하세요.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isMember() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() in [
+          // 사용할 이메일을 소문자로, 따옴표와 쉼표를 지켜서 적어주세요
+          'owner@example.com'
+        ];
+    }
+
+    match /{document=**} {
+      allow read, write: if isMember();
+    }
+  }
+}

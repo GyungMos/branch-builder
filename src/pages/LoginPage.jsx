@@ -5,13 +5,11 @@ import NeonIcon from '../components/common/NeonIcon';
 import './LoginPage.css';
 
 export default function LoginPage() {
-  const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -20,20 +18,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (isRegister) {
-        await register(email, password, displayName);
-      } else {
-        await login(email, password);
-      }
+      await login(email, password);
       navigate('/');
     } catch (err) {
       console.error('인증 에러:', err);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setError('이메일 또는 비밀번호가 일치하지 않습니다.');
-      } else if (err.code === 'auth/email-already-in-use') {
-        setError('이미 등록된 이메일 주소입니다.');
-      } else if (err.code === 'auth/weak-password') {
-        setError('비밀번호를 6자리 이상 입력해주세요.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.');
       } else if (err.code === 'auth/invalid-email') {
         setError('올바른 이메일 형식이 아닙니다.');
       } else {
@@ -61,35 +53,7 @@ export default function LoginPage() {
           <p className="login-subtitle">정비소 지점 오픈 관리 시스템</p>
         </div>
 
-        <div className="login-tabs">
-          <button
-            className={`login-tab ${!isRegister ? 'active' : ''}`}
-            onClick={() => { setIsRegister(false); setError(''); }}
-          >
-            로그인
-          </button>
-          <button
-            className={`login-tab ${isRegister ? 'active' : ''}`}
-            onClick={() => { setIsRegister(true); setError(''); }}
-          >
-            회원가입
-          </button>
-        </div>
-
         <form onSubmit={handleSubmit} className="login-form">
-          {isRegister && (
-            <div className="form-group animate-fade-in-up">
-              <label htmlFor="displayName">이름</label>
-              <input
-                id="displayName"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="이름을 입력하세요"
-                required={isRegister}
-              />
-            </div>
-          )}
 
           <div className="form-group">
             <label htmlFor="email">이메일</label>
@@ -114,7 +78,7 @@ export default function LoginPage() {
               placeholder="비밀번호를 입력하세요"
               required
               minLength={6}
-              autoComplete={isRegister ? 'new-password' : 'current-password'}
+              autoComplete="current-password"
             />
           </div>
 
@@ -133,10 +97,12 @@ export default function LoginPage() {
             {loading ? (
               <span className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
             ) : (
-              isRegister ? '회원가입' : '로그인'
+              '로그인'
             )}
           </button>
         </form>
+
+        <p className="login-help">계정이 필요하면 관리자에게 요청하세요.</p>
       </div>
     </div>
   );

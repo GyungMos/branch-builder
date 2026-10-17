@@ -168,8 +168,10 @@ export default function BranchTimelineFeed({
 
       const isImage = doc.fileType?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif)$/i.test(doc.fileName || '');
       const photos = [];
-      if (isImage && (doc.downloadUrl || doc.thumbnailUrl)) {
-        photos.push({ url: doc.downloadUrl || doc.thumbnailUrl, label: doc.fileName, summary: doc.category || '현장 서류/사진', date: norm.dateStr });
+      // 업로드 시 저장하는 이름은 fileUrl (예전 이름 downloadUrl도 함께 지원)
+      const fileUrl = doc.fileUrl || doc.downloadUrl || doc.thumbnailUrl;
+      if (isImage && fileUrl) {
+        photos.push({ url: fileUrl, label: doc.fileName, summary: doc.category || '현장 서류/사진', date: norm.dateStr });
       }
 
       items.push({
@@ -913,10 +915,10 @@ function TimelineCard({ item, onPhotoClick }) {
 
         <div className="timeline-card-title">{raw.fileName || '서류 파일'}</div>
 
-        {raw.downloadUrl && (
+        {(raw.fileUrl || raw.downloadUrl) && (
           <div style={{ marginTop: 6 }}>
             <a
-              href={raw.downloadUrl}
+              href={raw.fileUrl || raw.downloadUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-secondary btn-sm"

@@ -23,6 +23,7 @@ function setLocalData(key, data) {
 export function useBranches() {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false); // 보안 규칙의 허용 목록에 없는 계정
   const { user, demoMode } = useAuth();
 
   useEffect(() => {
@@ -38,9 +39,11 @@ export function useBranches() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBranches(data);
+      setAccessDenied(false);
       setLoading(false);
     }, (error) => {
       console.error('Error fetching branches:', error);
+      setAccessDenied(error.code === 'permission-denied');
       setLoading(false);
     });
     return unsubscribe;
@@ -100,7 +103,7 @@ export function useBranches() {
     return deleteDoc(doc(db, 'branches', branchId));
   };
 
-  return { branches, loading, addBranch, updateBranch, deleteBranch };
+  return { branches, loading, accessDenied, addBranch, updateBranch, deleteBranch };
 }
 
 // ========== Stages (Sub-collection) ==========

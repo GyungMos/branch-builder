@@ -8,7 +8,7 @@ import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
 import './BranchListPage.css';
 
 export default function BranchListPage() {
-  const { branches, loading, addBranch, deleteBranch } = useBranches();
+  const { branches, loading, accessDenied, addBranch, deleteBranch } = useBranches();
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
@@ -41,6 +41,17 @@ export default function BranchListPage() {
     return (
       <div className="loading-overlay">
         <div className="spinner spinner-lg" />
+      </div>
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="page" id="branch-list-page">
+        <div className="card-static" style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
+          <h2 style={{ fontSize: 'var(--font-size-lg)', marginBottom: 'var(--space-sm)' }}>접근 권한이 없는 계정입니다</h2>
+          <p className="text-secondary">관리자에게 이 이메일을 사용 허용 목록에 추가해 달라고 요청하세요.</p>
+        </div>
       </div>
     );
   }
