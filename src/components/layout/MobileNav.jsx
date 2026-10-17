@@ -61,6 +61,15 @@ export default function MobileNav({ activeTab, onTabChange }) {
         </span>
         <span className="mobile-nav-label">대시보드</span>
       </button>
+      <button
+        className={`mobile-nav-item ${location.pathname === '/compare' ? 'active' : ''}`}
+        onClick={() => navigate('/compare')}
+      >
+        <span className="mobile-nav-icon">
+          <NeonIcon name="chart" color="amber" size="sm" badge={false} />
+        </span>
+        <span className="mobile-nav-label">지점 비교</span>
+      </button>
     </nav>
   );
 }

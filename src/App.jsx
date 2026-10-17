@@ -6,6 +6,9 @@ import LoginPage from './pages/LoginPage';
 import BranchListPage from './pages/BranchListPage';
 import BranchDetailPage from './pages/BranchDetailPage';
 import DashboardPage from './pages/DashboardPage';
+import ComparePage from './pages/ComparePage';
+import BranchReportPage from './pages/BranchReportPage';
+import MobileNav from './components/layout/MobileNav';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -49,6 +52,7 @@ function AppRoutes() {
             <>
               <Header />
               <BranchListPage />
+              <MobileNav />
             </>
           </ProtectedRoute>
         }
@@ -60,6 +64,30 @@ function AppRoutes() {
             <>
               <Header />
               <DashboardPage />
+              <MobileNav />
+            </>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/compare"
+        element={
+          <ProtectedRoute>
+            <>
+              <Header />
+              <ComparePage />
+              <MobileNav />
+            </>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/branch/:branchId/report"
+        element={
+          <ProtectedRoute>
+            <>
+              <Header />
+              <BranchReportPage />
             </>
           </ProtectedRoute>
         }

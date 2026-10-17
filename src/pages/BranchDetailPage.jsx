@@ -17,6 +17,7 @@ import NeonIcon from '../components/common/NeonIcon';
 
 import BranchForm from '../components/branch/BranchForm';
 import StageBook from '../components/branch/StageBook';
+import CopyBranchModal from '../components/branch/CopyBranchModal';
 import Timeline from '../components/schedule/Timeline';
 import ArchitectPresetModal from '../components/schedule/ArchitectPresetModal';
 import QuickScheduleForm from '../components/schedule/QuickScheduleForm';
@@ -64,7 +65,8 @@ export default function BranchDetailPage({ initialTab }) {
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [editingCost, setEditingCost] = useState(null);
   const [formStageId, setFormStageId] = useState('');
-  const [showPresetModal, setShowPresetModal] = useState(false); // 단계별 기록에서 + 버튼으로 열 때 미리 고를 단계
+  const [showPresetModal, setShowPresetModal] = useState(false);
+  const [showCopyModal, setShowCopyModal] = useState(false); // 단계별 기록에서 + 버튼으로 열 때 미리 고를 단계
   const [loading, setLoading] = useState(true);
 
   const { demoMode } = useAuth();
@@ -397,6 +399,14 @@ export default function BranchDetailPage({ initialTab }) {
               <NeonIcon name="edit" color="emerald" size="sm" badge={false} />
               <span>지점/제원 수정</span>
             </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowCopyModal(true)}
+              id="copy-branch-btn"
+              title="단계·체크리스트·협력업체·장비 등을 복사해 새 지점 만들기"
+            >
+              이 지점처럼 새 지점 만들기
+            </button>
             <select className="branch-status-select" value={branch.status} onChange={(e) => handleStatusChange(e.target.value)} id="branch-status-select">
               {Object.entries(BRANCH_STATUS).map(([key, val]) => (
                 <option key={key} value={key}>{val.label}</option>
@@ -496,6 +506,7 @@ export default function BranchDetailPage({ initialTab }) {
         {/* 1. 단계별 기록 (임대차계약 → … → 오픈) */}
         {activeTab === 'stages' && (
           <StageBook
+            key={branchId}
             branch={branch}
             stages={stages}
             schedules={schedules}
@@ -704,6 +715,10 @@ export default function BranchDetailPage({ initialTab }) {
           onSubmit={handleCostSubmit}
           onClose={() => { setShowCostForm(false); setEditingCost(null); setFormStageId(''); }}
         />
+      )}
+
+      {showCopyModal && (
+        <CopyBranchModal source={branch} onClose={() => setShowCopyModal(false)} />
       )}
 
       {showPresetModal && (

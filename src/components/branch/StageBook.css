@@ -537,3 +537,7 @@ button.stage-record-main:hover .stage-record-title {
   font-size: var(--font-size-sm);
   color: var(--color-success);
 }
+
+.stage-quick-add-spacer {
+  flex: 1;
+}

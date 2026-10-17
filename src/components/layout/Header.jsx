@@ -27,6 +27,7 @@ export default function Header() {
   const isDetailPage = location.pathname.startsWith('/branch/');
   const isDashboard = location.pathname === '/dashboard';
   const isBranchList = location.pathname === '/';
+  const isCompare = location.pathname === '/compare';
 
   // 현재 상세 지점 ID 추출
   const pathParts = location.pathname.split('/');
@@ -125,6 +126,15 @@ export default function Header() {
             >
               <NeonIcon name="building" color={isBranchList ? 'cyan' : 'emerald'} size="sm" badge={false} />
               <span>지점 목록</span>
+            </button>
+            <button
+              className={`header-nav-btn ${isCompare ? 'active' : ''}`}
+              onClick={() => navigate('/compare')}
+              id="nav-compare-btn"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <NeonIcon name="chart" color={isCompare ? 'cyan' : 'emerald'} size="sm" badge={false} />
+              <span>지점 비교</span>
             </button>
           </nav>
         </div>

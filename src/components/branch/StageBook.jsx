@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { STAGE_STATUS } from '../../utils/constants';
 import { formatCurrency, formatDateShort } from '../../utils/formatters';
 import PropertySpecs from './PropertySpecs';
@@ -305,6 +306,9 @@ export default function StageBook({
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => onAddSchedule(stage.id)}>+ 일정</button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => onAddCost(stage.id)}>+ 비용</button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => onAddDocument(stage.id)}>+ 서류·사진</button>
+            <span className="stage-quick-add-spacer" />
+            <Link to={`/branch/${branch.id}/report?stage=${stage.id}`} className="btn btn-ghost btn-sm">이 단계 인쇄</Link>
+            <Link to={`/branch/${branch.id}/report`} className="btn btn-ghost btn-sm">전체 보고서</Link>
           </div>
         )}
 

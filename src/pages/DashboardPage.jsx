@@ -82,6 +82,9 @@ export default function DashboardPage() {
           <button className="btn btn-secondary btn-sm" onClick={() => navigate('/')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <NeonIcon name="building" size="xs" badge={false} /> 지점 목록 보기
           </button>
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/compare')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <NeonIcon name="chart" size="xs" badge={false} /> 지점 비교 보고서
+          </button>
           <button className="btn btn-primary btn-sm" onClick={() => setShowAddModal(true)}>
             + 새 지점 추가
           </button>
