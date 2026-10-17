@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import NeonIcon from '../common/NeonIcon';
 import ModalPortal from '../common/ModalPortal';
+import ZoomableImage from '../common/ZoomableImage';
 import { formatDate, formatDateShort, formatCurrency, formatFileSize, getDDay } from '../../utils/formatters';
 import './BranchTimelineFeed.css';
 
@@ -671,7 +672,7 @@ export default function BranchTimelineFeed({
               className="timeline-lightbox-content"
               onClick={(e) => e.stopPropagation()}
             >
-              <img
+              <ZoomableImage
                 src={lightbox.photos[lightbox.currentIndex]?.url}
                 alt={lightbox.photos[lightbox.currentIndex]?.label || '현장 사진'}
                 className="timeline-lightbox-img"

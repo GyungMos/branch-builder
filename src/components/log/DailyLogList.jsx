@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ZoomableImage from '../common/ZoomableImage';
 import NeonIcon from '../common/NeonIcon';
 import ModalPortal from '../common/ModalPortal';
 import DailyLogForm from './DailyLogForm';
@@ -581,7 +582,7 @@ export default function DailyLogList({
                 )}
 
                 <div className="log-lightbox-img-wrapper">
-                  <img
+                  <ZoomableImage
                     src={viewer.items[viewer.currentIndex]?.url}
                     alt={`현장 사진 ${viewer.currentIndex + 1}`}
                     className="log-lightbox-main-img"

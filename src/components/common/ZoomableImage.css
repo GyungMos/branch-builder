@@ -1,0 +1,47 @@
+.zoomable-img {
+  cursor: zoom-in;
+}
+
+/* 확대 화면: 원본 크기로 띄우고 스크롤(손가락으로 끌기)로 이동 */
+.zoomable-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: #000;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  cursor: zoom-out;
+  display: flex;
+}
+
+.zoomable-full {
+  margin: auto;
+  flex-shrink: 0;
+  min-width: 100%;
+  max-width: none;
+  max-height: none;
+  height: auto;
+}
+
+/* 사진이 화면보다 작으면 2배로 키워서 확대 효과 */
+@media (max-width: 768px) {
+  .zoomable-full {
+    min-width: 250%;
+  }
+}
+
+.zoomable-close {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10051;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 23, 42, 0.85);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}

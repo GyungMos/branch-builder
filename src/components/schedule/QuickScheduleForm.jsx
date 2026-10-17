@@ -2,20 +2,13 @@ import { useState } from 'react';
 import ModalPortal from '../common/ModalPortal';
 import NeonIcon from '../common/NeonIcon';
 import DateInput from '../common/DateInput';
+import { toDateInputValue } from '../../utils/formatters';
 
 export default function QuickScheduleForm({ schedule, stages, defaultStageId = '', onSubmit, onClose }) {
   const isEdit = Boolean(schedule);
   const [title, setTitle] = useState(schedule?.title || '');
-  const [startDate, setStartDate] = useState(
-    schedule?.startDate
-      ? (typeof schedule.startDate === 'string' ? schedule.startDate : new Date(schedule.startDate).toISOString().split('T')[0])
-      : new Date().toISOString().split('T')[0]
-  );
-  const [endDate, setEndDate] = useState(
-    schedule?.endDate
-      ? (typeof schedule.endDate === 'string' ? schedule.endDate : new Date(schedule.endDate).toISOString().split('T')[0])
-      : ''
-  );
+  const [startDate, setStartDate] = useState(toDateInputValue(schedule?.startDate) || toDateInputValue(new Date()));
+  const [endDate, setEndDate] = useState(toDateInputValue(schedule?.endDate));
   const [stageId, setStageId] = useState(schedule?.stageId || defaultStageId);
   const [assignee, setAssignee] = useState(schedule?.assignee || '');
   const [memo, setMemo] = useState(schedule?.memo || '');

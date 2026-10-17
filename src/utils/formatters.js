@@ -17,6 +17,18 @@ export function formatDateInput(date) {
   return d.toISOString().split('T')[0];
 }
 
+// 입력칸용 'YYYY-MM-DD' (문자열·Date·Firestore Timestamp 모두 처리, 잘못된 값이면 '')
+export function toDateInputValue(val) {
+  if (!val) return '';
+  if (typeof val === 'string') return val.slice(0, 10);
+  const d = val instanceof Date ? val : val.toDate ? val.toDate() : new Date(val);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // 금액 포맷
 export function formatCurrency(amount) {
   if (amount === null || amount === undefined) return '₩0';

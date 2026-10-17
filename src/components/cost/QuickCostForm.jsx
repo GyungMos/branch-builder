@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { COST_CATEGORIES } from '../../utils/constants';
-import { formatNumberWithCommas, parseNumberFromCommas } from '../../utils/formatters';
+import { formatNumberWithCommas, parseNumberFromCommas, toDateInputValue } from '../../utils/formatters';
 import ModalPortal from '../common/ModalPortal';
 import NeonIcon from '../common/NeonIcon';
 import DateInput from '../common/DateInput';
@@ -10,11 +10,7 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
   const [title, setTitle] = useState(cost?.title || '');
   const [amount, setAmount] = useState(cost?.amount ? formatNumberWithCommas(cost.amount) : '');
   const [category, setCategory] = useState(cost?.category || 'etc');
-  const [date, setDate] = useState(
-    cost?.date
-      ? (typeof cost.date === 'string' ? cost.date : new Date(cost.date).toISOString().split('T')[0])
-      : new Date().toISOString().split('T')[0]
-  );
+  const [date, setDate] = useState(toDateInputValue(cost?.date) || toDateInputValue(new Date()));
   const [stageId, setStageId] = useState(cost?.stageId || defaultStageId);
   const [memo, setMemo] = useState(cost?.memo || '');
   const [assignee, setAssignee] = useState(cost?.assignee || '');
