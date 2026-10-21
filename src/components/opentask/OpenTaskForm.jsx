@@ -3,29 +3,11 @@ import ModalPortal from '../common/ModalPortal';
 import DateInput from '../common/DateInput';
 import PeoplePicker from '../common/PeoplePicker';
 import NotionBadge from '../common/NotionBadge';
-import { loadStorage } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
-import { toDateInputValue, generateId } from '../../utils/formatters';
+import { toDateInputValue } from '../../utils/formatters';
+import { uploadAttachment } from '../../utils/fileUpload';
 
 const isYmd = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
-
-async function uploadFile(file, branchId, demoMode) {
-  if (demoMode) {
-    const url = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.onerror = reject;
-      r.readAsDataURL(file);
-    });
-    return { id: generateId(), name: file.name, url, storagePath: null };
-  }
-  const st = await loadStorage();
-  if (!st) throw new Error('파일 저장소에 연결하지 못했어요.');
-  const path = `branches/${branchId}/openTasks/${Date.now()}_${generateId()}_${file.name}`;
-  const ref = st.ref(st.storage, path);
-  await st.uploadBytes(ref, file);
-  return { id: generateId(), name: file.name, url: await st.getDownloadURL(ref), storagePath: path };
-}
 
 /**
  * 오픈 준비 스케줄 항목 작성·수정 (노션 '구리OPEN 스케쥴'의 칸과 같음)
@@ -55,10 +37,10 @@ export default function OpenTaskForm({ task, defaults = {}, branchId, people, gr
     setError('');
     try {
       const uploaded = [];
-      for (const f of list) uploaded.push(await uploadFile(f, branchId, demoMode));
+      for (const f of list) uploaded.push(await uploadAttachment(f, { branchId, folder: 'openTasks', demoMode }));
       setFiles(prev => [...prev, ...uploaded]);
     } catch (err) {
-      setError('파일을 올리지 못했어요: ' + err.message);
+      setError(err.message);
     } finally {
       setUploading(false);
     }

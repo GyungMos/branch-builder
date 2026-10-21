@@ -3,6 +3,7 @@ import { db } from '../config/firebase';
 import { callNotion, ymd } from './notionSync';
 import { COST_CATEGORIES } from './constants';
 import { isScheduledCost } from './costs';
+import { resolveAttachments } from './miniDoc';
 
 /** 기록 종류 → Firestore 하위 컬렉션 이름 */
 export const NOTION_COLLECTIONS = {
@@ -45,7 +46,7 @@ function toPayload(kind, r, stages = []) {
   const stageName = stages.find(s => s.id === r.stageId)?.name || '';
   switch (kind) {
     case 'plan': {
-      const body = r.body || '';
+      const body = resolveAttachments(r.body || '', r.attachments, true);
       return {
         bodyHash: textHash(body),
         record: {

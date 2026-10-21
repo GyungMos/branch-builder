@@ -156,6 +156,7 @@ export default function OpenTaskTable({ tasks, onAdd, onEdit, onToggleDone, onDe
                   <span role="columnheader">담당자1</span>
                   <span role="columnheader">담당자2</span>
                   <span role="columnheader">비고</span>
+                  <span role="columnheader" />
                 </div>
                 {g.items.map(t => (
                   <div
@@ -189,6 +190,9 @@ export default function OpenTaskTable({ tasks, onAdd, onEdit, onToggleDone, onDe
                     <span className="task-cell-people" role="cell" data-label="담당자1"><PeopleTags names={t.assignee1 || []} /></span>
                     <span className="task-cell-people" role="cell" data-label="담당자2"><PeopleTags names={t.assignee2 || []} /></span>
                     <span className="task-cell-memo" role="cell">{t.memo}</span>
+                    <span className="task-cell-edit" role="cell" onClick={(e) => e.stopPropagation()}>
+                      <button type="button" className="edit-chip" onClick={() => onEdit(t)} aria-label={`${t.title} 편집`}>✎ 편집</button>
+                    </span>
                   </div>
                 ))}
               </div>

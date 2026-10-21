@@ -4,6 +4,7 @@ import { useBranches } from '../hooks/useFirestore';
 import { useAuth } from '../contexts/AuthContext';
 import { loadBranchData } from '../utils/branchData';
 import { formatCurrency, formatDateShort } from '../utils/formatters';
+import { plainMiniDoc } from '../utils/miniDoc';
 import './SearchPage.css';
 
 const TYPES = {
@@ -40,7 +41,7 @@ function buildEntries(branch, data) {
     }
   });
   (data.openPlans || []).forEach(p => push('plan', p.title,
-    [p.body, ...(p.assignee1 || []), ...(p.assignee2 || [])].filter(Boolean).join(' · ').slice(0, 400), fmtDate(p.dueDate)));
+    [plainMiniDoc(p.body), ...(p.assignee1 || []), ...(p.assignee2 || [])].filter(Boolean).join(' · ').slice(0, 400), fmtDate(p.dueDate)));
   (data.openTasks || []).forEach(t => push('task', t.title,
     [t.group, t.category, t.memo, ...(t.assignee1 || []), ...(t.assignee2 || [])].filter(Boolean).join(' · '), fmtDate(t.startDate)));
   (data.schedules || []).forEach(s => push('schedule', s.title, [s.memo, s.assignee, s.milestoneText].filter(Boolean).join(' · '), fmtDate(s.startDate)));

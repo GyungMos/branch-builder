@@ -872,6 +872,7 @@ export default function BranchDetailPage({ initialTab }) {
         <OpenPlanEditor
           plan={planEditor.plan}
           defaultStatus={planEditor.status}
+          branchId={branchId}
           people={people}
           onSave={handleSavePlan}
           onDelete={handleDeletePlan}

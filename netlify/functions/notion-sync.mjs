@@ -10,7 +10,7 @@
  * 노션 구조:  부모 페이지 └ 지점 페이지 ├ 오픈 계획 ├ 오픈 준비 스케줄 ├ 일정 ├ 비용 └ 현장 일지  (모두 표)
  */
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { parseMiniDoc, splitLinks } from '../../src/utils/miniDoc.js';
+import { parseMiniDoc, parseInline, splitLinks } from '../../src/utils/miniDoc.js';
 
 const NOTION_VERSION = '2022-06-28';
 const NOTION_API = 'https://api.notion.com/v1';
@@ -76,6 +76,21 @@ function richText(text = '') {
   return out.length ? out : [{ type: 'text', text: { content: '' } }];
 }
 
+// 오픈 계획 본문용: 글씨색·배경색·[이름](주소) 링크까지 노션 글자 꾸밈으로 옮김
+// (노션은 한 글자에 색을 하나만 쓸 수 있어서 배경색이 있으면 배경색을 씀)
+function docRichText(text = '') {
+  const out = [];
+  parseInline(str(text)).forEach(p => {
+    const color = p.bg ? `${p.bg}_background` : (p.color || 'default');
+    const link = isHttp(p.url) && p.url.length <= 2000 ? { url: p.url } : null;
+    const content = !p.url || link ? p.text : `${p.text} (사이트에서 열기)`;
+    for (let i = 0; i < content.length; i += 1900) {
+      out.push({ type: 'text', text: { content: content.slice(i, i + 1900), link }, annotations: { color } });
+    }
+  });
+  return out.length ? out : [{ type: 'text', text: { content: '' } }];
+}
+
 const title = (t) => ({ title: richText(str(t).slice(0, 2000) || '제목 없음') });
 const text = (t) => ({ rich_text: richText(str(t)) });
 const select = (v) => ({ select: option(v) ? { name: option(v) } : null });
@@ -94,11 +109,17 @@ const image = (url) => block('image', { type: 'external', external: { url } });
 
 function miniDocBlocks(blocks) {
   return blocks.map(b => {
+    if (b.kind === 'image') {
+      // 저장소 주소 사진만 노션에 사진으로 (본문에 바로 넣은 작은 사진은 노션이 받지 못함)
+      return isHttp(b.url) && b.url.length <= 2000
+        ? image(b.url)
+        : para(`🖼 ${b.text || '사진'} (사진은 사이트에서 볼 수 있어요)`);
+    }
     const type = {
       h1: 'heading_1', h2: 'heading_2', h3: 'heading_3',
       bullet: 'bulleted_list_item', number: 'numbered_list_item', todo: 'to_do', para: 'paragraph',
     }[b.kind];
-    const content = { rich_text: richText(b.text) };
+    const content = { rich_text: docRichText(b.text) };
     if (b.kind === 'todo') content.checked = Boolean(b.checked);
     if (b.children?.length) content.children = miniDocBlocks(b.children);
     return block(type, content);

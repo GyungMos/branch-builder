@@ -114,6 +114,51 @@ button.status-pill.selected {
   opacity: 0.5;
 }
 
+/* 카드 오른쪽 위 '편집' 버튼 */
+.plan-card-wrap {
+  position: relative;
+}
+
+.plan-card-wrap .plan-card-title {
+  padding-right: 64px;
+}
+
+.plan-card-edit {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* '편집' 작은 버튼 (오픈 계획 카드 · 오픈 준비 줄 공통) */
+.edit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+
+[data-theme="light"] .edit-chip {
+  background: #ffffff;
+}
+
+.edit-chip:hover,
+.edit-chip:focus-visible {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-bg-secondary));
+}
+
 .plan-card-title {
   font-weight: 700;
   font-size: var(--font-size-base);
@@ -308,7 +353,7 @@ button.status-pill.selected {
   gap: 4px;
 }
 
-.plan-tools button {
+.plan-tools > button {
   padding: 4px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -320,9 +365,134 @@ button.status-pill.selected {
   cursor: pointer;
 }
 
-.plan-tools button:hover {
+.plan-tools > button:hover,
+.plan-tools > button.on {
   color: var(--color-text-primary);
   background: var(--color-bg-hover);
+}
+
+.plan-tools > button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.plan-tools {
+  position: relative;
+  align-items: center;
+}
+
+.plan-tools-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--color-border);
+}
+
+.tool-a {
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 2px;
+  border-radius: 3px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.tool-a-color {
+  color: #f87171;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+.tool-a-bg {
+  background: rgba(234, 179, 8, 0.4);
+  color: var(--color-text-primary);
+}
+
+/* 색 고르기 · 링크 넣기 작은 창 */
+.doc-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-secondary);
+  box-shadow: var(--shadow-xl);
+}
+
+[data-theme="light"] .doc-menu {
+  background: #ffffff;
+}
+
+.doc-color-menu {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  width: 260px;
+}
+
+.plan-tools .doc-color-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.doc-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-weight: 900;
+}
+
+.doc-link-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(320px, calc(100vw - 48px));
+}
+
+.doc-link-menu label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+}
+
+.doc-link-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.plan-tools .doc-link-actions .btn {
+  padding: 6px 12px;
+  font-size: var(--font-size-sm);
+}
+
+.plan-body-tip {
+  margin: 6px 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.plan-body-error {
+  margin: 6px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
 }
 
 /* 작성/미리보기 같은 두 칸 전환 */
@@ -411,4 +581,8 @@ button.status-pill.selected {
   .plan-body-head {
     flex-wrap: wrap;
   }
+}
+
+.plan-tools .doc-color-item:hover {
+  background: var(--color-bg-hover);
 }

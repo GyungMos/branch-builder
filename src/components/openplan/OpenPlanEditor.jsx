@@ -6,7 +6,10 @@ import MiniDocView from '../common/MiniDocView';
 import NotionBadge from '../common/NotionBadge';
 import { PLAN_COLUMNS } from './OpenPlanBoard';
 import { usePeopleContext } from '../../contexts/PeopleContext';
-import { toDateInputValue } from '../../utils/formatters';
+import { useAuth } from '../../contexts/AuthContext';
+import { toDateInputValue, generateId } from '../../utils/formatters';
+import { DOC_COLORS } from '../../utils/miniDoc';
+import { uploadAttachment, uploadDocPhoto } from '../../utils/fileUpload';
 
 // 본문 도구 단추: 지금 줄 앞에 표시를 넣음
 const TOOLS = [
@@ -18,11 +21,72 @@ const TOOLS = [
   { label: '→ 들여쓰기', prefix: '  ', title: '바로 위 목록의 하위 항목' },
 ];
 
+// 본문 글자 수 한도 (사진을 본문에 바로 넣을 때 저장 한도 1MB를 넘지 않게)
+const BODY_LIMIT = 900000;
+
+const cleanLabel = (s) => String(s).replace(/[[\]]/g, '');
+
+/** 글씨색·배경색 고르기 */
+function ColorMenu({ kind, onPick }) {
+  return (
+    <div className="doc-menu doc-color-menu" role="menu" aria-label={kind === 'bg' ? '배경색' : '글씨색'}>
+      {DOC_COLORS.map(c => (
+        <button
+          key={c.id}
+          type="button"
+          role="menuitem"
+          className="doc-color-item"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onPick(kind === 'bg' ? `bg-${c.id}` : c.id)}
+        >
+          <span className={`doc-swatch ${kind === 'bg' ? `bg-${c.id}` : `tc-${c.id}`}`}>가</span>
+          {c.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** 링크 넣기 */
+function LinkMenu({ initialLabel, onInsert, onCancel }) {
+  const [label, setLabel] = useState(initialLabel);
+  const [url, setUrl] = useState('');
+  const u = url.trim();
+  const ok = /^https?:\/\/\S+$/.test(u) || /^www\.\S+$/.test(u);
+  const submit = () => {
+    if (ok) onInsert(label.trim(), u.startsWith('www.') ? `https://${u}` : u);
+  };
+  return (
+    <div className="doc-menu doc-link-menu" role="dialog" aria-label="링크 넣기">
+      <label>
+        보일 이름
+        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="예: 구리시청 안내 페이지" />
+      </label>
+      <label>
+        주소
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://..."
+          inputMode="url"
+          autoFocus
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
+        />
+      </label>
+      <div className="doc-link-actions">
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>취소</button>
+        <button type="button" className="btn btn-primary btn-sm" disabled={!ok} onClick={submit}>넣기</button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * 오픈 계획 카드 세부 페이지 (노션 카드 안쪽과 같은 구성: 상태 · 담당자1·2 · 종료일 · 본문)
  */
-export default function OpenPlanEditor({ plan, defaultStatus = 'todo', people, onSave, onDelete, onRetryNotion, onClose }) {
+export default function OpenPlanEditor({ plan, defaultStatus = 'todo', branchId, people, onSave, onDelete, onRetryNotion, onClose }) {
   const isNew = !plan?.id;
+  const { demoMode } = useAuth();
   const { statusColor } = usePeopleContext();
   const [title, setTitle] = useState(plan?.title || '');
   const [status, setStatus] = useState(plan?.status || defaultStatus);
@@ -30,9 +94,17 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', people, o
   const [assignee2, setAssignee2] = useState(plan?.assignee2 || []);
   const [dueDate, setDueDate] = useState(toDateInputValue(plan?.dueDate));
   const [body, setBody] = useState(plan?.body || '');
+  // 사진·파일 주소는 본문 밖에 따로 두고, 본문에는 (att:번호)만 적음 (긴 주소가 본문에 보이지 않게)
+  const [attachments, setAttachments] = useState(plan?.attachments || {});
   const [mode, setMode] = useState(isNew || !plan?.body ? 'edit' : 'view');
   const [saving, setSaving] = useState(false);
+  const [menu, setMenu] = useState(null); // color | bg | link
+  const [uploading, setUploading] = useState('');
+  const [error, setError] = useState('');
   const bodyRef = useRef(null);
+  const selRef = useRef({ start: 0, end: 0 });
+  const photoRef = useRef(null);
+  const fileRef = useRef(null);
 
   const dirty = isNew
     || title !== (plan.title || '') || status !== (plan.status || 'todo') || body !== (plan.body || '')
@@ -58,9 +130,89 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', people, o
     });
   };
 
+  // 도구를 누르기 전 본문에서 고른 위치를 기억
+  const rememberSelection = () => {
+    const el = bodyRef.current;
+    if (el) selRef.current = { start: el.selectionStart, end: el.selectionEnd };
+  };
+
+  const focusAt = (start, end = start) => {
+    requestAnimationFrame(() => {
+      const el = bodyRef.current;
+      if (!el) return;
+      el.focus();
+      el.selectionStart = start;
+      el.selectionEnd = end;
+    });
+  };
+
+  // 고른 글자를 색 표시로 감쌈 (고른 글자가 없으면 '글자'를 넣고 골라 둠)
+  const wrapColor = (spec) => {
+    setMenu(null);
+    const { start, end } = selRef.current;
+    const picked = body.slice(start, end) || '글자';
+    const open = `{{${spec}:`;
+    setBody(body.slice(0, start) + open + picked + '}}' + body.slice(end));
+    focusAt(start + open.length, start + open.length + picked.length);
+  };
+
+  // 지금 위치에 글자 넣기 (block이면 따로 한 줄로)
+  const insertText = (text, block = false) => {
+    const { start, end } = selRef.current;
+    const before = body.slice(0, start);
+    const after = body.slice(end);
+    const pre = block && before && !before.endsWith('\n') ? '\n' : '';
+    const post = block && !after.startsWith('\n') ? '\n' : '';
+    const head = before + pre + text + post;
+    setBody(head + after);
+    selRef.current = { start: head.length, end: head.length };
+    focusAt(head.length);
+  };
+
+  const openMenu = (name) => {
+    rememberSelection();
+    setMenu(m => (m === name ? null : name));
+  };
+
+  const handleUpload = async (e, kind) => {
+    const list = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!list.length) return;
+    setError('');
+    setUploading(kind === 'photo' ? '사진 넣는 중…' : '파일 올리는 중…');
+    try {
+      const lines = [];
+      const added = {};
+      for (const f of list) {
+        const id = generateId();
+        if (kind === 'photo') {
+          const name = cleanLabel(f.name.replace(/\.[^.]+$/, ''));
+          added[id] = { url: await uploadDocPhoto(f, { branchId, demoMode }), name };
+          lines.push(`![${name}](att:${id})`);
+        } else {
+          const up = await uploadAttachment(f, { branchId, folder: 'openPlans', demoMode });
+          added[id] = { url: up.url, name: up.name, storagePath: up.storagePath };
+          lines.push(`📎 [${cleanLabel(up.name)}](att:${id})`);
+        }
+      }
+      setAttachments(prev => ({ ...prev, ...added }));
+      insertText(lines.join('\n'), true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading('');
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
+    // 본문에서 지운 사진·파일은 같이 뺌
+    const used = Object.fromEntries(Object.entries(attachments).filter(([id]) => body.includes(`(att:${id})`)));
+    if (body.length + JSON.stringify(used).length > BODY_LIMIT) {
+      setError('내용이 너무 커요 (본문에 바로 넣은 사진이 많아요). 사진 몇 장을 빼고 저장해 주세요.');
+      return;
+    }
     setSaving(true);
     try {
       await onSave({
@@ -70,11 +222,15 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', people, o
         assignee2,
         dueDate: /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : null,
         body,
+        attachments: used,
       });
     } finally {
       setSaving(false);
     }
   };
+
+  // 도구 단추를 눌러도 본문에서 고른 글자가 풀리지 않게
+  const keepSelection = (e) => e.preventDefault();
 
   return (
     <ModalPortal onClose={handleClose}>
@@ -82,7 +238,7 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', people, o
       <div className="modal modal-lg plan-editor">
         <form onSubmit={handleSave}>
           <div className="plan-editor-top">
-            <span className="plan-editor-kicker">{isNew ? '새 오픈 계획' : '오픈 계획'}</span>
+            <span className="plan-editor-kicker">{isNew ? '새 오픈 계획' : '오픈 계획 편집'}</span>
             <button type="button" className="modal-close" onClick={handleClose} aria-label="닫기">✕</button>
           </div>
 
@@ -138,11 +294,46 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', people, o
                   {TOOLS.map(t => (
                     <button key={t.label} type="button" title={t.title} onClick={() => insertPrefix(t.prefix)}>{t.label}</button>
                   ))}
+                  <span className="plan-tools-sep" aria-hidden="true" />
+                  <button type="button" title="고른 글자의 색" className={menu === 'color' ? 'on' : ''}
+                    onMouseDown={keepSelection} onClick={() => openMenu('color')}>
+                    <span className="tool-a tool-a-color">가</span> 글씨색 ▾
+                  </button>
+                  <button type="button" title="고른 글자의 배경색" className={menu === 'bg' ? 'on' : ''}
+                    onMouseDown={keepSelection} onClick={() => openMenu('bg')}>
+                    <span className="tool-a tool-a-bg">가</span> 배경색 ▾
+                  </button>
+                  <button type="button" title="링크 넣기" className={menu === 'link' ? 'on' : ''}
+                    onMouseDown={keepSelection} onClick={() => openMenu('link')}>
+                    🔗 링크
+                  </button>
+                  <button type="button" title="사진 넣기" disabled={Boolean(uploading)}
+                    onMouseDown={keepSelection} onClick={() => { rememberSelection(); setMenu(null); photoRef.current?.click(); }}>
+                    🖼 사진
+                  </button>
+                  <button type="button" title="파일 넣기" disabled={Boolean(uploading)}
+                    onMouseDown={keepSelection} onClick={() => { rememberSelection(); setMenu(null); fileRef.current?.click(); }}>
+                    📎 파일
+                  </button>
+                  <input ref={photoRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleUpload(e, 'photo')} />
+                  <input ref={fileRef} type="file" multiple hidden onChange={(e) => handleUpload(e, 'file')} />
+
+                  {(menu === 'color' || menu === 'bg') && <ColorMenu kind={menu} onPick={wrapColor} />}
+                  {menu === 'link' && (
+                    <LinkMenu
+                      initialLabel={body.slice(selRef.current.start, selRef.current.end)}
+                      onCancel={() => setMenu(null)}
+                      onInsert={(label, url) => {
+                        setMenu(null);
+                        insertText(label ? `[${cleanLabel(label)}](${url})` : url);
+                      }}
+                    />
+                  )}
                 </div>
               ) : <span className="plan-body-label">본문</span>}
               <div className="seg-toggle" role="tablist">
-                <button type="button" role="tab" aria-selected={mode === 'edit'} className={mode === 'edit' ? 'on' : ''} onClick={() => setMode('edit')}>작성</button>
-                <button type="button" role="tab" aria-selected={mode === 'view'} className={mode === 'view' ? 'on' : ''} onClick={() => setMode('view')}>미리보기</button>
+                <button type="button" role="tab" aria-selected={mode === 'edit'} className={mode === 'edit' ? 'on' : ''} onClick={() => setMode('edit')}>{isNew ? '작성' : '편집'}</button>
+                <button type="button" role="tab" aria-selected={mode === 'view'} className={mode === 'view' ? 'on' : ''} onClick={() => { setMode('view'); setMenu(null); }}>미리보기</button>
               </div>
             </div>
 
@@ -152,12 +343,20 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', people, o
                 className="plan-body-input"
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
+                onSelect={rememberSelection}
+                onBlur={rememberSelection}
                 rows={14}
                 placeholder={'내용을 자유롭게 적어 주세요.\n\n# 1. 자동차관리사업 신규 등록\n- 링크 : https://www.guri.go.kr/...\n1. 구비서류\n  - 자동차관리사업 등록 신청서\n  - 사업장 위치도 및 평면도'}
               />
             ) : (
-              <div className="plan-body-view"><MiniDocView text={body} /></div>
+              <div className="plan-body-view"><MiniDocView text={body} attachments={attachments} /></div>
             )}
+            {mode === 'edit' && (
+              <p className="plan-body-tip">
+                {uploading || '글자를 고른 뒤 글씨색·배경색을 누르면 색이 들어가요. 실제 모양은 미리보기에서 볼 수 있어요.'}
+              </p>
+            )}
+            {error && <p className="plan-body-error" role="alert">{error}</p>}
           </div>
 
           <div className="modal-footer plan-editor-foot">
@@ -172,7 +371,7 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', people, o
             )}
             {dirty && !isNew && <span className="plan-dirty">변경 사항 있음</span>}
             <button type="button" className="btn btn-secondary" onClick={handleClose}>닫기</button>
-            <button type="submit" className="btn btn-primary" disabled={saving || !title.trim() || !dirty}>
+            <button type="submit" className="btn btn-primary" disabled={saving || Boolean(uploading) || !title.trim() || !dirty}>
               {saving ? '저장 중…' : '저장'}
             </button>
           </div>

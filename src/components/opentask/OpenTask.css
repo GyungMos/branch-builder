@@ -187,7 +187,7 @@
 
 .task-row {
   display: grid;
-  grid-template-columns: 44px minmax(180px, 2fr) 96px 150px minmax(110px, 1fr) minmax(110px, 1fr) minmax(120px, 1.2fr);
+  grid-template-columns: 44px minmax(180px, 2fr) 96px 150px minmax(110px, 1fr) minmax(110px, 1fr) minmax(120px, 1.2fr) 64px;
   align-items: center;
   gap: 8px;
   padding: 8px 16px 8px 8px;
@@ -290,6 +290,11 @@
   color: var(--color-text-secondary);
 }
 
+.task-cell-edit {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .task-cell-memo {
   color: var(--color-text-secondary);
   overflow: hidden;
@@ -355,13 +360,13 @@
   }
 
   .task-row {
-    grid-template-columns: 36px 1fr auto;
+    grid-template-columns: 36px 1fr auto auto;
     grid-template-areas:
-      "check title cat"
-      ". date date"
-      ". p1 p1"
-      ". p2 p2"
-      ". memo memo";
+      "check title cat edit"
+      ". date date date"
+      ". p1 p1 p1"
+      ". p2 p2 p2"
+      ". memo memo memo";
     row-gap: 4px;
     padding: 12px 12px 12px 6px;
   }
@@ -369,6 +374,7 @@
   .task-cell-check { grid-area: check; align-self: start; }
   .task-cell-title { grid-area: title; }
   .task-cell-cat { grid-area: cat; align-self: start; }
+  .task-cell-edit { grid-area: edit; align-self: start; }
   .task-cell-date { grid-area: date; font-size: var(--font-size-xs); }
   .task-cell-date:empty { display: none; }
   .task-cell-people:nth-of-type(5) { grid-area: p1; }

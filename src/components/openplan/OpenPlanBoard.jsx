@@ -3,6 +3,7 @@ import { PeopleTags } from '../common/PeoplePicker';
 import NotionBadge from '../common/NotionBadge';
 import { usePeopleContext } from '../../contexts/PeopleContext';
 import { formatDateShort } from '../../utils/formatters';
+import { parseInline } from '../../utils/miniDoc';
 import './OpenPlan.css';
 
 export const PLAN_COLUMNS = [
@@ -19,9 +20,12 @@ const toDate = (v) => {
   return d;
 };
 
-/** 본문 첫 줄을 카드 미리보기로 (# · - · 1. 같은 표시는 뺌) */
+/** 본문 첫 줄을 카드 미리보기로 (# · - · 1. · 색 표시 · 사진 줄은 뺌) */
 function bodyPreview(body = '') {
-  const line = String(body).split('\n').map(l => l.replace(/^\s*(#{1,3}|[-*•]|\d+[.)]|\[[ xX]\])\s*/, '').trim()).find(Boolean);
+  const line = String(body).split('\n')
+    .filter(l => !/^\s*!\[[^\]]*\]\(\S+\)\s*$/.test(l))
+    .map(l => parseInline(l.replace(/^\s*(#{1,3}|[-*•]|\d+[.)]|\[[ xX]\])\s*/, '')).map(p => p.text).join('').trim())
+    .find(Boolean);
   return line ? line.slice(0, 80) : '';
 }
 
@@ -67,26 +71,30 @@ export default function OpenPlanBoard({ plans, onOpen, onCreate, onMove }) {
                 const people = Array.from(new Set([...(p.assignee1 || []), ...(p.assignee2 || [])]));
                 const preview = bodyPreview(p.body);
                 return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={`plan-card ${dragId === p.id ? 'dragging' : ''}`}
-                    draggable
-                    onDragStart={(e) => { setDragId(p.id); e.dataTransfer.effectAllowed = 'move'; }}
-                    onDragEnd={() => { setDragId(null); setOverCol(null); }}
-                    onClick={() => onOpen(p)}
-                  >
-                    <span className="plan-card-title">{p.title || '제목 없음'}</span>
-                    {preview && <span className="plan-card-preview">{preview}</span>}
-                    {(people.length > 0 || due || p.notionPageId || p.notionError) && (
-                      <span className="plan-card-foot">
-                        {people.length > 0 && <PeopleTags names={people} max={3} />}
-                        <span className="plan-card-spacer" />
-                        {due && <span className={`plan-due ${overdue ? 'overdue' : ''}`}>{formatDateShort(due)}</span>}
-                        <NotionBadge record={p} compact />
-                      </span>
-                    )}
-                  </button>
+                  <div key={p.id} className="plan-card-wrap">
+                    <button
+                      type="button"
+                      className={`plan-card ${dragId === p.id ? 'dragging' : ''}`}
+                      draggable
+                      onDragStart={(e) => { setDragId(p.id); e.dataTransfer.effectAllowed = 'move'; }}
+                      onDragEnd={() => { setDragId(null); setOverCol(null); }}
+                      onClick={() => onOpen(p)}
+                    >
+                      <span className="plan-card-title">{p.title || '제목 없음'}</span>
+                      {preview && <span className="plan-card-preview">{preview}</span>}
+                      {(people.length > 0 || due || p.notionPageId || p.notionError) && (
+                        <span className="plan-card-foot">
+                          {people.length > 0 && <PeopleTags names={people} max={3} />}
+                          <span className="plan-card-spacer" />
+                          {due && <span className={`plan-due ${overdue ? 'overdue' : ''}`}>{formatDateShort(due)}</span>}
+                          <NotionBadge record={p} compact />
+                        </span>
+                      )}
+                    </button>
+                    <button type="button" className="edit-chip plan-card-edit" onClick={() => onOpen(p)} aria-label={`${p.title || '제목 없음'} 편집`}>
+                      ✎ 편집
+                    </button>
+                  </div>
                 );
               })}
               <button type="button" className="plan-add" onClick={() => onCreate(col.id)}>+ 새 항목</button>
