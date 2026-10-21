@@ -301,6 +301,11 @@
   white-space: nowrap;
 }
 
+/* 작성 창이 떠 있는 동안에는 숨김 (어둡게 덮인 화면 위로 버튼만 밝게 남지 않도록) */
+body:has(.modal-backdrop) .fab-daily-log {
+  visibility: hidden;
+}
+
 @media (max-width: 768px) {
   .fab-daily-log {
     right: 18px;
