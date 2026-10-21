@@ -135,14 +135,14 @@ export default function BranchDetailPage({ initialTab }) {
   };
   useEffect(() => {
     if (!notionQueue.length || !branch) return;
-    const lists = { plan: plans, task: tasks, schedule: schedules, cost: costs, dailyLog: dailyLogs };
+    const lists = { plan: plans, task: tasks, schedule: schedules, cost: costs, dailyLog: dailyLogs, document: documents };
     const ready = notionQueue.filter(q => lists[q.kind].some(rec => rec.id === q.id));
     if (!ready.length) return;
     setNotionQueue(q => q.filter(x => !ready.includes(x)));
     ready.forEach(q => {
       syncToNotion(q.kind, branch, lists[q.kind].find(rec => rec.id === q.id), { updateBranch, stages });
     });
-  }, [notionQueue, plans, tasks, schedules, costs, dailyLogs, branch, stages, updateBranch]);
+  }, [notionQueue, plans, tasks, schedules, costs, dailyLogs, documents, branch, stages, updateBranch]);
 
   useEffect(() => {
     if (!branchId) return;
@@ -310,7 +310,8 @@ export default function BranchDetailPage({ initialTab }) {
   // 서류
   // 업로드 창은 { file, ...정보 } 한 덩어리로 넘겨줌 (예전엔 인자 순서가 어긋나 업로드가 실패했음)
   const handleUploadDocument = async ({ file, ...metadata }, onProgress) => {
-    await uploadDocument(file, metadata, onProgress);
+    const created = await uploadDocument(file, metadata, onProgress);
+    queueNotion('document', created?.id);
     addLog('doc_upload', `서류 업로드: ${metadata.requiredDoc ? `[${metadata.requiredDoc}] ` : ''}${file.name}`);
     setShowDocUpload(false);
     setFormStageId('');
@@ -319,6 +320,7 @@ export default function BranchDetailPage({ initialTab }) {
   const handleDeleteDocument = async (docId, storagePath) => {
     const d = documents.find(x => x.id === docId);
     await deleteDocument(docId, storagePath);
+    archiveNotionPage(d?.notionPageId);
     addLog('doc_delete', `서류 삭제: ${d?.fileName || ''}`);
   };
 

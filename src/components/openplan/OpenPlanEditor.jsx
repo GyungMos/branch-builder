@@ -8,7 +8,7 @@ import { PLAN_COLUMNS } from './OpenPlanBoard';
 import { usePeopleContext } from '../../contexts/PeopleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { toDateInputValue, generateId } from '../../utils/formatters';
-import { DOC_COLORS } from '../../utils/miniDoc';
+import { DOC_COLORS, safeUrl } from '../../utils/miniDoc';
 import { uploadAttachment, uploadDocPhoto } from '../../utils/fileUpload';
 
 // 본문 도구 단추: 지금 줄 앞에 표시를 넣음
@@ -84,7 +84,7 @@ function LinkMenu({ initialLabel, onInsert, onCancel }) {
   const u = url.trim();
   const ok = /^https?:\/\/\S+$/.test(u) || /^www\.\S+$/.test(u);
   const submit = () => {
-    if (ok) onInsert(label.trim(), u.startsWith('www.') ? `https://${u}` : u);
+    if (ok) onInsert(label.trim(), safeUrl(u.startsWith('www.') ? `https://${u}` : u));
   };
   return (
     <div className="doc-menu doc-link-menu" role="dialog" aria-label="링크 넣기">
@@ -195,10 +195,13 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', branchId,
   };
 
   // 지금 위치에 글자 넣기 (block이면 따로 한 줄로)
+  // 위치는 넣는 순간 작성 칸의 실제 커서에서 읽음 (파일을 올리는 동안 글을 더 써도 엉뚱한 곳에 끼어들지 않게)
   const insertText = (text, block = false) => {
-    const { start, end } = selRef.current;
-    const before = body.slice(0, start);
-    const after = body.slice(end);
+    const el = bodyRef.current;
+    const current = el ? el.value : body;
+    const { start, end } = el ? { start: el.selectionStart, end: el.selectionEnd } : selRef.current;
+    const before = current.slice(0, start);
+    const after = current.slice(end);
     const pre = block && before && !before.endsWith('\n') ? '\n' : '';
     const post = block && !after.startsWith('\n') ? '\n' : '';
     const head = before + pre + text + post;

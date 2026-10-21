@@ -129,6 +129,11 @@ export function resolveAttachments(text = '', attachments = {}, forNotion = fals
     const url = attachments?.[id]?.url;
     if (!url) return '(missing:)';
     if (forNotion && !/^https?:\/\//.test(url)) return '(site:)';
-    return `(${url})`;
+    return `(${safeUrl(url)})`;
   });
+}
+
+/** 주소 속 괄호·띄어쓰기를 바꿔 둠 (파일 이름에 '(청년용)' 같은 괄호가 있으면 링크가 중간에서 끊겼음) */
+export function safeUrl(url = '') {
+  return String(url).replace(/\(/g, '%28').replace(/\)/g, '%29').replace(/ /g, '%20');
 }

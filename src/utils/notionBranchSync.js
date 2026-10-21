@@ -1,7 +1,7 @@
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db, loadStorage } from '../config/firebase';
 import { callNotion, ymd } from './notionSync';
-import { COST_CATEGORIES } from './constants';
+import { COST_CATEGORIES, DOCUMENT_CATEGORIES } from './constants';
 import { isScheduledCost } from './costs';
 import { resolveAttachments } from './miniDoc';
 
@@ -12,6 +12,7 @@ export const NOTION_COLLECTIONS = {
   schedule: 'schedules',
   cost: 'costs',
   dailyLog: 'dailyLogs',
+  document: 'documents',
 };
 
 const WEATHER_LABEL = { sunny: '맑음', cloudy: '흐림', rain: '우천', snow: '강설' };
@@ -91,9 +92,72 @@ function toPayload(kind, r, stages = []) {
         record,
       };
     }
+    case 'document': {
+      const url = r.fileUrl || '';
+      return {
+        // 파일이 바뀌면 노션 페이지 안의 사진·링크도 새로
+        bodyHash: textHash(url),
+        record: {
+          name: r.name || r.fileName || '', fileName: r.fileName || '', url, stageName,
+          categoryLabel: DOCUMENT_CATEGORIES.find(c => c.id === r.category)?.label || '',
+          requiredDoc: r.requiredDoc || '', memo: r.memo || '', date: ymd(r.createdAt),
+          isImage: String(r.fileType || '').startsWith('image/') || r.category === 'photo',
+        },
+      };
+    }
     default:
       throw new Error(`알 수 없는 기록 종류: ${kind}`);
   }
+}
+
+const isInline = (u) => String(u || '').startsWith('data:image/');
+const UPLOAD_TIMEOUT_MS = 25000;
+
+/**
+ * 저장소를 켜기 전에 기록 안에 바로 넣어 둔 작은 사진(data:)을 저장소에 올리고 주소로 바꿈
+ * → 노션은 주소가 있는 사진만 받을 수 있어서. 바뀐 주소는 사이트 기록에도 저장 (기록도 가벼워짐)
+ * 저장소에 올리지 못하면 그 사진은 그대로 둠
+ */
+async function hostInlinePhotos(branchId, kind, record) {
+  if (!db || (kind !== 'dailyLog' && kind !== 'plan')) return record;
+  const inline = kind === 'dailyLog'
+    ? [...(record.photos || []), ...(record.entries || []).flatMap(e => e.photos || [])].some(isInline)
+    : Object.values(record.attachments || {}).some(a => isInline(a?.url));
+  if (!inline) return record;
+
+  const st = await loadStorage();
+  if (!st) return record;
+  const folder = kind === 'dailyLog' ? 'dailyLogs' : 'openPlans';
+  let moved = 0;
+  const host = async (url) => {
+    if (!isInline(url)) return url;
+    try {
+      const ref = st.ref(st.storage, `branches/${branchId}/${folder}/${Date.now()}_${Math.random().toString(36).slice(2, 9)}.jpg`);
+      await Promise.race([
+        st.uploadString(ref, url, 'data_url'),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('시간 초과')), UPLOAD_TIMEOUT_MS)),
+      ]);
+      const hostedUrl = await st.getDownloadURL(ref);
+      moved += 1;
+      return hostedUrl;
+    } catch {
+      return url;
+    }
+  };
+
+  let changes;
+  if (kind === 'dailyLog') {
+    const photos = await Promise.all((record.photos || []).map(host));
+    const entries = await Promise.all((record.entries || []).map(async e => ({ ...e, photos: await Promise.all((e.photos || []).map(host)) })));
+    changes = { photos, ...(record.entries ? { entries } : {}) };
+  } else {
+    const attachments = {};
+    for (const [id, a] of Object.entries(record.attachments || {})) attachments[id] = { ...a, url: await host(a?.url) };
+    changes = { attachments };
+  }
+  if (!moved) return record;
+  await updateDoc(doc(db, 'branches', branchId, NOTION_COLLECTIONS[kind], record.id), changes).catch(() => {});
+  return { ...record, ...changes };
 }
 
 // 한 번 확인한 지점의 노션 표 정보는 이번 접속 동안 기억 (매번 확인하지 않도록)
@@ -105,8 +169,8 @@ export async function ensureBranchNotion(branch, updateBranch) {
   if (cached && cached.name === branch.name) return cached.ids;
   const res = await callNotion('ensureBranch', { branch: { id: branch.id, name: branch.name }, ids: branch.notion || {} });
   if (res.skipped) return null;
-  const { branchPageId, plansDbId, tasksDbId, schedulesDbId, costsDbId, logsDbId } = res;
-  const ids = { branchPageId, plansDbId, tasksDbId, schedulesDbId, costsDbId, logsDbId };
+  const { branchPageId, plansDbId, tasksDbId, schedulesDbId, costsDbId, logsDbId, docsDbId } = res;
+  const ids = { branchPageId, plansDbId, tasksDbId, schedulesDbId, costsDbId, logsDbId, docsDbId };
   if (JSON.stringify(branch.notion || {}) !== JSON.stringify(ids)) {
     await updateBranch(branch.id, { notion: ids });
   }
@@ -123,7 +187,8 @@ export async function syncToNotion(kind, branch, record, { updateBranch, stages 
   try {
     const ids = await ensureBranchNotion(branch, updateBranch);
     if (!ids) return { skipped: true };
-    const { record: payload, bodyHash } = toPayload(kind, record, stages);
+    const hosted = await hostInlinePhotos(branch.id, kind, record);
+    const { record: payload, bodyHash } = toPayload(kind, hosted, stages);
     const res = await callNotion('upsert', {
       kind,
       ids,

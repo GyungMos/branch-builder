@@ -264,6 +264,40 @@ const KINDS = {
       return out;
     },
   },
+  document: {
+    idKey: 'docsDbId',
+    dbTitle: '서류·사진',
+    schema: {
+      이름: { title: {} },
+      단계: { select: {} },
+      분류: { select: {} },
+      필수서류: { rich_text: {} },
+      파일: { files: {} },
+      메모: { rich_text: {} },
+      '올린 날짜': { date: {} },
+    },
+    properties: (r) => ({
+      이름: title(r.name),
+      단계: select(r.stageName),
+      분류: select(r.categoryLabel),
+      필수서류: text(r.requiredDoc),
+      파일: {
+        files: isHttp(r.url) && r.url.length <= 2000
+          ? [{ name: str(r.fileName || r.name || '파일').slice(0, 100), type: 'external', external: { url: r.url } }]
+          : [],
+      },
+      메모: text(r.memo),
+      '올린 날짜': date(r.date),
+    }),
+    // 사진이면 페이지 안에 사진을, 그 밖의 파일은 바로 열 수 있는 링크를 넣음
+    blocks: (r) => {
+      if (!isHttp(r.url) || r.url.length > 2000) return [para('파일은 사이트에서 볼 수 있어요.')];
+      if (r.isImage) return [image(r.url)];
+      return [block('paragraph', {
+        rich_text: [{ type: 'text', text: { content: `📎 ${str(r.fileName || r.name || '파일').slice(0, 1900)}`, link: { url: r.url } } }],
+      })];
+    },
+  },
 };
 
 // ---------- 로그인 확인 ----------

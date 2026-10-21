@@ -380,7 +380,7 @@ function NotionSection() {
         <span className="notion-mark" aria-hidden="true">N</span>
         <div>
           <h2>노션 연결</h2>
-          <p className="settings-help">사이트 → 노션 한 방향이에요. 오픈 계획·오픈 준비·일정·비용·현장 일지를 저장하면 노션에 자동으로 반영돼요. 노션에서 고친 내용은 사이트로 돌아오지 않아요.</p>
+          <p className="settings-help">사이트 → 노션 한 방향이에요. 오픈 계획·오픈 준비·일정·비용·현장 일지·서류/사진을 저장하면 노션에 자동으로 반영돼요. 노션에서 고친 내용은 사이트로 돌아오지 않아요.</p>
         </div>
       </header>
       <div className="notion-steps">
