@@ -586,3 +586,54 @@ button.status-pill.selected {
 .plan-tools .doc-color-item:hover {
   background: var(--color-bg-hover);
 }
+
+/* ===== 작성 칸: 뒤에 색 입힌 글자를 깔아 작성 중에도 글씨색·배경색이 보이게 ===== */
+.plan-body-editor {
+  position: relative;
+}
+
+.plan-body-editor .plan-body-mirror {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: 1.75;
+  color: var(--color-text-primary);
+  background: var(--color-input-bg);
+  border: 1.5px solid transparent;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.plan-body-editor .plan-body-typing {
+  position: relative;
+  display: block;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--color-text-primary);
+}
+
+.plan-body-editor .plan-body-typing::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.plan-body-editor .plan-body-typing::selection {
+  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+/* 글자 폭이 바뀌면 줄이 어긋나므로 배경색에 여백을 주지 않음 */
+.plan-body-editor .plan-body-mirror [class*="bg-"] {
+  padding: 0;
+  border-radius: 2px;
+}
+
+.plan-body-editor .plan-body-mirror .mark-sign,
+.plan-body-editor .plan-body-mirror .mark-link {
+  color: var(--color-text-tertiary);
+  opacity: 0.75;
+}

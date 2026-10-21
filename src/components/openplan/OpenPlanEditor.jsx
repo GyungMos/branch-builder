@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import ModalPortal from '../common/ModalPortal';
 import DateInput from '../common/DateInput';
 import PeoplePicker from '../common/PeoplePicker';
@@ -25,6 +25,36 @@ const TOOLS = [
 const BODY_LIMIT = 900000;
 
 const cleanLabel = (s) => String(s).replace(/[[\]]/g, '');
+
+// 작성 칸에서 색을 보여줄 표시들: 색 {{..:..}} · 링크 [..](..) · 사진 ![..](..)
+const MARK_RE = /\{\{([a-z,-]+):([^\n]*?)\}\}|!?\[[^\]\n]*\]\([^\s)]+\)/g;
+
+function colorClasses(spec) {
+  return spec.split(',').map(s => (s.startsWith('bg-') ? s : `tc-${s}`)).join(' ');
+}
+
+/** 작성 칸 뒤에 깔리는 색 입힌 글자 (글자 폭이 바뀌지 않게 색만 바꿈) */
+function HighlightedBody({ text }) {
+  const out = [];
+  let last = 0;
+  let key = 0;
+  text.replace(MARK_RE, (whole, spec, inner, offset) => {
+    if (offset > last) out.push(text.slice(last, offset));
+    if (spec !== undefined) {
+      out.push(<span key={key++} className="mark-sign">{`{{${spec}:`}</span>);
+      out.push(<span key={key++} className={colorClasses(spec)}>{inner}</span>);
+      out.push(<span key={key++} className="mark-sign">{'}}'}</span>);
+    } else {
+      out.push(<span key={key++} className="mark-link">{whole}</span>);
+    }
+    last = offset + whole.length;
+    return whole;
+  });
+  out.push(text.slice(last));
+  // 마지막 줄이 비어 있어도 높이가 맞도록
+  out.push('​');
+  return out;
+}
 
 /** 글씨색·배경색 고르기 */
 function ColorMenu({ kind, onPick }) {
@@ -105,6 +135,14 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', branchId,
   const selRef = useRef({ start: 0, end: 0 });
   const photoRef = useRef(null);
   const fileRef = useRef(null);
+
+  // 작성 칸이 글 길이에 맞춰 늘어나게 (뒤에 깔린 색 글자와 줄이 어긋나지 않도록 칸 안 스크롤 없앰)
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (!el || mode !== 'edit') return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight + 2}px`;
+  }, [body, mode]);
 
   const dirty = isNew
     || title !== (plan.title || '') || status !== (plan.status || 'todo') || body !== (plan.body || '')
@@ -338,16 +376,23 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', branchId,
             </div>
 
             {mode === 'edit' ? (
-              <textarea
-                ref={bodyRef}
-                className="plan-body-input"
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                onSelect={rememberSelection}
-                onBlur={rememberSelection}
-                rows={14}
-                placeholder={'내용을 자유롭게 적어 주세요.\n\n# 1. 자동차관리사업 신규 등록\n- 링크 : https://www.guri.go.kr/...\n1. 구비서류\n  - 자동차관리사업 등록 신청서\n  - 사업장 위치도 및 평면도'}
-              />
+              <div className="plan-body-editor">
+                {/* 글자 뒤에 같은 내용을 색까지 입혀 깔아서, 작성 중에도 글씨색·배경색이 보이게 함 */}
+                <div className="plan-body-input plan-body-mirror minidoc" aria-hidden="true">
+                  <HighlightedBody text={body} />
+                </div>
+                <textarea
+                  ref={bodyRef}
+                  className="plan-body-input plan-body-typing"
+                  spellCheck={false}
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  onSelect={rememberSelection}
+                  onBlur={rememberSelection}
+                  rows={14}
+                  placeholder={'내용을 자유롭게 적어 주세요.\n\n# 1. 자동차관리사업 신규 등록\n- 링크 : https://www.guri.go.kr/...\n1. 구비서류\n  - 자동차관리사업 등록 신청서\n  - 사업장 위치도 및 평면도'}
+                />
+              </div>
             ) : (
               <div className="plan-body-view"><MiniDocView text={body} attachments={attachments} /></div>
             )}
