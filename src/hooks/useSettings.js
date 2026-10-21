@@ -66,7 +66,10 @@ export function usePeople() {
   const saveNames = (next) => save({ names: next });
   // 사람별 색 { 이름: '#색' }
   const saveColor = (name, color) => save({ colors: { ...colors, [name]: color } });
-  return { names, colors, loading, saveNames, saveColor };
+  // 오픈 계획 상태 색 { todo, doing, done }
+  const statusColors = data?.statusColors || {};
+  const saveStatusColor = (id, color) => save({ statusColors: { ...statusColors, [id]: color } });
+  return { names, colors, statusColors, loading, saveNames, saveColor, saveStatusColor };
 }
 
 /** 사이트 사용 계정 · 관리자 */

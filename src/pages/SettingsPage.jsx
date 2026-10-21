@@ -3,7 +3,7 @@ import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 
 import { useAuth } from '../contexts/AuthContext';
 import { useBranches } from '../hooks/useFirestore';
 import { useMembers, usePeople } from '../hooks/useSettings';
-import { PEOPLE_PALETTE, colorForPerson } from '../contexts/PeopleContext';
+import { PEOPLE_PALETTE, DEFAULT_STATUS_COLORS, colorForPerson } from '../contexts/PeopleContext';
 import { PersonTag } from '../components/common/PeoplePicker';
 import { createStaffAccount } from '../utils/staffAccounts';
 import { displayLoginId, toLoginEmail, validateLoginId } from '../utils/loginId';
@@ -109,6 +109,38 @@ function PeopleSection({ canEdit }) {
         </ul>
       )}
       {!canEdit && <p className="settings-help">명단은 관리자만 고칠 수 있어요.</p>}
+    </section>
+  );
+}
+
+/** 오픈 계획 상태(시작 전·진행 중·완료) 색 */
+const STATUS_ROWS = [
+  { id: 'todo', label: '시작 전' },
+  { id: 'doing', label: '진행 중' },
+  { id: 'done', label: '완료' },
+];
+
+function StatusColorSection({ canEdit }) {
+  const { statusColors, saveStatusColor } = usePeople();
+  return (
+    <section className="settings-card">
+      <header className="settings-card-head">
+        <div>
+          <h2>오픈 계획 상태 색</h2>
+          <p className="settings-help">보드의 칸 머리와 카드 상태에 쓰는 색이에요. 왼쪽 색 점을 눌러 바꿀 수 있어요.</p>
+        </div>
+      </header>
+      <ul className="people-grid">
+        {STATUS_ROWS.map(st => {
+          const color = statusColors[st.id] || DEFAULT_STATUS_COLORS[st.id];
+          return (
+            <li key={st.id} className="people-card" style={{ '--av': color }}>
+              <ColorSwatch color={color} onPick={(c) => saveStatusColor(st.id, c)} disabled={!canEdit} />
+              <span className="people-card-name"><PersonTag name={st.label} color={color} /></span>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
@@ -380,7 +412,7 @@ function NotionSection() {
 }
 
 const TABS = [
-  { id: 'people', label: '담당자 명단' },
+  { id: 'people', label: '담당자·색' },
   { id: 'staff', label: '직원 계정', admin: true },
   { id: 'notion', label: '노션 연결', admin: true },
   { id: 'me', label: '내 계정' },
@@ -427,6 +459,7 @@ export default function SettingsPage() {
       </nav>
 
       {active === 'people' && <PeopleSection canEdit={members.isAdmin} />}
+      {active === 'people' && <StatusColorSection canEdit={members.isAdmin} />}
       {active === 'staff' && <StaffSection />}
       {active === 'notion' && <NotionSection />}
       {active === 'me' && <MyAccountSection />}

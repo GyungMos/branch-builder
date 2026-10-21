@@ -1,28 +1,24 @@
-/* ===== 상태 표시 (보드 칸 머리·세부 페이지 공통) ===== */
+/* ===== 상태 태그 (담당자 태그와 같은 둥근 색 배경, 색은 설정에서 바꿈) ===== */
 .status-pill {
-  --st: var(--color-text-tertiary);
+  --st: #64748b;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
   border: 1px solid transparent;
-  background: color-mix(in srgb, var(--st) 14%, transparent);
-  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--st) 28%, transparent);
+  color: color-mix(in srgb, var(--st) 40%, white);
   font: inherit;
   font-size: var(--font-size-sm);
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
 }
 
-.status-pill.doing { --st: #3b82f6; }
-.status-pill.done { --st: #10b981; }
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--st);
+[data-theme="light"] .status-pill {
+  background: color-mix(in srgb, var(--st) 20%, white);
+  color: color-mix(in srgb, var(--st) 55%, black);
 }
 
 button.status-pill {
@@ -35,12 +31,12 @@ button.status-pill.muted {
   color: var(--color-text-tertiary);
 }
 
-button.status-pill.muted .status-dot {
-  opacity: 0.5;
+button.status-pill.muted:hover {
+  border-color: var(--st);
 }
 
 button.status-pill.selected {
-  border-color: color-mix(in srgb, var(--st) 55%, transparent);
+  border-color: color-mix(in srgb, var(--st) 60%, transparent);
 }
 
 /* ===== 오픈 계획 보드 ===== */
@@ -59,8 +55,9 @@ button.status-pill.selected {
   transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
-.plan-col.doing { background: color-mix(in srgb, #3b82f6 5%, var(--color-bg-secondary)); }
-.plan-col.done { background: color-mix(in srgb, #10b981 5%, var(--color-bg-secondary)); }
+.plan-col {
+  background: color-mix(in srgb, var(--st, transparent) 6%, var(--color-bg-secondary));
+}
 
 .plan-col.drop-over {
   border-color: var(--color-accent);

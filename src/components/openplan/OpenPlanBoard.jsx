@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PeopleTags } from '../common/PeoplePicker';
 import NotionBadge from '../common/NotionBadge';
+import { usePeopleContext } from '../../contexts/PeopleContext';
 import { formatDateShort } from '../../utils/formatters';
 import './OpenPlan.css';
 
@@ -29,6 +30,7 @@ function bodyPreview(body = '') {
  * 카드를 다른 칸으로 끌어 놓거나, 카드를 눌러 세부 내용을 작성
  */
 export default function OpenPlanBoard({ plans, onOpen, onCreate, onMove }) {
+  const { statusColor } = usePeopleContext();
   const [dragId, setDragId] = useState(null);
   const [overCol, setOverCol] = useState(null);
   const today = new Date();
@@ -42,6 +44,7 @@ export default function OpenPlanBoard({ plans, onOpen, onCreate, onMove }) {
           <section
             key={col.id}
             className={`plan-col ${col.id} ${overCol === col.id ? 'drop-over' : ''}`}
+            style={{ '--st': statusColor(col.id) }}
             onDragOver={(e) => { if (dragId) { e.preventDefault(); setOverCol(col.id); } }}
             onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOverCol(null); }}
             onDrop={(e) => {
@@ -53,7 +56,7 @@ export default function OpenPlanBoard({ plans, onOpen, onCreate, onMove }) {
             }}
           >
             <header className="plan-col-head">
-              <span className={`status-pill ${col.id}`}><span className="status-dot" />{col.label}</span>
+              <span className="status-pill">{col.label}</span>
               <span className="plan-col-count">{items.length}</span>
             </header>
 

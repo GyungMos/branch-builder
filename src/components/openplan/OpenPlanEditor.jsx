@@ -5,6 +5,7 @@ import PeoplePicker from '../common/PeoplePicker';
 import MiniDocView from '../common/MiniDocView';
 import NotionBadge from '../common/NotionBadge';
 import { PLAN_COLUMNS } from './OpenPlanBoard';
+import { usePeopleContext } from '../../contexts/PeopleContext';
 import { toDateInputValue } from '../../utils/formatters';
 
 // 본문 도구 단추: 지금 줄 앞에 표시를 넣음
@@ -22,6 +23,7 @@ const TOOLS = [
  */
 export default function OpenPlanEditor({ plan, defaultStatus = 'todo', people, onSave, onDelete, onRetryNotion, onClose }) {
   const isNew = !plan?.id;
+  const { statusColor } = usePeopleContext();
   const [title, setTitle] = useState(plan?.title || '');
   const [status, setStatus] = useState(plan?.status || defaultStatus);
   const [assignee1, setAssignee1] = useState(plan?.assignee1 || []);
@@ -102,9 +104,10 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', people, o
                 <div className="plan-status-group" role="radiogroup" aria-label="상태">
                   {PLAN_COLUMNS.map(c => (
                     <button key={c.id} type="button" role="radio" aria-checked={status === c.id}
-                      className={`status-pill ${c.id} ${status === c.id ? 'selected' : 'muted'}`}
+                      className={`status-pill ${status === c.id ? 'selected' : 'muted'}`}
+                      style={{ '--st': statusColor(c.id) }}
                       onClick={() => setStatus(c.id)}>
-                      <span className="status-dot" />{c.label}
+                      {c.label}
                     </button>
                   ))}
                 </div>
