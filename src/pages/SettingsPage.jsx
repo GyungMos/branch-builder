@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranches } from '../hooks/useFirestore';
 import { useMembers, usePeople } from '../hooks/useSettings';
+import { PEOPLE_PALETTE, colorForPerson } from '../contexts/PeopleContext';
+import { Avatar } from '../components/common/PeoplePicker';
 import { createStaffAccount } from '../utils/staffAccounts';
 import { displayLoginId, toLoginEmail, validateLoginId } from '../utils/loginId';
 import { callNotion } from '../utils/notionSync';
@@ -10,9 +12,42 @@ import { loadBranchData } from '../utils/branchData';
 import { syncBranchAll } from '../utils/notionBranchSync';
 import './SettingsPage.css';
 
-/** 담당자 명단: 오픈 계획·스케줄에서 고르는 이름 (계정과 별개) */
+function Message({ msg }) {
+  if (!msg) return null;
+  return <p className={`settings-msg ${msg.type}`}>{msg.text}</p>;
+}
+
+/** 색 고르기 (담당자마다) */
+function ColorSwatch({ color, onPick, disabled }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  return (
+    <span className="swatch-wrap" ref={ref}>
+      <button type="button" className="swatch" style={{ '--sw': color }} onClick={() => setOpen(o => !o)} disabled={disabled}
+        aria-label="색 바꾸기" title={disabled ? '' : '색 바꾸기'} />
+      {open && (
+        <span className="swatch-popover" role="listbox" aria-label="색 고르기">
+          {PEOPLE_PALETTE.map(c => (
+            <button key={c} type="button" role="option" aria-selected={c === color}
+              className={`swatch ${c === color ? 'on' : ''}`} style={{ '--sw': c }}
+              onClick={() => { onPick(c); setOpen(false); }} />
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** 담당자 명단: 오픈 계획·스케줄에서 고르는 이름과 색 (계정과 별개) */
 function PeopleSection({ canEdit }) {
-  const { names, saveNames } = usePeople();
+  const { names, colors, saveNames, saveColor } = usePeople();
   const [input, setInput] = useState('');
 
   const add = async (e) => {
@@ -34,37 +69,47 @@ function PeopleSection({ canEdit }) {
 
   return (
     <section className="settings-card">
-      <h2>담당자 명단</h2>
-      <p className="settings-help">오픈 계획·오픈 준비 스케줄에서 담당자1·담당자2로 고를 이름이에요. 로그인 계정이 없는 외부 협력자도 넣을 수 있어요.</p>
+      <header className="settings-card-head">
+        <div>
+          <h2>담당자 명단</h2>
+          <p className="settings-help">오픈 계획·오픈 준비에서 담당자1·담당자2로 고를 이름이에요. 사람마다 색이 정해져서 <strong>색만 봐도 누구인지</strong> 알 수 있어요. 동그라미를 눌러 색을 바꿀 수 있어요.</p>
+        </div>
+      </header>
+
+      {canEdit && (
+        <form className="settings-inline-form" onSubmit={add}>
+          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="이름 추가 (여러 명은 쉼표로: 김홍우, 진경태)" aria-label="추가할 이름" />
+          <button type="submit" className="btn btn-primary btn-sm" disabled={!input.trim()}>추가</button>
+        </form>
+      )}
+
       {names.length === 0 ? (
         <p className="settings-empty">아직 명단이 비어 있어요.</p>
       ) : (
-        <ul className="people-list">
-          {names.map((n, i) => (
-            <li key={n}>
-              <span>{n}</span>
-              {canEdit && (
-                <span className="people-list-actions">
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => move(i, -1)} aria-label={`${n} 위로`} disabled={i === 0}>▲</button>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => move(i, 1)} aria-label={`${n} 아래로`} disabled={i === names.length - 1}>▼</button>
-                  <button type="button" className="btn btn-ghost btn-sm settings-danger"
-                    onClick={() => { if (window.confirm(`'${n}'을(를) 명단에서 뺄까요? 이미 지정된 항목에는 이름이 그대로 남아요.`)) saveNames(names.filter(x => x !== n)); }}>
-                    빼기
-                  </button>
-                </span>
-              )}
-            </li>
-          ))}
+        <ul className="people-grid">
+          {names.map((n, i) => {
+            const color = colorForPerson(n, names, colors);
+            return (
+              <li key={n} className="people-card" style={{ '--av': color }}>
+                <ColorSwatch color={color} onPick={(c) => saveColor(n, c)} disabled={!canEdit} />
+                <Avatar name={n} size="md" color={color} />
+                <span className="people-card-name">{n}</span>
+                {canEdit && (
+                  <span className="people-card-actions">
+                    <button type="button" className="icon-btn" onClick={() => move(i, -1)} aria-label={`${n} 위로`} disabled={i === 0}>↑</button>
+                    <button type="button" className="icon-btn" onClick={() => move(i, 1)} aria-label={`${n} 아래로`} disabled={i === names.length - 1}>↓</button>
+                    <button type="button" className="icon-btn danger" aria-label={`${n} 빼기`}
+                      onClick={() => { if (window.confirm(`'${n}'을(를) 명단에서 뺄까요? 이미 지정된 항목에는 이름이 그대로 남아요.`)) saveNames(names.filter(x => x !== n)); }}>
+                      ×
+                    </button>
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
-      {canEdit ? (
-        <form className="settings-inline-form" onSubmit={add}>
-          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="이름 (여러 명은 쉼표로: 김홍우, 진경태)" aria-label="추가할 이름" />
-          <button type="submit" className="btn btn-primary btn-sm" disabled={!input.trim()}>추가</button>
-        </form>
-      ) : (
-        <p className="settings-help">명단은 관리자만 고칠 수 있어요.</p>
-      )}
+      {!canEdit && <p className="settings-help">명단은 관리자만 고칠 수 있어요.</p>}
     </section>
   );
 }
@@ -80,22 +125,10 @@ function StaffSection() {
   const [existingEmail, setExistingEmail] = useState('');
   const myEmail = (user?.email || '').toLowerCase();
 
-  const allowExisting = async (e) => {
-    e.preventDefault();
-    const email = existingEmail.trim().toLowerCase();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setMessage({ type: 'error', text: '이메일 주소를 정확히 입력해 주세요.' }); return; }
-    if (members.emails.includes(email)) { setMessage({ type: 'error', text: '이미 허용된 계정이에요.' }); return; }
-    await members.save({ emails: [...members.emails, email] });
-    setMessage({ type: 'ok', text: `${email} 계정을 허용했어요.` });
-    setExistingEmail('');
-  };
-
-  const accounts = [
-    ...members.emails.map(email => {
-      const s = members.staff.find(x => x.email === email);
-      return { email, name: s?.name || (email === myEmail ? (user?.displayName || '나') : ''), loginId: displayLoginId(email) };
-    }),
-  ];
+  const accounts = members.emails.map(email => {
+    const s = members.staff.find(x => x.email === email);
+    return { email, name: s?.name || (email === myEmail ? (user?.displayName || '나') : ''), loginId: displayLoginId(email) };
+  });
 
   const create = async (e) => {
     e.preventDefault();
@@ -115,13 +148,23 @@ function StaffSection() {
       if (form.addToPeople && form.name.trim() && !names.includes(form.name.trim())) {
         await saveNames([...names, form.name.trim()]);
       }
-      setMessage({ type: 'ok', text: `'${form.name}' 계정을 만들었어요. 아이디 ${form.loginId.trim().toLowerCase()} / 임시 비밀번호를 직원에게 알려주세요.` });
+      setMessage({ type: 'ok', text: `'${form.name}' 계정을 만들었어요. 아이디 ${form.loginId.trim().toLowerCase()} 와 임시 비밀번호를 직원에게 알려주세요.` });
       setForm({ name: '', loginId: '', password: '', addToPeople: true });
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
     } finally {
       setWorking(false);
     }
+  };
+
+  const allowExisting = async (e) => {
+    e.preventDefault();
+    const email = existingEmail.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setMessage({ type: 'error', text: '이메일 주소를 정확히 입력해 주세요.' }); return; }
+    if (members.emails.includes(email)) { setMessage({ type: 'error', text: '이미 허용된 계정이에요.' }); return; }
+    await members.save({ emails: [...members.emails, email] });
+    setMessage({ type: 'ok', text: `${email} 계정을 허용했어요.` });
+    setExistingEmail('');
   };
 
   const toggleAdmin = (email) => {
@@ -133,44 +176,49 @@ function StaffSection() {
 
   const disable = (email) => {
     if (email === myEmail) return;
-    if (!window.confirm('이 계정의 사이트 사용을 막을까요? (보안 규칙을 게시한 뒤부터 로그인해도 기록을 볼 수 없어요)')) return;
-    members.save({
-      emails: members.emails.filter(x => x !== email),
-      admins: members.admins.filter(x => x !== email),
-    });
+    if (!window.confirm('이 계정의 사이트 사용을 막을까요? 로그인해도 기록을 볼 수 없게 돼요.')) return;
+    members.save({ emails: members.emails.filter(x => x !== email), admins: members.admins.filter(x => x !== email) });
   };
 
   return (
-    <section className="settings-card">
-      <h2>직원 계정</h2>
-      <p className="settings-help">직원은 <strong>아이디 + 비밀번호</strong>로 로그인해요. 비밀번호를 잊으면 '비밀번호 찾기' 메일이 가지 않으니, 관리자가 새 아이디로 다시 만들어 주세요.</p>
-
-      <table className="settings-table">
-        <thead><tr><th>이름</th><th>아이디</th><th>권한</th><th /></tr></thead>
-        <tbody>
-          {accounts.map(a => (
-            <tr key={a.email}>
-              <td>{a.name || '-'}</td>
-              <td className="mono">{a.loginId}</td>
-              <td>
-                <button type="button" className={`role-chip ${members.admins.includes(a.email) ? 'admin' : ''}`} onClick={() => toggleAdmin(a.email)}
-                  title="눌러서 관리자 지정/해제">
-                  {members.admins.includes(a.email) ? '관리자' : '직원'}
+    <>
+      <section className="settings-card">
+        <header className="settings-card-head">
+          <div>
+            <h2>사용 중인 계정 <span className="settings-count">{accounts.length}</span></h2>
+            <p className="settings-help">권한 표시를 눌러 <strong>관리자/직원</strong>을 바꿀 수 있어요. 관리자는 여러 명 둘 수 있어요.</p>
+          </div>
+        </header>
+        <ul className="account-list">
+          {accounts.map(a => {
+            const admin = members.admins.includes(a.email);
+            return (
+              <li key={a.email} className="account-row">
+                <Avatar name={a.name || a.loginId} size="md" />
+                <span className="account-main">
+                  <span className="account-name">{a.name || '이름 없음'}{a.email === myEmail && <span className="account-me">나</span>}</span>
+                  <span className="account-id">{a.loginId}</span>
+                </span>
+                <button type="button" className={`role-chip ${admin ? 'admin' : ''}`} onClick={() => toggleAdmin(a.email)} title="눌러서 관리자 지정/해제">
+                  {admin ? '관리자' : '직원'}
                 </button>
-              </td>
-              <td className="right">
-                {a.email !== myEmail && (
-                  <button type="button" className="btn btn-ghost btn-sm settings-danger" onClick={() => disable(a.email)}>사용 중지</button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                {a.email !== myEmail
+                  ? <button type="button" className="icon-btn danger" onClick={() => disable(a.email)} title="사용 중지" aria-label={`${a.name} 사용 중지`}>⊘</button>
+                  : <span className="icon-btn-space" />}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
-      <form className="settings-form" onSubmit={create}>
-        <h3>새 직원 계정 만들기</h3>
-        <div className="form-row">
+      <section className="settings-card">
+        <header className="settings-card-head">
+          <div>
+            <h2>새 직원 계정 만들기</h2>
+            <p className="settings-help">직원은 <strong>아이디 + 비밀번호</strong>로 로그인해요. 비밀번호를 잊으면 메일로 찾을 수 없으니, 관리자가 새 아이디로 다시 만들어 주세요.</p>
+          </div>
+        </header>
+        <form className="settings-form-grid" onSubmit={create}>
           <div className="form-group">
             <label htmlFor="staff-name">이름</label>
             <input id="staff-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="예: 진경태" required />
@@ -179,28 +227,34 @@ function StaffSection() {
             <label htmlFor="staff-id">아이디</label>
             <input id="staff-id" value={form.loginId} onChange={(e) => setForm({ ...form, loginId: e.target.value })} placeholder="영문 소문자·숫자 (예: jin)" autoCapitalize="none" required />
           </div>
-        </div>
-        <div className="form-group">
-          <label htmlFor="staff-pw">임시 비밀번호 (6자리 이상)</label>
-          <input id="staff-pw" type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="new-password" required />
-        </div>
-        <label className="settings-check">
-          <input type="checkbox" checked={form.addToPeople} onChange={(e) => setForm({ ...form, addToPeople: e.target.checked })} />
-          <span>담당자 명단에도 이름 추가</span>
-        </label>
-        {message && <p className={`settings-msg ${message.type}`}>{message.text}</p>}
-        <button type="submit" className="btn btn-primary" disabled={working}>{working ? '만드는 중…' : '계정 만들기'}</button>
-      </form>
+          <div className="form-group">
+            <label htmlFor="staff-pw">임시 비밀번호</label>
+            <input id="staff-pw" type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="6자리 이상" autoComplete="new-password" required />
+          </div>
+          <label className="settings-check full">
+            <input type="checkbox" checked={form.addToPeople} onChange={(e) => setForm({ ...form, addToPeople: e.target.checked })} />
+            <span>담당자 명단에도 이름 추가</span>
+          </label>
+          <div className="full">
+            <Message msg={message} />
+            <button type="submit" className="btn btn-primary" disabled={working}>{working ? '만드는 중…' : '계정 만들기'}</button>
+          </div>
+        </form>
+      </section>
 
-      <form className="settings-form" onSubmit={allowExisting}>
-        <h3>이미 이메일로 쓰던 계정 허용하기</h3>
-        <p className="settings-help">예전에 이메일로 가입해서 쓰던 분이 있으면 여기서 허용해 주세요. 허용 목록에 없는 계정은 노션으로 보낼 수 없고, 보안 규칙을 게시한 뒤에는 기록도 볼 수 없어요.</p>
-        <div className="settings-inline-form">
+      <section className="settings-card">
+        <header className="settings-card-head">
+          <div>
+            <h2>이미 이메일로 쓰던 계정 허용하기</h2>
+            <p className="settings-help">예전에 이메일로 가입해서 쓰던 분이 있으면 여기서 허용해 주세요. 허용 목록에 없는 계정은 기록을 볼 수 없어요.</p>
+          </div>
+        </header>
+        <form className="settings-inline-form" onSubmit={allowExisting}>
           <input type="email" value={existingEmail} onChange={(e) => setExistingEmail(e.target.value)} placeholder="name@example.com" aria-label="허용할 이메일" />
           <button type="submit" className="btn btn-secondary btn-sm" disabled={!existingEmail.trim()}>허용</button>
-        </div>
-      </form>
-    </section>
+        </form>
+      </section>
+    </>
   );
 }
 
@@ -229,21 +283,26 @@ function MyAccountSection() {
 
   return (
     <section className="settings-card">
-      <h2>내 계정</h2>
-      <p className="settings-help">로그인 아이디: <strong className="mono">{displayLoginId(user?.email)}</strong></p>
-      <form className="settings-form" onSubmit={change}>
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="pw-current">지금 비밀번호</label>
-            <input id="pw-current" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required />
-          </div>
-          <div className="form-group">
-            <label htmlFor="pw-next">새 비밀번호</label>
-            <input id="pw-next" type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" required />
-          </div>
+      <header className="settings-card-head">
+        <Avatar name={user?.displayName || displayLoginId(user?.email)} size="md" />
+        <div>
+          <h2>{user?.displayName || '내 계정'}</h2>
+          <p className="settings-help">로그인 아이디 <strong className="mono">{displayLoginId(user?.email)}</strong></p>
         </div>
-        {message && <p className={`settings-msg ${message.type}`}>{message.text}</p>}
-        <button type="submit" className="btn btn-secondary">비밀번호 바꾸기</button>
+      </header>
+      <form className="settings-form-grid" onSubmit={change}>
+        <div className="form-group">
+          <label htmlFor="pw-current">지금 비밀번호</label>
+          <input id="pw-current" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required />
+        </div>
+        <div className="form-group">
+          <label htmlFor="pw-next">새 비밀번호</label>
+          <input id="pw-next" type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" placeholder="6자리 이상" required />
+        </div>
+        <div className="full">
+          <Message msg={message} />
+          <button type="submit" className="btn btn-secondary">비밀번호 바꾸기</button>
+        </div>
       </form>
     </section>
   );
@@ -283,53 +342,97 @@ function NotionSection() {
       total += res.total;
       failed += res.failed;
     }
-    setProgress({ text: `끝났어요. ${total}건 중 ${total - failed}건 보냄${failed ? `, ${failed}건 실패 (각 기록의 '노션 !' 표시를 눌러 다시 보낼 수 있어요)` : ''}.`, done: true });
+    setProgress({ text: `끝났어요. ${total}건 중 ${total - failed}건 보냄${failed ? `, ${failed}건 실패 (각 기록의 'N!' 표시를 눌러 다시 보낼 수 있어요)` : ''}.`, done: true });
   };
 
   return (
     <section className="settings-card">
-      <h2>노션 연결</h2>
-      <p className="settings-help">사이트 → 노션 한 방향이에요. 오픈 계획 · 오픈 준비 스케줄 · 일정 · 비용 · 현장 일지를 저장하면 노션에 자동으로 반영돼요. 노션에서 고친 내용은 사이트로 돌아오지 않아요.</p>
-      <div className="settings-actions">
-        <button type="button" className="btn btn-secondary" onClick={check}>노션 연결 확인</button>
-        <button type="button" className="btn btn-primary" onClick={sendAll} disabled={progress && !progress.done}>기존 기록 노션으로 보내기</button>
-        <label className="settings-check">
-          <input type="checkbox" checked={onlyUnsynced} onChange={(e) => setOnlyUnsynced(e.target.checked)} />
-          <span>아직 안 보낸 것·실패한 것만</span>
-        </label>
+      <header className="settings-card-head">
+        <span className="notion-mark" aria-hidden="true">N</span>
+        <div>
+          <h2>노션 연결</h2>
+          <p className="settings-help">사이트 → 노션 한 방향이에요. 오픈 계획·오픈 준비·일정·비용·현장 일지를 저장하면 노션에 자동으로 반영돼요. 노션에서 고친 내용은 사이트로 돌아오지 않아요.</p>
+        </div>
+      </header>
+      <div className="notion-steps">
+        <div className="notion-step">
+          <span className="notion-step-num">1</span>
+          <div>
+            <strong>연결 확인</strong>
+            <p className="settings-help">Netlify에 넣은 노션 키와 페이지가 맞는지 확인해요.</p>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={check}>노션 연결 확인</button>
+            <Message msg={status} />
+          </div>
+        </div>
+        <div className="notion-step">
+          <span className="notion-step-num">2</span>
+          <div>
+            <strong>기존 기록 보내기</strong>
+            <p className="settings-help">처음 연결했을 때, 또는 실패한 기록을 한 번에 다시 보낼 때 써요.</p>
+            <label className="settings-check">
+              <input type="checkbox" checked={onlyUnsynced} onChange={(e) => setOnlyUnsynced(e.target.checked)} />
+              <span>아직 안 보낸 것·실패한 것만</span>
+            </label>
+            <button type="button" className="btn btn-primary btn-sm" onClick={sendAll} disabled={progress && !progress.done}>기존 기록 노션으로 보내기</button>
+            {progress && <Message msg={{ type: progress.done ? 'ok' : 'info', text: progress.text }} />}
+          </div>
+        </div>
       </div>
-      {status && <p className={`settings-msg ${status.type}`}>{status.text}</p>}
-      {progress && <p className={`settings-msg ${progress.done ? 'ok' : 'info'}`}>{progress.text}</p>}
     </section>
   );
 }
 
+const TABS = [
+  { id: 'people', label: '담당자 명단' },
+  { id: 'staff', label: '직원 계정', admin: true },
+  { id: 'notion', label: '노션 연결', admin: true },
+  { id: 'me', label: '내 계정' },
+];
+
 export default function SettingsPage() {
   const members = useMembers();
+  const [tab, setTab] = useState('people');
 
   if (members.loading) {
     return <div className="loading-overlay"><div className="spinner spinner-lg" /></div>;
   }
 
+  const tabs = TABS.filter(t => !t.admin || members.isAdmin);
+  const active = tabs.some(t => t.id === tab) ? tab : 'people';
+
   return (
     <div className="page settings-page">
-      <h1 className="page-title">설정</h1>
+      <div className="settings-head">
+        <h1 className="page-title">설정</h1>
+        <p className="settings-help">담당자 명단과 직원 계정, 노션 연결을 관리해요.</p>
+      </div>
 
       {members.needsBootstrap && (
         <section className="settings-card settings-bootstrap">
-          <h2>관리자 정하기</h2>
-          <p className="settings-help">
-            아직 관리자가 없어요. <strong>지금 로그인한 계정</strong>을 관리자로 지정하면 담당자 명단·직원 계정·노션 연결을 관리할 수 있어요.
-            관리자는 나중에 여러 명으로 늘릴 수 있어요.
-          </p>
+          <header className="settings-card-head">
+            <div>
+              <h2>관리자 정하기</h2>
+              <p className="settings-help">
+                아직 관리자가 없어요. <strong>지금 로그인한 계정</strong>을 관리자로 지정하면 담당자 명단·직원 계정·노션 연결을 관리할 수 있어요. 관리자는 나중에 여러 명으로 늘릴 수 있어요.
+              </p>
+            </div>
+          </header>
           <button type="button" className="btn btn-primary" onClick={members.bootstrap}>이 계정을 관리자로 시작</button>
         </section>
       )}
 
-      <PeopleSection canEdit={members.isAdmin} />
-      {members.isAdmin && <StaffSection />}
-      {members.isAdmin && <NotionSection />}
-      <MyAccountSection />
+      <nav className="settings-tabs" role="tablist" aria-label="설정 메뉴">
+        {tabs.map(t => (
+          <button key={t.id} type="button" role="tab" aria-selected={active === t.id} className={active === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      {active === 'people' && <PeopleSection canEdit={members.isAdmin} />}
+      {active === 'staff' && <StaffSection />}
+      {active === 'notion' && <NotionSection />}
+      {active === 'me' && <MyAccountSection />}
     </div>
   );
 }

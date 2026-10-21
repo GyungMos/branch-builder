@@ -102,7 +102,19 @@ export default function OpenTaskForm({ task, defaults = {}, branchId, people, gr
               <label htmlFor="task-title">세부항목 *</label>
               <input id="task-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 간판, 공구 구입, 화재보험" required autoFocus={isNew} />
             </div>
-            <div className="form-row">
+
+            <button
+              type="button"
+              className="task-done-check"
+              aria-pressed={done}
+              onClick={() => setDone(v => !v)}
+              style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit' }}
+            >
+              <span className={`round-check ${done ? 'on' : ''}`} aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{done ? '✓' : ''}</span>
+              <span>{done ? '완료됨' : '완료로 표시'}</span>
+            </button>
+
+            <div className="task-form-grid">
               <div className="form-group">
                 <label htmlFor="task-group">그룹</label>
                 <input id="task-group" list="task-group-options" value={group} onChange={(e) => setGroup(e.target.value)} placeholder="골라도 되고 새로 써도 돼요" />
@@ -113,8 +125,6 @@ export default function OpenTaskForm({ task, defaults = {}, branchId, people, gr
                 <input id="task-category" list="task-category-options" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="예: 본부, 현장, 사무실" />
                 <datalist id="task-category-options">{categories.map(c => <option key={c} value={c} />)}</datalist>
               </div>
-            </div>
-            <div className="form-row">
               <div className="form-group">
                 <label htmlFor="task-start">완료일자 (시작)</label>
                 <DateInput id="task-start" value={startDate} onChange={setStartDate} />
@@ -123,39 +133,35 @@ export default function OpenTaskForm({ task, defaults = {}, branchId, people, gr
                 <label htmlFor="task-end">완료일자 (끝 · 하루면 비워두기)</label>
                 <DateInput id="task-end" value={endDate} onChange={setEndDate} />
               </div>
-            </div>
-            <label className="task-done-check">
-              <input type="checkbox" checked={done} onChange={(e) => setDone(e.target.checked)} />
-              <span>완료</span>
-            </label>
-            <div className="form-group">
-              <label>담당자1</label>
-              <PeoplePicker names={people} value={assignee1} onChange={setAssignee1} />
-            </div>
-            <div className="form-group">
-              <label>담당자2</label>
-              <PeoplePicker names={people} value={assignee2} onChange={setAssignee2} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="task-memo">비고</label>
-              <textarea id="task-memo" rows={3} value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="예: 견적 3곳 비교 후 결정" />
-            </div>
-            <div className="form-group">
-              <label>파일과 미디어</label>
-              {files.length > 0 && (
-                <ul className="task-file-list">
-                  {files.map(f => (
-                    <li key={f.id || f.url}>
-                      <a href={f.url} target="_blank" rel="noreferrer">{f.name}</a>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFiles(prev => prev.filter(x => x !== f))}>빼기</button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <label className="btn btn-secondary btn-sm task-file-btn">
-                {uploading ? '올리는 중…' : '+ 파일 올리기'}
-                <input type="file" multiple onChange={handleFiles} disabled={uploading} hidden />
-              </label>
+              <div className="form-group">
+                <label>담당자1</label>
+                <PeoplePicker names={people} value={assignee1} onChange={setAssignee1} />
+              </div>
+              <div className="form-group">
+                <label>담당자2</label>
+                <PeoplePicker names={people} value={assignee2} onChange={setAssignee2} />
+              </div>
+              <div className="form-group full">
+                <label htmlFor="task-memo">비고</label>
+                <textarea id="task-memo" rows={3} value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="예: 견적 3곳 비교 후 결정" />
+              </div>
+              <div className="form-group full">
+                <label>파일과 미디어</label>
+                {files.length > 0 && (
+                  <ul className="task-file-list">
+                    {files.map(f => (
+                      <li key={f.id || f.url}>
+                        <a href={f.url} target="_blank" rel="noreferrer">📎 {f.name}</a>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFiles(prev => prev.filter(x => x !== f))}>빼기</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <label className="btn btn-secondary btn-sm task-file-btn">
+                  {uploading ? '올리는 중…' : '+ 파일 올리기'}
+                  <input type="file" multiple onChange={handleFiles} disabled={uploading} hidden />
+                </label>
+              </div>
             </div>
             {!isNew && (task.notionPageId || task.notionError) && (
               <p><NotionBadge record={task} onRetry={onRetryNotion} /></p>

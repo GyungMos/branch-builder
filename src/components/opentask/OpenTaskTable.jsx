@@ -4,6 +4,7 @@ import { PeopleTags } from '../common/PeoplePicker';
 import NotionBadge from '../common/NotionBadge';
 import { formatDateShort } from '../../utils/formatters';
 import { OPEN_TASK_GROUPS } from '../../utils/constants';
+import { PEOPLE_PALETTE } from '../../contexts/PeopleContext';
 import './OpenTask.css';
 
 const toDate = (v) => {
@@ -19,8 +20,24 @@ function dateText(t) {
   return e && e.getTime() !== s.getTime() ? `${formatDateShort(s)} → ${formatDateShort(e)}` : formatDateShort(s);
 }
 
+/** 구분 태그 색 (구분 이름마다 고정) */
+export function categoryColor(name = '') {
+  let h = 7;
+  for (let i = 0; i < name.length; i++) h = (h * 33 + name.charCodeAt(i)) | 0;
+  return PEOPLE_PALETTE[Math.abs(h) % PEOPLE_PALETTE.length];
+}
+
+function Progress({ done, total }) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <span className="task-progress-bar" aria-label={`완료 ${done}/${total}`}>
+      <span className="task-progress-fill" style={{ width: `${pct}%` }} />
+    </span>
+  );
+}
+
 /**
- * 오픈 준비 스케줄 (노션 '구리OPEN 스케쥴'): 그룹별 표 + 타임라인 보기
+ * 오픈 준비 스케줄 (노션 '구리OPEN 스케쥴'): 그룹별 목록 + 타임라인 보기
  */
 export default function OpenTaskTable({ tasks, onAdd, onEdit, onToggleDone, onDelete, onImport, onRetryNotion }) {
   const [view, setView] = useState('table');
@@ -44,7 +61,11 @@ export default function OpenTaskTable({ tasks, onAdd, onEdit, onToggleDone, onDe
       if (!names.includes(g)) names.push(g);
     });
     return names
-      .map(name => ({ name, items: filtered.filter(t => (t.group || '그룹 없음') === name), all: tasks.filter(t => (t.group || '그룹 없음') === name) }))
+      .map(name => ({
+        name,
+        items: filtered.filter(t => (t.group || '그룹 없음') === name),
+        all: tasks.filter(t => (t.group || '그룹 없음') === name),
+      }))
       .filter(g => g.items.length > 0);
   }, [tasks, filtered]);
 
@@ -66,17 +87,29 @@ export default function OpenTaskTable({ tasks, onAdd, onEdit, onToggleDone, onDe
   const byId = (item) => tasks.find(t => t.id === item.id);
 
   return (
-    <div className="task-table-wrap">
+    <div className="task-wrap">
+      {tasks.length > 0 && (
+        <div className="task-summary">
+          <div className="task-summary-text">
+            <strong>{doneCount}</strong> / {tasks.length} 완료
+            <span className="task-summary-pct">{tasks.length ? Math.round((doneCount / tasks.length) * 100) : 0}%</span>
+          </div>
+          <Progress done={doneCount} total={tasks.length} />
+        </div>
+      )}
+
       <div className="task-toolbar">
-        <div className="task-view-toggle" role="tablist">
-          <button type="button" role="tab" aria-selected={view === 'table'} className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>표</button>
+        <div className="seg-toggle" role="tablist" aria-label="보기 방식">
+          <button type="button" role="tab" aria-selected={view === 'table'} className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>목록</button>
           <button type="button" role="tab" aria-selected={view === 'timeline'} className={view === 'timeline' ? 'on' : ''} onClick={() => setView('timeline')}>타임라인</button>
         </div>
-        <span className="task-progress">완료 {doneCount} / {tasks.length}</span>
-        <input type="search" className="task-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="항목·담당자 찾기" aria-label="찾기" />
-        <label className="task-only-open">
-          <input type="checkbox" checked={onlyOpen} onChange={(e) => setOnlyOpen(e.target.checked)} /> 미완료만
-        </label>
+        <div className="task-search-wrap">
+          <span className="task-search-icon" aria-hidden="true">⌕</span>
+          <input type="search" className="task-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="항목·담당자 찾기" aria-label="찾기" />
+        </div>
+        <button type="button" className={`filter-pill ${onlyOpen ? 'on' : ''}`} aria-pressed={onlyOpen} onClick={() => setOnlyOpen(v => !v)}>
+          미완료만
+        </button>
         <span className="task-toolbar-spacer" />
         <button type="button" className="btn btn-secondary btn-sm" onClick={onImport}>다른 지점에서 가져오기</button>
         <button type="button" className="btn btn-primary btn-sm" onClick={() => onAdd({})}>+ 항목 추가</button>
@@ -84,12 +117,14 @@ export default function OpenTaskTable({ tasks, onAdd, onEdit, onToggleDone, onDe
 
       {tasks.length === 0 ? (
         <div className="task-empty">
-          <p>아직 항목이 없어요.</p>
-          <p className="text-secondary text-sm">이전 지점에서 쓰던 항목을 <strong>"다른 지점에서 가져오기"</strong>로 한 번에 불러오면 편해요 (체크·날짜는 비운 채로).</p>
+          <div className="task-empty-icon" aria-hidden="true">☑</div>
+          <p className="task-empty-title">아직 항목이 없어요</p>
+          <p className="task-empty-desc">이전 지점에서 쓰던 항목을 <strong>다른 지점에서 가져오기</strong>로 한 번에 불러오면 편해요. 완료 체크·날짜는 비운 채로 들어와요.</p>
+          <button type="button" className="btn btn-primary btn-sm" onClick={onImport}>다른 지점에서 가져오기</button>
         </div>
       ) : view === 'timeline' ? (
         <>
-          {noDateCount > 0 && <p className="task-note">날짜가 없는 항목 {noDateCount}개는 표에서 확인하세요.</p>}
+          {noDateCount > 0 && <p className="task-note">날짜가 없는 항목 {noDateCount}개는 목록에서 확인하세요.</p>}
           <Timeline
             schedules={timelineItems}
             stages={[]}
@@ -101,50 +136,65 @@ export default function OpenTaskTable({ tasks, onAdd, onEdit, onToggleDone, onDe
       ) : groups.length === 0 ? (
         <p className="task-note">조건에 맞는 항목이 없어요.</p>
       ) : (
-        groups.map(g => (
-          <section key={g.name} className="task-group">
-            <header className="task-group-head">
-              <h3>{g.name}</h3>
-              <span className="task-group-count">{g.all.filter(t => t.done).length} / {g.all.length}</span>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => onAdd({ group: g.name === '그룹 없음' ? '' : g.name })}>+ 추가</button>
-            </header>
-            <div className="task-table-scroll">
-              <table className="task-table">
-                <thead>
-                  <tr>
-                    <th className="col-done">완료</th>
-                    <th>세부항목</th>
-                    <th>구분</th>
-                    <th>완료일자</th>
-                    <th>담당자1</th>
-                    <th>담당자2</th>
-                    <th>비고</th>
-                    <th>파일</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {g.items.map(t => (
-                    <tr key={t.id} className={t.done ? 'is-done' : ''} onClick={() => onEdit(t)}>
-                      <td className="col-done" onClick={(e) => e.stopPropagation()}>
-                        <input type="checkbox" checked={Boolean(t.done)} onChange={() => onToggleDone(t)} aria-label={`${t.title} 완료`} />
-                      </td>
-                      <td className="col-title">
-                        <span>{t.title}</span>
-                        <NotionBadge record={t} onRetry={t.notionError ? () => onRetryNotion(t) : undefined} />
-                      </td>
-                      <td>{t.category && <span className="task-cat">{t.category}</span>}</td>
-                      <td className="col-date">{dateText(t)}</td>
-                      <td><PeopleTags names={t.assignee1 || []} /></td>
-                      <td><PeopleTags names={t.assignee2 || []} /></td>
-                      <td className="col-memo">{t.memo}</td>
-                      <td className="col-files">{(t.files || []).length ? `📎 ${(t.files || []).length}` : ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ))
+        groups.map(g => {
+          const gDone = g.all.filter(t => t.done).length;
+          return (
+            <section key={g.name} className="task-group">
+              <header className="task-group-head">
+                <h3>{g.name}</h3>
+                <span className="task-group-count">{gDone}/{g.all.length}</span>
+                <Progress done={gDone} total={g.all.length} />
+                <button type="button" className="task-group-add" onClick={() => onAdd({ group: g.name === '그룹 없음' ? '' : g.name })}>+ 추가</button>
+              </header>
+
+              <div className="task-list" role="table">
+                <div className="task-row task-row-head" role="row">
+                  <span role="columnheader" />
+                  <span role="columnheader">세부항목</span>
+                  <span role="columnheader">구분</span>
+                  <span role="columnheader">완료일자</span>
+                  <span role="columnheader">담당자1</span>
+                  <span role="columnheader">담당자2</span>
+                  <span role="columnheader">비고</span>
+                </div>
+                {g.items.map(t => (
+                  <div
+                    key={t.id}
+                    role="row"
+                    tabIndex={0}
+                    className={`task-row ${t.done ? 'is-done' : ''}`}
+                    onClick={() => onEdit(t)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') onEdit(t); }}
+                  >
+                    <span className="task-cell-check" role="cell" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className={`round-check ${t.done ? 'on' : ''}`}
+                        aria-pressed={Boolean(t.done)}
+                        aria-label={`${t.title} ${t.done ? '완료 취소' : '완료'}`}
+                        onClick={() => onToggleDone(t)}
+                      >
+                        {t.done ? '✓' : ''}
+                      </button>
+                    </span>
+                    <span className="task-cell-title" role="cell">
+                      <span className="task-title-text">{t.title}</span>
+                      {(t.files || []).length > 0 && <span className="task-file-count" title="첨부 파일">📎{t.files.length}</span>}
+                      <NotionBadge record={t} compact onRetry={t.notionError ? () => onRetryNotion(t) : undefined} />
+                    </span>
+                    <span className="task-cell-cat" role="cell">
+                      {t.category && <span className="cat-tag" style={{ '--cat': categoryColor(t.category) }}>{t.category}</span>}
+                    </span>
+                    <span className="task-cell-date" role="cell">{dateText(t)}</span>
+                    <span className="task-cell-people" role="cell" data-label="담당자1"><PeopleTags names={t.assignee1 || []} /></span>
+                    <span className="task-cell-people" role="cell" data-label="담당자2"><PeopleTags names={t.assignee2 || []} /></span>
+                    <span className="task-cell-memo" role="cell">{t.memo}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        })
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { PeopleProvider } from './contexts/PeopleContext';
 import Header from './components/layout/Header';
 import MobileNav from './components/layout/MobileNav';
 
@@ -161,7 +162,9 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <PeopleProvider>
+            <AppRoutes />
+          </PeopleProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

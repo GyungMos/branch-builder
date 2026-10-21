@@ -1137,3 +1137,10 @@ body.modal-open .fab {
   color: var(--color-error);
   cursor: pointer;
 }
+
+.notion-badge.compact {
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}

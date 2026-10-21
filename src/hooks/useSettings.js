@@ -62,8 +62,11 @@ function useSettingsDoc(name) {
 export function usePeople() {
   const { data, loading, save } = useSettingsDoc('people');
   const names = data?.names || [];
+  const colors = data?.colors || {};
   const saveNames = (next) => save({ names: next });
-  return { names, loading, saveNames };
+  // 사람별 색 { 이름: '#색' }
+  const saveColor = (name, color) => save({ colors: { ...colors, [name]: color } });
+  return { names, colors, loading, saveNames, saveColor };
 }
 
 /** 사이트 사용 계정 · 관리자 */
