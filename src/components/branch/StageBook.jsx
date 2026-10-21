@@ -509,7 +509,7 @@ export default function StageBook({
                 {stageLogs.map(l => (
                   <li key={l.id}>
                     <div className="stage-record-main">
-                      <span className="stage-record-title">{l.summary || '내용 없음'}</span>
+                      <span className="stage-record-title">{l.title || l.summary || '내용 없음'}</span>
                       <span className="stage-record-sub">
                         {formatDateShort(l.when)}
                         {l.workersCount ? ` · ${l.workersCount}명 출역` : ''}

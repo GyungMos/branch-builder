@@ -18,6 +18,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [weather, setWeather] = useState(initialData?.weather || 'sunny');
   const [stageId, setStageId] = useState(initialData ? (initialData.stageId || '') : defaultStageId);
+  const [title, setTitle] = useState(initialData?.title || '');
   const [summary, setSummary] = useState(initialData?.summary || '');
   const [workersCount, setWorkersCount] = useState(
     initialData?.workersCount !== undefined && initialData?.workersCount !== null
@@ -34,6 +35,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
   const [restoredDraft, setRestoredDraft] = useState(false);
 
   const summaryRef = useRef(null);
+  const titleRef = useRef(null);
 
   // 1. 신규 작성 시에만 임시 보관본(Draft) 복원
   useEffect(() => {
@@ -42,9 +44,10 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const draft = JSON.parse(saved);
-        if (draft.summary || draft.workersCount || draft.equipmentUsed || draft.issues) {
+        if (draft.title || draft.summary || draft.workersCount || draft.equipmentUsed || draft.issues) {
           if (draft.date) setDate(draft.date);
           if (draft.weather) setWeather(draft.weather);
+          if (draft.title) setTitle(draft.title);
           if (draft.summary) setSummary(draft.summary);
           if (draft.workersCount) setWorkersCount(draft.workersCount);
           if (draft.equipmentUsed) setEquipmentUsed(draft.equipmentUsed);
@@ -61,11 +64,12 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
   // 2. 신규 작성 시에만 작성 중인 내용 실시간 임시 보관
   useEffect(() => {
     if (isEdit) return;
-    if (!summary && !workersCount && !equipmentUsed && !issues) return;
+    if (!title && !summary && !workersCount && !equipmentUsed && !issues) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         date,
         weather,
+        title,
         summary,
         workersCount,
         equipmentUsed,
@@ -76,7 +80,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
     } catch {
       // quota exceeded ignore
     }
-  }, [isEdit, date, weather, summary, workersCount, equipmentUsed, issues, photos]);
+  }, [isEdit, date, weather, title, summary, workersCount, equipmentUsed, issues, photos]);
 
   const handlePhotoUpload = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -111,6 +115,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
   const handleSafeClose = () => {
     if (isEdit) {
       const isChanged =
+        title !== (initialData?.title || '') ||
         summary !== (initialData?.summary || '') ||
         date !== (initialData?.date || '') ||
         weather !== (initialData?.weather || 'sunny') ||
@@ -123,7 +128,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
         const confirmed = window.confirm('수정 중인 내용이 있습니다. 저장하지 않고 닫으시겠습니까?');
         if (!confirmed) return;
       }
-    } else if (summary.trim() || workersCount || equipmentUsed || issues) {
+    } else if (title.trim() || summary.trim() || workersCount || equipmentUsed || issues) {
       const confirmed = window.confirm(
         '작성 중인 일지 내용이 있습니다. 창을 닫으시겠습니까?\n\n(작성하신 내용은 임시 보관되어 다시 열 때 복원됩니다)'
       );
@@ -142,6 +147,11 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
     }
 
     // 필수 항목 검사 및 명확한 피드백
+    if (!title.trim()) {
+      setErrorMessage('일지 제목을 적어 주세요. (노션 페이지 제목이 돼요)');
+      titleRef.current?.focus();
+      return;
+    }
     if (!summary.trim()) {
       setErrorMessage('오늘 진행한 주요 공정 내용을 작성해 주세요.');
       summaryRef.current?.focus();
@@ -153,6 +163,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
       await onSubmit({
         date,
         weather,
+        title: title.trim(),
         summary: summary.trim(),
         workersCount: workersCount ? Number(workersCount) : 0,
         equipmentUsed: equipmentUsed.trim(),
@@ -298,6 +309,24 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
             )}
 
             <div className="form-group">
+              <label htmlFor="log-title">일지 제목 *</label>
+              <input
+                ref={titleRef}
+                id="log-title"
+                type="text"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  if (errorMessage) setErrorMessage('');
+                }}
+                placeholder="예: 마당 바닥 공구리"
+                maxLength={60}
+                required
+                autoFocus
+              />
+            </div>
+
+            <div className="form-group">
               <label htmlFor="log-summary">오늘 진행한 주요 공정 내용 *</label>
               <textarea
                 ref={summaryRef}
@@ -310,7 +339,6 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                 placeholder="예: 2주식 리프트 바닥 앙카 타설 완료, 천장 LED 조명 배선 작업 진행"
                 rows={3}
                 required
-                autoFocus
               />
             </div>
 

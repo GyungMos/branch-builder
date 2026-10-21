@@ -281,6 +281,7 @@ export default function DailyLogList({
                   <div className="daily-log-body-split">
                     {/* 좌측 컬럼: 작업 내용 & 인포 칩 & 특이사항 */}
                     <div className="daily-log-info-col">
+                      {log.title && <div className="daily-log-title">{log.title}</div>}
                       <div className="daily-log-summary">
                         {log.summary}
                       </div>

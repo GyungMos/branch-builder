@@ -15,6 +15,7 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
   const [stageId, setStageId] = useState(cost?.stageId || defaultStageId);
   const [memo, setMemo] = useState(cost?.memo || '');
   const [assignee, setAssignee] = useState(cost?.assignee || '');
+  const [vendor, setVendor] = useState(cost?.vendor || '');
   // 상대방 계좌 정보
   const [bankName, setBankName] = useState(cost?.bankName || '');
   const [accountNumber, setAccountNumber] = useState(cost?.accountNumber || '');
@@ -36,6 +37,7 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
         paymentStatus,
         stageId: stageId || null,
         assignee: assignee.trim(),
+        vendor: vendor.trim(),
         memo: memo.trim(),
         bankName: bankName.trim(),
         accountNumber: accountNumber.trim(),
@@ -137,6 +139,19 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
                 </select>
               </div>
               <div className="form-group">
+                <label htmlFor="cost-vendor">거래처</label>
+                <input
+                  id="cost-vendor"
+                  type="text"
+                  value={vendor}
+                  onChange={(e) => setVendor(e.target.value)}
+                  placeholder="예: ○○건설, ○○설계사무소"
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
                 <label htmlFor="cost-assignee">담당자</label>
                 <input
                   id="cost-assignee"
@@ -146,19 +161,18 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
                   placeholder="예: 김대리"
                 />
               </div>
+              {stages.length > 0 && (
+                <div className="form-group">
+                  <label htmlFor="cost-stage">연결 단계</label>
+                  <select id="cost-stage" value={stageId} onChange={(e) => setStageId(e.target.value)}>
+                    <option value="">선택 안함</option>
+                    {stages.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
-
-            {stages.length > 0 && (
-              <div className="form-group">
-                <label htmlFor="cost-stage">연결 단계</label>
-                <select id="cost-stage" value={stageId} onChange={(e) => setStageId(e.target.value)}>
-                  <option value="">선택 안함</option>
-                  {stages.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             {/* 상대방 계좌 정보 */}
             <div className="form-section-toggle">

@@ -5,7 +5,7 @@ import { isScheduledCost, sumScheduled, dueLabel, daysUntilDue } from '../../uti
 import './CostList.css';
 
 function exportToCSV(costs, totalCost) {
-  const headers = ['항목명', '금액', '카테고리', '날짜', '지급 상태', '담당자', '은행명', '예금주', '계좌번호', '메모'];
+  const headers = ['항목명', '금액', '카테고리', '날짜', '지급 상태', '거래처', '담당자', '은행명', '예금주', '계좌번호', '메모'];
   const rows = costs.map(c => {
     const cat = COST_CATEGORIES.find(ct => ct.id === c.category);
     return [
@@ -14,6 +14,7 @@ function exportToCSV(costs, totalCost) {
       cat?.label || '기타',
       c.date?.toDate ? c.date.toDate().toISOString().slice(0, 10) : (c.date || ''),
       isScheduledCost(c) ? '지급 예정' : '지급 완료',
+      c.vendor || '',
       c.assignee || '',
       c.bankName || '',
       c.accountHolder || '',
@@ -21,9 +22,9 @@ function exportToCSV(costs, totalCost) {
       c.memo || '',
     ];
   });
-  rows.push(['', '', '', '', '', '', '', '', '', '']);
-  rows.push(['지급 완료 합계', totalCost, '', '', '', '', '', '', '', '']);
-  rows.push(['지급 예정 합계', sumScheduled(costs), '', '', '', '', '', '', '', '']);
+  rows.push(['', '', '', '', '', '', '', '', '', '', '']);
+  rows.push(['지급 완료 합계', totalCost, '', '', '', '', '', '', '', '', '']);
+  rows.push(['지급 예정 합계', sumScheduled(costs), '', '', '', '', '', '', '', '', '']);
 
   const BOM = '\uFEFF';
   const csvContent = BOM + [headers, ...rows].map(row =>
@@ -121,6 +122,9 @@ export default function CostList({ costs, totalCost, onEdit, onDelete, onMarkPai
                     <NeonIcon name={category.iconName || 'budget'} color={category.color || 'emerald'} size="xs" badge={false} />
                     {category.label}
                   </span>
+                  {cost.vendor && (
+                    <span className="badge badge-neutral" title="거래처">🏢 {cost.vendor}</span>
+                  )}
                   {cost.assignee && (
                     <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       <NeonIcon name="partner" size="xs" color="violet" badge={false} />

@@ -339,6 +339,7 @@ export function useDailyLogs(branchId) {
     const sanitizedData = {
       date: slimData.date || new Date().toISOString().split('T')[0],
       weather: slimData.weather || 'sunny',
+      title: (slimData.title || '').trim(),
       summary: (slimData.summary || '').trim(),
       workersCount: Number(slimData.workersCount) || 0,
       equipmentUsed: (slimData.equipmentUsed || '').trim(),
@@ -391,6 +392,7 @@ export function useDailyLogs(branchId) {
     const sanitizedData = {
       date: slimData.date || existingLog?.date || new Date().toISOString().split('T')[0],
       weather: slimData.weather || existingLog?.weather || 'sunny',
+      title: (slimData.title !== undefined ? slimData.title : (existingLog?.title || '')).trim(),
       summary: (slimData.summary !== undefined ? slimData.summary : (existingLog?.summary || '')).trim(),
       workersCount: slimData.workersCount !== undefined ? Number(slimData.workersCount) : (existingLog?.workersCount || 0),
       equipmentUsed: (slimData.equipmentUsed !== undefined ? slimData.equipmentUsed : (existingLog?.equipmentUsed || '')).trim(),

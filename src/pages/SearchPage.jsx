@@ -47,8 +47,8 @@ function buildEntries(branch, data) {
   (data.schedules || []).forEach(s => push('schedule', s.title, [s.memo, s.assignee, s.milestoneText].filter(Boolean).join(' · '), fmtDate(s.startDate)));
   (data.costs || []).forEach(c => push('cost', c.title, [c.vendor, c.assignee, c.memo, c.accountHolder].filter(Boolean).join(' · '), `${fmtDate(c.date)} ${formatCurrency(Number(c.amount) || 0)}`));
   (data.documents || []).forEach(d => push('document', d.name || d.fileName, [d.fileName, d.memo, d.requiredDoc].filter(Boolean).join(' · '), fmtDate(d.createdAt)));
-  (data.dailyLogs || []).forEach(l => push('dailyLog', l.summary,
-    [l.issues, l.equipmentUsed, l.author, ...(l.entries || []).map(e => [e.summary, e.issues].filter(Boolean).join(' '))].filter(Boolean).join(' · '),
+  (data.dailyLogs || []).forEach(l => push('dailyLog', l.title || l.summary,
+    [l.title ? l.summary : '', l.issues, l.equipmentUsed, l.author, ...(l.entries || []).map(e => [e.summary, e.issues].filter(Boolean).join(' '))].filter(Boolean).join(' · '),
     fmtDate(l.date)));
   (data.partners || []).forEach(p => push('partner', p.companyName, [p.contactName, p.phone, p.category, p.memo].filter(Boolean).join(' · ')));
   (data.equipments || []).forEach(e => push('equipment', e.name, [e.modelNumber, e.modelName, e.manufacturer, e.vendor, e.memo].filter(Boolean).join(' · ')));

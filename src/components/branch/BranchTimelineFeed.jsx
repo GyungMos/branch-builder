@@ -90,14 +90,14 @@ export default function BranchTimelineFeed({
 
       // 검색 텍스트 생성
       const entriesText = (log.entries || []).map(e => `${e.summary || ''} ${e.workType || ''} ${e.issues || ''}`).join(' ');
-      const searchStr = `${log.summary || ''} ${log.equipmentUsed || ''} ${log.issues || ''} ${log.author || ''} ${entriesText}`;
+      const searchStr = `${log.title || ''} ${log.summary || ''} ${log.equipmentUsed || ''} ${log.issues || ''} ${log.author || ''} ${entriesText}`;
 
       items.push({
         id: `dailyLog_${log.id}`,
         itemType: 'dailyLog',
         dateStr: norm.dateStr,
         dateObj: norm.dateObj,
-        title: log.summary ? `[현장 일지] ${log.summary}` : '[현장 일지] 작업 내용',
+        title: `[현장 일지] ${log.title || log.summary || '작업 내용'}`,
         raw: log,
         photos: allPhotos,
         hasPhotos: allPhotos.length > 0,
@@ -742,8 +742,11 @@ function TimelineCard({ item, onPhotoClick }) {
           )}
         </div>
 
+        {raw.title && (
+          <div className="timeline-card-title">{raw.title}</div>
+        )}
         {raw.summary && (
-          <div className="timeline-card-title">{raw.summary}</div>
+          <div className={raw.title ? 'timeline-card-desc' : 'timeline-card-title'}>{raw.summary}</div>
         )}
 
         {/* 특이사항 / 현장 이슈 */}

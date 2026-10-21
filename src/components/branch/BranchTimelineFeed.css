@@ -422,6 +422,15 @@
   line-height: 1.4;
 }
 
+/* 현장 일지 제목 아래 작업 내용 */
+.timeline-card-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 /* 메타 정보 칩 (날씨, 인원, 장비 등) */
 .timeline-meta-chips {
   display: flex;

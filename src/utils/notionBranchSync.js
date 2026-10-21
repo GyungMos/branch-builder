@@ -17,6 +17,11 @@ export const NOTION_COLLECTIONS = {
 
 const WEATHER_LABEL = { sunny: '맑음', cloudy: '흐림', rain: '우천', snow: '강설' };
 
+const firstLine = (text = '') => {
+  const line = String(text).split('\n').map(l => l.trim()).find(Boolean) || '현장 일지';
+  return line.length > 40 ? `${line.slice(0, 40)}…` : line;
+};
+
 /** 본문이 바뀌었는지 비교하기 위한 짧은 지문 */
 export function textHash(text = '') {
   let h = 5381;
@@ -82,13 +87,15 @@ function toPayload(kind, r, stages = []) {
       };
     case 'dailyLog': {
       const record = {
+        // 제목이 없는 예전 일지는 작업 내용 첫 줄을 제목으로
+        title: r.title || firstLine(r.summary),
         summary: r.summary, date: ymd(r.date), stageName, weatherLabel: WEATHER_LABEL[r.weather] || '',
         workersCount: r.workersCount || 0, author: r.author || '', issues: r.issues || '',
         equipmentUsed: r.equipmentUsed || '', photos: r.photos || [],
         entries: (r.entries || []).map(e => ({ timeTag: e.timeTag, time: e.time, summary: e.summary, issues: e.issues, photos: e.photos || [] })),
       };
       return {
-        bodyHash: textHash(JSON.stringify([record.summary, record.equipmentUsed, record.issues, record.photos, record.entries])),
+        bodyHash: textHash(JSON.stringify(['v2', record.summary, record.equipmentUsed, record.issues, record.photos, record.entries])),
         record,
       };
     }

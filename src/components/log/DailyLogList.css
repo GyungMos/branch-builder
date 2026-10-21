@@ -177,6 +177,13 @@
   padding: 12px 14px;
 }
 
+.daily-log-title {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+
 .daily-log-summary {
   font-size: 1.05rem;
   color: #f8fafc;

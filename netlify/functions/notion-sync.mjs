@@ -233,7 +233,7 @@ const KINDS = {
     idKey: 'logsDbId',
     dbTitle: '현장 일지',
     schema: {
-      작업내용: { title: {} },
+      제목: { title: {} },
       날짜: { date: {} },
       단계: { select: {} },
       날씨: { select: {} },
@@ -242,7 +242,7 @@ const KINDS = {
       이슈: { rich_text: {} },
     },
     properties: (r) => ({
-      작업내용: title(r.summary),
+      제목: title(r.title),
       날짜: date(r.date),
       단계: select(r.stageName),
       날씨: select(r.weatherLabel),
@@ -251,7 +251,7 @@ const KINDS = {
       이슈: text(r.issues),
     }),
     blocks: (r) => {
-      const out = [para(r.summary || '')];
+      const out = [heading('작업 내용'), ...str(r.summary).split('\n').filter(l => l.trim()).map(l => para(l))];
       if (r.equipmentUsed) out.push(para(`투입 장비: ${r.equipmentUsed}`));
       if (r.issues) out.push(para(`특이사항·이슈: ${r.issues}`));
       (r.photos || []).filter(isHttp).forEach(u => out.push(image(u)));
@@ -346,6 +346,12 @@ async function getAlive(path) {
 async function ensureDatabase(dbId, parentPageId, dbTitle, schema) {
   const existing = dbId ? await getAlive(`/databases/${dbId}`) : null;
   if (existing) {
+    // 제목 칸 이름이 바뀌었으면 (예: 현장 일지 '작업내용' → '제목') 노션 표의 칸 이름도 바꿈
+    const titleName = Object.keys(schema).find(name => schema[name].title);
+    const oldTitle = Object.entries(existing.properties || {}).find(([, p]) => p.type === 'title')?.[0];
+    if (titleName && oldTitle && oldTitle !== titleName) {
+      await notion(`/databases/${dbId}`, 'PATCH', { properties: { [oldTitle]: { name: titleName } } });
+    }
     // 노션에서 칸이 지워졌으면 다시 만들어 둠 (이름이 같은 칸은 건드리지 않음)
     const missing = Object.fromEntries(
       Object.entries(schema).filter(([name, def]) => !def.title && !existing.properties?.[name]),
