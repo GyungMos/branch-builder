@@ -61,15 +61,20 @@ function toPayload(kind, r, stages = []) {
         },
       };
     }
-    case 'task':
+    case 'task': {
+      const body = resolveAttachments(r.body || '', r.attachments, true);
       return {
+        // 세부 내용이 생긴 항목만 노션 페이지 본문을 채움 (본문 없는 예전 항목은 그대로)
+        bodyHash: body || r.notionBodyHash ? textHash(body) : undefined,
         record: {
+          body,
           title: r.title, group: r.group || '', category: r.category || '',
           startDate: ymd(r.startDate), endDate: ymd(r.endDate), done: Boolean(r.done),
           assignee1: r.assignee1 || [], assignee2: r.assignee2 || [], memo: r.memo || '',
           files: (r.files || []).map(f => ({ name: f.name, url: f.url })),
         },
       };
+    }
     case 'schedule':
       return {
         record: {

@@ -343,6 +343,15 @@
   font-family: Georgia, serif;
 }
 
+.notion-import-preview {
+  margin-top: var(--space-md);
+}
+
+.notion-import-preview ul {
+  margin: 0 0 var(--space-md);
+  padding-left: 1.2em;
+}
+
 .notion-steps {
   display: flex;
   flex-direction: column;
@@ -407,4 +416,8 @@
 /* 담당자 명단 카드: 이름은 노션식 색 태그 */
 .people-card-name {
   overflow: visible;
+}
+
+.settings-file-btn {
+  cursor: pointer;
 }

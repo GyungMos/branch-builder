@@ -181,6 +181,8 @@ const KINDS = {
           .map(f => ({ name: str(f.name || '파일').slice(0, 100), type: 'external', external: { url: f.url } })),
       },
     }),
+    // 세부 내용 (예전 항목처럼 비어 있으면 본문 없음)
+    blocks: (r) => miniDocBlocks(parseMiniDoc(r.body || '')),
   },
   schedule: {
     idKey: 'schedulesDbId',

@@ -10,6 +10,8 @@ import { displayLoginId, toLoginEmail, validateLoginId } from '../utils/loginId'
 import { callNotion } from '../utils/notionSync';
 import { loadBranchData } from '../utils/branchData';
 import { syncBranchAll } from '../utils/notionBranchSync';
+import { readNotionBundle, importNotionBundle } from '../utils/notionImport';
+import { Link } from 'react-router-dom';
 import './SettingsPage.css';
 
 function Message({ msg }) {
@@ -411,6 +413,92 @@ function NotionSection() {
   );
 }
 
+/** 노션에서 묶어 온 자료(.zip)를 새 지점으로 넣기 (관리자만) */
+function NotionImportSection() {
+  const { demoMode, user } = useAuth();
+  const { addBranch } = useBranches();
+  const { names, saveNames } = usePeople();
+  const [bundle, setBundle] = useState(null);
+  const [branchName, setBranchName] = useState('');
+  const [status, setStatus] = useState(null);
+  const [working, setWorking] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const pickFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setResult(null);
+    setStatus({ type: 'info', text: '파일을 읽는 중…' });
+    try {
+      const b = await readNotionBundle(file);
+      setBundle(b);
+      setBranchName(b.data.branchName || '');
+      setStatus(null);
+    } catch (err) {
+      setBundle(null);
+      setStatus({ type: 'error', text: err.message });
+    }
+  };
+
+  const run = async () => {
+    if (!bundle || !branchName.trim()) return;
+    if (!window.confirm(`'${branchName.trim()}' 지점을 새로 만들고 자료를 넣을까요? 사진이 많으면 몇 분 걸려요. 끝날 때까지 이 화면을 닫지 마세요.`)) return;
+    setWorking(true);
+    try {
+      const res = await importNotionBundle({
+        bundle, branchName: branchName.trim(), addBranch, demoMode, user,
+        onProgress: (p) => setStatus({ type: 'info', text: p.text }),
+      });
+      // 담당자 명단에 없는 이름은 명단에 더함
+      const missing = res.people.filter(n => !names.includes(n));
+      if (missing.length) await saveNames([...names, ...missing]);
+      setResult(res);
+      setBundle(null);
+      setStatus({ type: 'ok', text: `끝났어요. 오픈 계획 ${res.plans}개, 오픈 준비 ${res.tasks}개, 사진·파일 ${res.files}개를 넣었어요.` });
+    } catch (err) {
+      setStatus({ type: 'error', text: '넣는 중 문제가 생겼어요: ' + err.message });
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const d = bundle?.data;
+  return (
+    <section className="settings-card">
+      <header className="settings-card-head">
+        <span className="notion-mark" aria-hidden="true">N</span>
+        <div>
+          <h2>노션 자료 가져오기</h2>
+          <p className="settings-help">다른 사람 노션에 있던 지점 자료를 묶은 파일(.zip)을 골라 새 지점으로 넣어요. 오픈 계획·오픈 준비와 사진·파일이 함께 들어가요.</p>
+        </div>
+      </header>
+      {!working && (
+        <label className="btn btn-secondary btn-sm settings-file-btn">
+          노션 자료 파일(.zip) 고르기
+          <input type="file" accept=".zip,application/zip" hidden onChange={pickFile} />
+        </label>
+      )}
+      {d && !working && (
+        <div className="notion-import-preview">
+          <ul>
+            <li>오픈 계획 <strong>{d.plans?.length || 0}</strong>개</li>
+            <li>오픈 준비 <strong>{d.tasks?.length || 0}</strong>개</li>
+            <li>사진·파일 <strong>{(d.files || []).filter(f => f.path).length}</strong>개</li>
+          </ul>
+          <div className="form-group">
+            <label htmlFor="import-branch-name">새 지점 이름</label>
+            <input id="import-branch-name" value={branchName} onChange={(e) => setBranchName(e.target.value)} />
+          </div>
+          <button type="button" className="btn btn-primary btn-sm" disabled={!branchName.trim()} onClick={run}>새 지점으로 넣기</button>
+        </div>
+      )}
+      <Message msg={status} />
+      {result && <Link className="btn btn-primary btn-sm" to={`/branch/${result.branchId}?tab=plans`}>{branchName} 보러 가기</Link>}
+    </section>
+  );
+}
+
 const TABS = [
   { id: 'people', label: '담당자·색' },
   { id: 'staff', label: '직원 계정', admin: true },
@@ -462,6 +550,7 @@ export default function SettingsPage() {
       {active === 'people' && <StatusColorSection canEdit={members.isAdmin} />}
       {active === 'staff' && <StaffSection />}
       {active === 'notion' && <NotionSection />}
+      {active === 'notion' && <NotionImportSection />}
       {active === 'me' && <MyAccountSection />}
     </div>
   );

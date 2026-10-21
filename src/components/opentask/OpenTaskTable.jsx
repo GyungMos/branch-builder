@@ -180,6 +180,7 @@ export default function OpenTaskTable({ tasks, onAdd, onEdit, onToggleDone, onDe
                     </span>
                     <span className="task-cell-title" role="cell">
                       <span className="task-title-text">{t.title}</span>
+                      {t.body && <span className="task-body-mark" title="세부 내용 있음">📝</span>}
                       {(t.files || []).length > 0 && <span className="task-file-count" title="첨부 파일">📎{t.files.length}</span>}
                       <NotionBadge record={t} compact onRetry={t.notionError ? () => onRetryNotion(t) : undefined} />
                     </span>

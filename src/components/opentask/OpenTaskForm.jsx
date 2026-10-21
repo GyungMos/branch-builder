@@ -3,6 +3,7 @@ import ModalPortal from '../common/ModalPortal';
 import DateInput from '../common/DateInput';
 import PeoplePicker from '../common/PeoplePicker';
 import NotionBadge from '../common/NotionBadge';
+import MiniDocView from '../common/MiniDocView';
 import { useAuth } from '../../contexts/AuthContext';
 import { toDateInputValue } from '../../utils/formatters';
 import { uploadAttachment } from '../../utils/fileUpload';
@@ -25,6 +26,8 @@ export default function OpenTaskForm({ task, defaults = {}, branchId, people, gr
   const [assignee2, setAssignee2] = useState(task?.assignee2 || []);
   const [memo, setMemo] = useState(task?.memo ?? '');
   const [files, setFiles] = useState(task?.files || []);
+  const [body, setBody] = useState(task?.body ?? '');
+  const [bodyMode, setBodyMode] = useState(task?.body ? 'view' : 'edit');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -64,6 +67,9 @@ export default function OpenTaskForm({ task, defaults = {}, branchId, people, gr
         assignee2,
         memo: memo.trim(),
         files,
+        body,
+        // 본문 속 사진·파일 주소 (노션에서 가져온 항목). 본문에서 지운 것은 뺌
+        attachments: Object.fromEntries(Object.entries(task?.attachments || {}).filter(([id]) => body.includes(`(att:${id})`))),
       });
     } finally {
       setSaving(false);
@@ -126,6 +132,21 @@ export default function OpenTaskForm({ task, defaults = {}, branchId, people, gr
               <div className="form-group full">
                 <label htmlFor="task-memo">비고</label>
                 <textarea id="task-memo" rows={3} value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="예: 견적 3곳 비교 후 결정" />
+              </div>
+              <div className="form-group full">
+                <div className="task-body-head">
+                  <label htmlFor="task-body">세부 내용</label>
+                  <div className="seg-toggle" role="tablist">
+                    <button type="button" role="tab" aria-selected={bodyMode === 'edit'} className={bodyMode === 'edit' ? 'on' : ''} onClick={() => setBodyMode('edit')}>편집</button>
+                    <button type="button" role="tab" aria-selected={bodyMode === 'view'} className={bodyMode === 'view' ? 'on' : ''} onClick={() => setBodyMode('view')}>미리보기</button>
+                  </div>
+                </div>
+                {bodyMode === 'edit' ? (
+                  <textarea id="task-body" rows={6} value={body} onChange={(e) => setBody(e.target.value)}
+                    placeholder={'진행 방법·필요 서류 등을 자세히 적어 두세요.\n- 주체 : 구리시청\n- 필요서류 : 정비업허가신청서, 법인인감'} />
+                ) : (
+                  <div className="task-body-view"><MiniDocView text={body} attachments={task?.attachments} /></div>
+                )}
               </div>
               <div className="form-group full">
                 <label>파일과 미디어</label>

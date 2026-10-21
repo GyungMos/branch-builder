@@ -25,3 +25,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 노션에서 가져온 자료 (사진·회사 자료, 올리지 않음)
+notion-import/
