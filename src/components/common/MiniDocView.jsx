@@ -36,7 +36,7 @@ function renderList(items, depth = 0) {
         return (
           <figure key={`${depth}-${gi}`} className="minidoc-image">
             <ZoomableImage src={b.url} alt={b.text || '사진'} />
-            {b.text && <figcaption>{b.text}</figcaption>}
+            {b.text && !['사진', 'image', 'image.png'].includes(b.text) && <figcaption>{b.text}</figcaption>}
           </figure>
         );
       }
