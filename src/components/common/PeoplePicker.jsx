@@ -2,32 +2,27 @@ import { useEffect, useRef, useState } from 'react';
 import { usePeopleContext } from '../../contexts/PeopleContext';
 import './PeoplePicker.css';
 
-/** 이름표 동그라미 글자: 한글 세 글자 이름은 뒤 두 글자(홍우), 영문은 머리글자(KH) */
-function initialsOf(name = '') {
-  const n = name.trim();
-  if (/^[가-힣]{3,4}$/.test(n)) return n.slice(-2);
-  if (/^[가-힣]{1,2}$/.test(n)) return n;
-  const words = n.split(/\s+/).filter(Boolean);
-  if (words.length > 1) return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-  return n.slice(0, 2).toUpperCase();
-}
-
-/** 사람 동그라미 (이름 글자 + 사람마다 고정된 색 — 설정의 담당자 명단에서 정함) */
-export function Avatar({ name, size = 'sm', color }) {
+/**
+ * 담당자 태그 (노션 담당자 칸처럼 색 배경 + 이름, 둥근 알약 모양)
+ * onRemove가 있으면 오른쪽에 × 단추
+ */
+export function PersonTag({ name, onRemove, color, size }) {
   const { colorOf } = usePeopleContext();
   return (
-    <span className={`avatar avatar-${size}`} style={{ '--av': color || colorOf(name) }} aria-hidden="true">
-      {initialsOf(name)}
+    <span className={`person-tag ${size === 'sm' ? 'sm' : ''}`} style={{ '--av': color || colorOf(name) }}>
+      <span className="person-tag-name">{name}</span>
+      {onRemove && (
+        <button type="button" className="person-tag-remove" onClick={(e) => { e.stopPropagation(); onRemove(); }} aria-label={`${name} 빼기`}>×</button>
+      )}
     </span>
   );
 }
 
 /**
- * 담당자 고르기 (펼침 목록): 고른 사람만 색 이름표로 보이고, '+'를 누르면 명단이 펼쳐짐
+ * 담당자 고르기 (펼침 목록): 고른 사람만 색 태그로 보이고, '+'를 누르면 명단이 펼쳐짐
  * 명단에서 빠진 이름이 이미 들어 있으면 그대로 보여주고 빼기만 가능
  */
 export default function PeoplePicker({ names = [], value = [], onChange, placeholder = '+ 담당자 추가' }) {
-  const { colorOf } = usePeopleContext();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const wrapRef = useRef(null);
@@ -52,13 +47,7 @@ export default function PeoplePicker({ names = [], value = [], onChange, placeho
 
   return (
     <div className="people-picker" ref={wrapRef}>
-      {value.map(name => (
-        <span key={name} className="person-chip" style={{ '--av': colorOf(name) }}>
-          <Avatar name={name} />
-          <span className="person-chip-name">{name}</span>
-          <button type="button" className="person-chip-remove" onClick={() => toggle(name)} aria-label={`${name} 빼기`}>×</button>
-        </span>
-      ))}
+      {value.map(name => <PersonTag key={name} name={name} onRemove={() => toggle(name)} />)}
       <button type="button" className="people-add" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-haspopup="listbox">
         {value.length ? '+' : placeholder}
       </button>
@@ -80,10 +69,8 @@ export default function PeoplePicker({ names = [], value = [], onChange, placeho
             filtered.map(name => {
               const on = value.includes(name);
               return (
-                <button key={name} type="button" role="option" aria-selected={on} className={`people-option ${on ? 'on' : ''}`}
-                  style={{ '--av': colorOf(name) }} onClick={() => toggle(name)}>
-                  <Avatar name={name} />
-                  <span>{name}</span>
+                <button key={name} type="button" role="option" aria-selected={on} className={`people-option ${on ? 'on' : ''}`} onClick={() => toggle(name)}>
+                  <PersonTag name={name} />
                   <span className="people-option-check">{on ? '✓' : ''}</span>
                 </button>
               );
@@ -95,23 +82,14 @@ export default function PeoplePicker({ names = [], value = [], onChange, placeho
   );
 }
 
-/** 담당자 표시 (카드·표 안): 색 동그라미 + 이름 (compact: 동그라미만 겹쳐서) */
-export function PeopleTags({ names = [], compact = false }) {
-  const { colorOf } = usePeopleContext();
+/** 담당자 표시 (카드·표 안): 색 태그. max를 넘으면 '+N' */
+export function PeopleTags({ names = [], max }) {
   if (!names.length) return null;
-  if (compact) {
-    return (
-      <span className="avatar-stack" title={names.join(', ')}>
-        {names.slice(0, 4).map(n => <Avatar key={n} name={n} />)}
-        {names.length > 4 && <span className="avatar avatar-sm avatar-more">+{names.length - 4}</span>}
-      </span>
-    );
-  }
+  const shown = max ? names.slice(0, max) : names;
   return (
-    <span className="people-tags">
-      {names.map(n => (
-        <span key={n} className="people-tag" style={{ '--av': colorOf(n) }}><Avatar name={n} size="xs" />{n}</span>
-      ))}
+    <span className="people-tags" title={names.join(', ')}>
+      {shown.map(n => <PersonTag key={n} name={n} size="sm" />)}
+      {max && names.length > max && <span className="person-tag sm more">+{names.length - max}</span>}
     </span>
   );
 }

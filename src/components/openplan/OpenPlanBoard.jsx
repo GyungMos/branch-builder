@@ -77,8 +77,7 @@ export default function OpenPlanBoard({ plans, onOpen, onCreate, onMove }) {
                     {preview && <span className="plan-card-preview">{preview}</span>}
                     {(people.length > 0 || due || p.notionPageId || p.notionError) && (
                       <span className="plan-card-foot">
-                        {people.length > 0 && <PeopleTags names={people} compact />}
-                        {people.length > 0 && <span className="plan-card-people">{people.join(', ')}</span>}
+                        {people.length > 0 && <PeopleTags names={people} max={3} />}
                         <span className="plan-card-spacer" />
                         {due && <span className={`plan-due ${overdue ? 'overdue' : ''}`}>{formatDateShort(due)}</span>}
                         <NotionBadge record={p} compact />

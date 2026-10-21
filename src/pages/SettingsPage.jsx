@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useBranches } from '../hooks/useFirestore';
 import { useMembers, usePeople } from '../hooks/useSettings';
 import { PEOPLE_PALETTE, colorForPerson } from '../contexts/PeopleContext';
-import { Avatar } from '../components/common/PeoplePicker';
+import { PersonTag } from '../components/common/PeoplePicker';
 import { createStaffAccount } from '../utils/staffAccounts';
 import { displayLoginId, toLoginEmail, validateLoginId } from '../utils/loginId';
 import { callNotion } from '../utils/notionSync';
@@ -72,7 +72,7 @@ function PeopleSection({ canEdit }) {
       <header className="settings-card-head">
         <div>
           <h2>담당자 명단</h2>
-          <p className="settings-help">오픈 계획·오픈 준비에서 담당자1·담당자2로 고를 이름이에요. 사람마다 색이 정해져서 <strong>색만 봐도 누구인지</strong> 알 수 있어요. 동그라미를 눌러 색을 바꿀 수 있어요.</p>
+          <p className="settings-help">오픈 계획·오픈 준비에서 담당자1·담당자2로 고를 이름이에요. 사람마다 색이 정해져서 <strong>색만 봐도 누구인지</strong> 알 수 있어요. 이름 왼쪽 색 점을 눌러 색을 바꿀 수 있어요.</p>
         </div>
       </header>
 
@@ -92,8 +92,7 @@ function PeopleSection({ canEdit }) {
             return (
               <li key={n} className="people-card" style={{ '--av': color }}>
                 <ColorSwatch color={color} onPick={(c) => saveColor(n, c)} disabled={!canEdit} />
-                <Avatar name={n} size="md" color={color} />
-                <span className="people-card-name">{n}</span>
+                <span className="people-card-name"><PersonTag name={n} color={color} /></span>
                 {canEdit && (
                   <span className="people-card-actions">
                     <button type="button" className="icon-btn" onClick={() => move(i, -1)} aria-label={`${n} 위로`} disabled={i === 0}>↑</button>
@@ -194,7 +193,6 @@ function StaffSection() {
             const admin = members.admins.includes(a.email);
             return (
               <li key={a.email} className="account-row">
-                <Avatar name={a.name || a.loginId} size="md" />
                 <span className="account-main">
                   <span className="account-name">{a.name || '이름 없음'}{a.email === myEmail && <span className="account-me">나</span>}</span>
                   <span className="account-id">{a.loginId}</span>
@@ -284,7 +282,6 @@ function MyAccountSection() {
   return (
     <section className="settings-card">
       <header className="settings-card-head">
-        <Avatar name={user?.displayName || displayLoginId(user?.email)} size="md" />
         <div>
           <h2>{user?.displayName || '내 계정'}</h2>
           <p className="settings-help">로그인 아이디 <strong className="mono">{displayLoginId(user?.email)}</strong></p>

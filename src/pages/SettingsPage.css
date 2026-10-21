@@ -403,3 +403,8 @@
   margin: 0;
   accent-color: var(--color-accent);
 }
+
+/* 담당자 명단 카드: 이름은 노션식 색 태그 */
+.people-card-name {
+  overflow: visible;
+}

@@ -1,42 +1,57 @@
-/* ===== 사람 동그라미 ===== */
-.avatar {
+/* ===== 담당자 태그 (노션식 색 배경 + 이름, 둥근 알약 모양) ===== */
+.person-tag {
   --av: #10b981;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--av) 22%, transparent);
-  color: color-mix(in srgb, var(--av) 75%, white);
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  gap: 2px;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--av) 28%, transparent);
+  color: color-mix(in srgb, var(--av) 40%, white);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
   line-height: 1;
+  white-space: nowrap;
 }
 
-[data-theme="light"] .avatar {
-  background: color-mix(in srgb, var(--av) 16%, white);
-  color: color-mix(in srgb, var(--av) 70%, black);
+[data-theme="light"] .person-tag {
+  background: color-mix(in srgb, var(--av) 20%, white);
+  color: color-mix(in srgb, var(--av) 55%, black);
 }
 
-.avatar-xs { width: 18px; height: 18px; font-size: 9px; }
-.avatar-sm { width: 24px; height: 24px; font-size: 10px; }
-.avatar-md { width: 32px; height: 32px; font-size: 12px; }
+.person-tag.sm {
+  height: 22px;
+  padding: 0 10px;
+  font-size: var(--font-size-xs);
+}
 
-.avatar-more {
+.person-tag.more {
   background: var(--color-bg-tertiary);
   color: var(--color-text-secondary);
 }
 
-.avatar-stack {
-  display: inline-flex;
+.person-tag:has(.person-tag-remove) {
+  padding-right: 4px;
 }
 
-.avatar-stack .avatar {
-  box-shadow: 0 0 0 2px var(--color-bg-secondary);
+.person-tag-remove {
+  width: 20px;
+  height: 20px;
+  margin-left: 2px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  opacity: 0.65;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.avatar-stack .avatar + .avatar {
-  margin-left: -6px;
+.person-tag-remove:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--av) 30%, transparent);
 }
 
 /* ===== 담당자 고르기 ===== */
@@ -49,51 +64,18 @@
   min-height: 32px;
 }
 
-.person-chip {
-  --av: #10b981;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 4px;
-  border-radius: var(--radius-full);
-  border: 1px solid color-mix(in srgb, var(--av) 45%, transparent);
-  background: color-mix(in srgb, var(--av) 12%, transparent);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-}
-
-.person-chip-name {
-  padding-right: 2px;
-}
-
-.person-chip-remove {
-  width: 20px;
-  height: 20px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--color-text-tertiary);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.person-chip-remove:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
-}
-
 .people-add {
-  height: 30px;
-  min-width: 30px;
+  height: 26px;
+  min-width: 26px;
   padding: 0 12px;
   border: 1px dashed var(--color-border);
-  border-radius: var(--radius-full);
+  border-radius: 999px;
   background: transparent;
   color: var(--color-text-tertiary);
   font: inherit;
   font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -107,8 +89,8 @@
   top: calc(100% + 6px);
   left: 0;
   z-index: 50;
-  width: 240px;
-  max-height: 280px;
+  width: 220px;
+  max-height: 300px;
   overflow-y: auto;
   padding: 6px;
   display: flex;
@@ -129,24 +111,18 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 8px;
+  padding: 6px 8px;
   border: none;
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--color-text-primary);
   font: inherit;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
   text-align: left;
   cursor: pointer;
 }
 
-.people-option:hover {
-  background: var(--color-bg-hover);
-}
-
+.people-option:hover,
 .people-option.on {
-  background: color-mix(in srgb, var(--av) 12%, transparent);
+  background: var(--color-bg-hover);
 }
 
 .people-option-check {
@@ -166,18 +142,4 @@
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px;
-}
-
-.people-tag {
-  --av: #10b981;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 8px 1px 2px;
-  border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--av) 14%, transparent);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  white-space: nowrap;
 }
