@@ -5,6 +5,7 @@ import DateInput from '../common/DateInput';
 import { useBranches } from '../../hooks/useFirestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { loadBranchData, copyBranchSetup } from '../../utils/branchData';
+import { syncBranchAll } from '../../utils/notionBranchSync';
 import { toDateInputValue } from '../../utils/formatters';
 
 /**
@@ -14,12 +15,12 @@ import { toDateInputValue } from '../../utils/formatters';
 export default function CopyBranchModal({ source, onClose }) {
   const navigate = useNavigate();
   const { demoMode, user } = useAuth();
-  const { addBranch } = useBranches();
+  const { addBranch, updateBranch } = useBranches();
   const [data, setData] = useState(null);
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [opts, setOpts] = useState({
-    stages: true, partners: true, equipments: true, compliance: true, budget: false, schedules: false,
+    stages: true, openTasks: true, partners: true, equipments: true, compliance: true, budget: false, schedules: false,
   });
   const [scheduleStart, setScheduleStart] = useState(toDateInputValue(new Date()));
   const [working, setWorking] = useState(false);
@@ -35,6 +36,7 @@ export default function CopyBranchModal({ source, onClose }) {
   const count = (key) => (data?.[key] || []).length;
   const options = [
     { key: 'stages', label: '단계와 체크리스트', note: '체크는 모두 해제된 상태로', n: count('stages') },
+    { key: 'openTasks', label: '오픈 준비 스케줄 항목', note: '체크·날짜·파일은 비운 채로', n: count('openTasks') },
     { key: 'partners', label: '협력업체 연락처', n: count('partners') },
     { key: 'equipments', label: '장비 목록', note: '설치·검사 전 상태로', n: count('equipments') },
     { key: 'compliance', label: '법정 시설·인허가 항목', note: '모두 미확인 상태로', n: count('compliance') },
@@ -63,6 +65,11 @@ export default function CopyBranchModal({ source, onClose }) {
         user,
       });
       setResult({ id: created.id, summary });
+      // 새 지점 기록도 노션으로 (뒤에서 천천히, 실패해도 각 기록에 표시만 남음)
+      if (!demoMode) {
+        loadBranchData(created.id, demoMode).then(data =>
+          syncBranchAll({ id: created.id, name: name.trim() }, data, { updateBranch }));
+      }
     } catch (err) {
       console.error('지점 복사 실패:', err);
       setError('복사 중 오류가 발생했습니다: ' + (err.message || '다시 시도해 주세요.'));
@@ -86,6 +93,7 @@ export default function CopyBranchModal({ source, onClose }) {
               <p><strong>{name}</strong> 지점을 만들었어요.</p>
               <ul className="text-secondary text-sm" style={{ marginTop: 'var(--space-sm)', paddingLeft: '1.2em' }}>
                 {result.summary.stages > 0 && <li>단계 {result.summary.stages}개</li>}
+                {result.summary.openTasks > 0 && <li>오픈 준비 항목 {result.summary.openTasks}개</li>}
                 {result.summary.partners > 0 && <li>협력업체 {result.summary.partners}곳</li>}
                 {result.summary.equipments > 0 && <li>장비 {result.summary.equipments}개</li>}
                 {result.summary.compliance > 0 && <li>법정 항목 {result.summary.compliance}개</li>}

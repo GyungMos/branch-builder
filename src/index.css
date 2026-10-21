@@ -1114,3 +1114,26 @@ body.modal-open .fab {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* --- 노션 전송 상태 표시 (오픈 계획·스케줄·일정·비용·일지 공통) --- */
+.notion-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.notion-badge.ok {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-tertiary);
+}
+
+.notion-badge.fail {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  cursor: pointer;
+}

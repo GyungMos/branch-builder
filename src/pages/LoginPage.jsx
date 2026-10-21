@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import NeonIcon from '../components/common/NeonIcon';
+import { toLoginEmail } from '../utils/loginId';
 import './LoginPage.css';
 
 export default function LoginPage() {
@@ -18,16 +19,17 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      // 아이디만 입력하면 직원 계정 이메일로 바꿔서 로그인 (@가 있으면 이메일 그대로)
+      await login(toLoginEmail(email), password);
       navigate('/');
     } catch (err) {
       console.error('인증 에러:', err);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError('이메일 또는 비밀번호가 일치하지 않습니다.');
+        setError('아이디(이메일) 또는 비밀번호가 일치하지 않습니다.');
       } else if (err.code === 'auth/too-many-requests') {
         setError('로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.');
       } else if (err.code === 'auth/invalid-email') {
-        setError('올바른 이메일 형식이 아닙니다.');
+        setError('아이디 형식이 올바르지 않습니다.');
       } else {
         setError(err.message || '인증에 실패했습니다. 다시 시도해주세요.');
       }
@@ -56,15 +58,18 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="login-form">
 
           <div className="form-group">
-            <label htmlFor="email">이메일</label>
+            <label htmlFor="email">아이디 또는 이메일</label>
             <input
               id="email"
-              type="email"
+              type="text"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="이메일을 입력하세요"
+              placeholder="예: hong (관리자는 이메일)"
               required
-              autoComplete="email"
+              autoComplete="username"
             />
           </div>
 

@@ -1,16 +1,15 @@
 rules_version = '2';
 
-// Storage(사진·서류 파일) 보안 규칙: firestore.rules와 같은 이메일 목록을 유지하세요
+// Storage(사진·서류 파일) 보안 규칙: 사이트 설정의 '허용 계정'에 있는 계정만 파일을 올리고 볼 수 있음
+// (Firestore의 settings/members 문서를 확인 — Firestore 규칙도 함께 게시해야 함)
 // Firebase 콘솔 → Storage → 규칙(Rules) 탭에 이 내용을 붙여넣고 '게시'하세요.
 service firebase.storage {
   match /b/{bucket}/o {
     function isMember() {
       return request.auth != null
         && request.auth.token.email != null
-        && request.auth.token.email.lower() in [
-          // 사용할 이메일을 소문자로, 따옴표와 쉼표를 지켜서 적어주세요
-          'owner@example.com'
-        ];
+        && request.auth.token.email.lower() in
+          firestore.get(/databases/(default)/documents/settings/members).data.emails;
     }
 
     match /{allPaths=**} {

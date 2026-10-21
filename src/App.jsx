@@ -13,6 +13,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ComparePage = lazy(() => import('./pages/ComparePage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const BranchReportPage = lazy(() => import('./pages/BranchReportPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 const pageLoading = (
   <div className="loading-overlay">
@@ -75,6 +76,18 @@ function AppRoutes() {
             <>
               <Header />
               <DashboardPage />
+              <MobileNav />
+            </>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <>
+              <Header />
+              <SettingsPage />
               <MobileNav />
             </>
           </ProtectedRoute>

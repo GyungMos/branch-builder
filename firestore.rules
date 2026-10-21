@@ -1,20 +1,45 @@
 rules_version = '2';
 
-// Firestore 보안 규칙: 아래 목록에 있는 이메일로 로그인한 사람만 읽기/쓰기 가능
+// Firestore 보안 규칙
+// - 사이트 설정 화면의 '허용 계정'(settings/members 의 emails)에 있는 계정만 지점 기록을 읽고 쓸 수 있음
+// - 관리자(settings/members 의 admins)만 허용 계정·관리자·담당자 명단을 바꿀 수 있음
+// - 관리자가 아직 없을 때만 처음 로그인한 사람이 자기 자신을 관리자로 지정할 수 있음
 // Firebase 콘솔 → Firestore Database → 규칙(Rules) 탭에 이 내용을 붙여넣고 '게시'하세요.
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+    function membersDoc() {
+      return /databases/$(database)/documents/settings/members;
+    }
     function isMember() {
-      return request.auth != null
-        && request.auth.token.email != null
-        && request.auth.token.email.lower() in [
-          // 사용할 이메일을 소문자로, 따옴표와 쉼표를 지켜서 적어주세요
-          'owner@example.com'
-        ];
+      return signedIn() && exists(membersDoc()) && myEmail() in get(membersDoc()).data.emails;
+    }
+    function isAdmin() {
+      return signedIn() && exists(membersDoc()) && myEmail() in get(membersDoc()).data.admins;
     }
 
-    match /{document=**} {
+    // 지점과 그 아래 모든 기록 (단계·일정·비용·서류·일지·오픈 계획·오픈 준비 등)
+    match /branches/{rest=**} {
       allow read, write: if isMember();
+    }
+
+    // 사이트 설정
+    match /settings/members {
+      allow read: if signedIn();
+      // 처음 한 번: 관리자가 없을 때 자기 자신만 관리자로 등록 가능
+      allow create: if signedIn()
+        && request.resource.data.admins == [myEmail()]
+        && myEmail() in request.resource.data.emails;
+      allow update: if isAdmin();
+    }
+    match /settings/people {
+      allow read: if isMember();
+      allow write: if isAdmin();
     }
   }
 }

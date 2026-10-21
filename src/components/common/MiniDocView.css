@@ -1,0 +1,56 @@
+.minidoc {
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.minidoc h2,
+.minidoc h3,
+.minidoc h4 {
+  margin: var(--space-lg) 0 var(--space-xs);
+  line-height: 1.35;
+}
+
+.minidoc h2 { font-size: var(--font-size-xl); }
+.minidoc h3 { font-size: var(--font-size-lg); }
+.minidoc h4 { font-size: var(--font-size-md); }
+
+.minidoc > :first-child {
+  margin-top: 0;
+}
+
+.minidoc p {
+  margin: 4px 0;
+}
+
+.minidoc ul,
+.minidoc ol {
+  margin: 4px 0;
+  padding-left: 1.4em;
+}
+
+.minidoc li {
+  margin: 2px 0;
+}
+
+.minidoc li.todo {
+  list-style: none;
+  margin-left: -1.2em;
+}
+
+.minidoc li.todo.checked > span:not(.todo-box) {
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+}
+
+.minidoc .todo-box {
+  margin-right: 6px;
+}
+
+.minidoc a {
+  color: var(--color-info);
+  text-decoration: underline;
+}
+
+.minidoc-empty {
+  color: var(--color-text-tertiary);
+}

@@ -10,3 +10,8 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# 노션 연결 프로그램 (netlify/functions/notion-sync.mjs → /.netlify/functions/notion-sync)
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"

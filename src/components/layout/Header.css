@@ -290,8 +290,9 @@
     font-size: var(--font-size-xs);
   }
 
-  /* 저장 방식 표시는 정보용이라 아주 좁은 화면에선 빼고 지점 선택창에 자리를 줌 */
-  .sync-status-badge {
+  /* 저장 방식 표시는 정보용이라 아주 좁은 화면에선 빼고 지점 선택창에 자리를 줌 (설정은 하단 탭에 있음) */
+  .sync-status-badge,
+  .header-settings-btn {
     display: none !important;
   }
 

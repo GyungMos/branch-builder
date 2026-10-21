@@ -1,0 +1,234 @@
+/* ===== 오픈 계획 보드 ===== */
+.plan-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.plan-col {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-sm);
+  min-height: 120px;
+}
+
+.plan-col.drop-over {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.plan-col-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.plan-col-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-tertiary);
+}
+
+.plan-col-dot.doing { background: var(--color-info); }
+.plan-col-dot.done { background: var(--color-success); }
+
+.plan-col-count {
+  color: var(--color-text-tertiary);
+  font-weight: 600;
+}
+
+.plan-col-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plan-card:hover {
+  border-color: var(--color-accent);
+}
+
+.plan-card-title {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.plan-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.plan-card-due {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.plan-add {
+  padding: 8px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.plan-add:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-text-tertiary);
+}
+
+/* ===== 세부 페이지 ===== */
+.modal.modal-lg {
+  max-width: 820px;
+}
+
+.plan-editor .modal-header {
+  gap: var(--space-sm);
+}
+
+.plan-editor-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+}
+
+.plan-editor-title:focus {
+  outline: none;
+  box-shadow: inset 0 -2px 0 var(--color-accent);
+}
+
+.plan-props {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-lg);
+}
+
+.plan-props > div {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  align-items: start;
+  gap: var(--space-sm);
+}
+
+.plan-props dt {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  padding-top: 6px;
+}
+
+.plan-props dd {
+  margin: 0;
+}
+
+.plan-status-toggle {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.plan-body-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--color-divider);
+  padding-top: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.plan-body-label {
+  font-weight: 800;
+}
+
+.plan-body-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.plan-body-tabs button {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.plan-body-tabs button.on {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.plan-body-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 280px;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.plan-body-help {
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.plan-body-view {
+  min-height: 160px;
+  padding: var(--space-sm) 0;
+}
+
+.plan-delete {
+  margin-right: auto;
+  color: var(--color-error);
+}
+
+@media (max-width: 768px) {
+  .plan-board {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-props > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .plan-props dt {
+    padding-top: 0;
+  }
+}

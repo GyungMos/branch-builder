@@ -1,0 +1,236 @@
+.task-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.task-view-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.task-view-toggle button {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.task-view-toggle button.on {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.task-progress {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.task-search {
+  width: 180px;
+}
+
+.task-only-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.task-toolbar-spacer {
+  flex: 1;
+}
+
+.task-empty {
+  padding: var(--space-xl);
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.task-note {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-sm);
+}
+
+/* 그룹 */
+.task-group {
+  margin-bottom: var(--space-xl);
+}
+
+.task-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: 6px;
+}
+
+.task-group-head h3 {
+  font-size: var(--font-size-md);
+  font-weight: 800;
+}
+
+.task-group-count {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
+/* 표 */
+.task-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.task-table th,
+.task-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-divider);
+  text-align: left;
+  vertical-align: top;
+}
+
+.task-table th {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.task-table tbody tr {
+  cursor: pointer;
+}
+
+.task-table tbody tr:hover {
+  background: var(--color-bg-hover);
+}
+
+.task-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.task-table .col-done {
+  width: 48px;
+  text-align: center;
+}
+
+.task-table .col-done input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-success);
+}
+
+.task-table .col-title {
+  font-weight: 700;
+  min-width: 160px;
+}
+
+.task-table .col-title > span:first-child {
+  margin-right: 6px;
+}
+
+.task-table tr.is-done .col-title > span:first-child {
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+}
+
+.task-table .col-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-table .col-memo {
+  min-width: 140px;
+  color: var(--color-text-secondary);
+  white-space: pre-line;
+}
+
+.task-cat {
+  padding: 1px 8px;
+  border-radius: 4px;
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 작성 창 */
+.task-done-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--space-md);
+  font-weight: 600;
+}
+
+.task-done-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-success);
+}
+
+.task-file-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 6px;
+}
+
+.task-file-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: var(--font-size-sm);
+}
+
+.task-file-list a {
+  overflow-wrap: anywhere;
+}
+
+.task-file-btn {
+  cursor: pointer;
+}
+
+.task-form-error {
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 768px) {
+  .task-search {
+    flex: 1;
+    width: auto;
+    min-width: 120px;
+  }
+
+  .task-toolbar-spacer {
+    display: none;
+  }
+}

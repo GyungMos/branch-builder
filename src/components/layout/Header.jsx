@@ -178,6 +178,16 @@ export default function Header() {
           </button>
 
           <button
+            className="btn-ghost btn-icon header-settings-btn"
+            onClick={() => navigate('/settings')}
+            aria-label="설정"
+            title="설정 (담당자 명단 · 직원 계정 · 노션 연결)"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <NeonIcon name="settings" size="xs" color="cyan" badge={false} />
+          </button>
+
+          <button
             className="btn-ghost btn-icon theme-toggle"
             onClick={toggleTheme}
             aria-label="테마 전환"

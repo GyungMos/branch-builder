@@ -130,3 +130,19 @@
 .mobile-more-sheet {
   z-index: calc(var(--z-floating, 500) + 2);
 }
+
+/* 탭이 6칸이 돼도 한 줄에 들어가도록: 칸을 똑같이 나누고 글자는 줄바꿈하지 않음 */
+.mobile-nav {
+  padding: 0 4px;
+}
+
+.mobile-nav-item {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: var(--space-sm) 2px;
+}
+
+.mobile-nav-label {
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+}

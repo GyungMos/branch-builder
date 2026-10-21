@@ -7,6 +7,7 @@ import { generateId, toDateInputValue } from './formatters';
 // 지점 하위 데이터 (Firestore: branches/{id}/{이름}, 로컬: bb_{이름}_{id})
 export const BRANCH_COLLECTIONS = [
   'stages', 'schedules', 'costs', 'documents', 'dailyLogs', 'partners', 'equipments', 'compliance',
+  'openPlans', 'openTasks',
 ];
 
 function readLocal(key, fallback = []) {
@@ -50,7 +51,9 @@ export async function loadBranchData(branchId, demoMode, names = BRANCH_COLLECTI
 
 function strip(item, extraKeys = []) {
   const copy = { ...item };
-  ['id', 'createdAt', 'updatedAt', 'createdBy', '_offline', ...extraKeys].forEach(k => { delete copy[k]; });
+  // 노션 페이지 정보는 원래 지점 것이라 복사하지 않음 (새 지점은 새 노션 페이지로)
+  ['id', 'createdAt', 'updatedAt', 'createdBy', '_offline', 'notionPageId', 'notionError', 'notionSyncedAt', 'notionBodyHash', ...extraKeys]
+    .forEach(k => { delete copy[k]; });
   return copy;
 }
 
@@ -74,7 +77,7 @@ function shiftYmd(ymd, days) {
 export async function copyBranchSetup({ source, targetBranchId, options, demoMode, user }) {
   const uid = user?.uid || 'anonymous';
   const stageIdMap = {};
-  const summary = { stages: 0, partners: 0, equipments: 0, compliance: 0, schedules: 0, budget: false };
+  const summary = { stages: 0, partners: 0, equipments: 0, compliance: 0, schedules: 0, openTasks: 0, budget: false };
 
   const addItems = async (name, items) => {
     if (!items.length) return [];
@@ -134,6 +137,15 @@ export async function copyBranchSetup({ source, targetBranchId, options, demoMod
       }
     }
     summary.compliance = items.length;
+  }
+
+  if (options.openTasks) {
+    // 오픈 준비 스케줄: 그룹·구분·항목·담당자·비고만 (체크·날짜·파일은 비움)
+    const items = (source.openTasks || []).map((t, i) => ({
+      ...strip(t, ['files', 'startDate', 'endDate']),
+      done: false, startDate: null, endDate: null, files: [], order: t.order ?? i,
+    }));
+    summary.openTasks = (await addItems('openTasks', items)).length;
   }
 
   if (options.budget && source.budget) {

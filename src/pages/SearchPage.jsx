@@ -10,6 +10,8 @@ const TYPES = {
   branch: { label: '지점', tab: null },
   stage: { label: '단계·체크리스트', tab: 'stages' },
   lesson: { label: '다음 지점 메모', tab: 'stages' },
+  plan: { label: '오픈 계획', tab: 'plans' },
+  task: { label: '오픈 준비', tab: 'tasks' },
   schedule: { label: '일정', tab: 'schedule' },
   cost: { label: '비용', tab: 'cost' },
   document: { label: '서류·사진', tab: 'documents' },
@@ -37,6 +39,10 @@ function buildEntries(branch, data) {
       push('lesson', s.name, [l.good && `잘된 점: ${l.good}`, l.bad && `아쉬운 점: ${l.bad}`, l.next && `다음 지점: ${l.next}`].filter(Boolean).join(' / '));
     }
   });
+  (data.openPlans || []).forEach(p => push('plan', p.title,
+    [p.body, ...(p.assignee1 || []), ...(p.assignee2 || [])].filter(Boolean).join(' · ').slice(0, 400), fmtDate(p.dueDate)));
+  (data.openTasks || []).forEach(t => push('task', t.title,
+    [t.group, t.category, t.memo, ...(t.assignee1 || []), ...(t.assignee2 || [])].filter(Boolean).join(' · '), fmtDate(t.startDate)));
   (data.schedules || []).forEach(s => push('schedule', s.title, [s.memo, s.assignee, s.milestoneText].filter(Boolean).join(' · '), fmtDate(s.startDate)));
   (data.costs || []).forEach(c => push('cost', c.title, [c.vendor, c.assignee, c.memo, c.accountHolder].filter(Boolean).join(' · '), `${fmtDate(c.date)} ${formatCurrency(Number(c.amount) || 0)}`));
   (data.documents || []).forEach(d => push('document', d.name || d.fileName, [d.fileName, d.memo, d.requiredDoc].filter(Boolean).join(' · '), fmtDate(d.createdAt)));

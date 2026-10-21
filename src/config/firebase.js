@@ -11,7 +11,7 @@ import { getFirestore } from 'firebase/firestore';
 // VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 // VITE_FIREBASE_APP_ID=your-app-id
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,

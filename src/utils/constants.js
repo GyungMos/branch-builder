@@ -78,3 +78,7 @@ export const DEFAULT_STAGES = [
     requiredDocs: ['자동차관리사업 등록증', '사업자등록증', '영업배상책임보험 증권'],
   },
 ];
+
+// 오픈 준비 스케줄 기본 그룹·구분 (노션 '구리OPEN 스케쥴' 기준, 새 값은 입력하면 자동으로 추가됨)
+export const OPEN_TASK_GROUPS = ['인허가 및 행정절차', '업체 및 물품준비', '인력 및 교육', '오픈 프로모션', '사전점검 및 오픈'];
+export const OPEN_TASK_CATEGORIES = ['본부', '현장', '사무실', '정비', '고객대기실', '집기', '홍보', '교육'];

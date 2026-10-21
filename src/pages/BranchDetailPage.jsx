@@ -39,6 +39,15 @@ import MobileNav from '../components/layout/MobileNav';
 import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
 import { formatCurrency, toDateInputValue } from '../utils/formatters';
 import { isScheduledCost, daysUntilDue } from '../utils/costs';
+import { useSubcollection } from '../hooks/useSubcollection';
+import { usePeople } from '../hooks/useSettings';
+import OpenPlanBoard from '../components/openplan/OpenPlanBoard';
+import OpenPlanEditor from '../components/openplan/OpenPlanEditor';
+import OpenTaskTable from '../components/opentask/OpenTaskTable';
+import OpenTaskForm from '../components/opentask/OpenTaskForm';
+import ImportTasksModal from '../components/opentask/ImportTasksModal';
+import { syncToNotion, archiveNotionPage } from '../utils/notionBranchSync';
+import { OPEN_TASK_GROUPS, OPEN_TASK_CATEGORIES } from '../utils/constants';
 import './BranchDetailPage.css';
 
 export default function BranchDetailPage({ initialTab }) {
@@ -109,6 +118,31 @@ export default function BranchDetailPage({ initialTab }) {
     deleteDailyLogEntry,
   } = useDailyLogs(branchId);
   const { budget, updateBudget } = useBranchBudget(branchId, totalCost);
+
+  // 오픈 계획 · 오픈 준비 스케줄 (노션에서 쓰던 양식)
+  const { items: plans, add: addPlan, update: updatePlan, remove: removePlan } = useSubcollection(branchId, 'openPlans');
+  const { items: tasks, add: addTask, update: updateTask, remove: removeTask } = useSubcollection(branchId, 'openTasks');
+  const { names: people } = usePeople();
+  const [planEditor, setPlanEditor] = useState(null); // { plan } 수정 또는 { status } 새 항목
+  const [taskEditor, setTaskEditor] = useState(null); // { task } 수정 또는 { defaults } 새 항목
+  const [showImportTasks, setShowImportTasks] = useState(false);
+
+  // 노션 자동 전송: 저장한 기록을 줄 세워 두었다가, 최신 내용이 화면 상태에 들어오면 보냄 (사이트 저장은 기다리지 않음)
+  const [notionQueue, setNotionQueue] = useState([]);
+  const queueNotion = (kind, id) => {
+    if (demoMode || !id) return;
+    setNotionQueue(q => (q.some(x => x.kind === kind && x.id === id) ? q : [...q, { kind, id }]));
+  };
+  useEffect(() => {
+    if (!notionQueue.length || !branch) return;
+    const lists = { plan: plans, task: tasks, schedule: schedules, cost: costs, dailyLog: dailyLogs };
+    const ready = notionQueue.filter(q => lists[q.kind].some(rec => rec.id === q.id));
+    if (!ready.length) return;
+    setNotionQueue(q => q.filter(x => !ready.includes(x)));
+    ready.forEach(q => {
+      syncToNotion(q.kind, branch, lists[q.kind].find(rec => rec.id === q.id), { updateBranch, stages });
+    });
+  }, [notionQueue, plans, tasks, schedules, costs, dailyLogs, branch, stages, updateBranch]);
 
   useEffect(() => {
     if (!branchId) return;
@@ -206,9 +240,11 @@ export default function BranchDetailPage({ initialTab }) {
   const handleScheduleSubmit = async (data) => {
     if (editingSchedule) {
       await updateSchedule(editingSchedule.id, data);
+      queueNotion('schedule', editingSchedule.id);
       addLog('schedule_update', `일정 수정: ${data.title}`);
     } else {
-      await addSchedule(data);
+      const created = await addSchedule(data);
+      queueNotion('schedule', created?.id);
       addLog('schedule_add', `일정 추가: ${data.title}`);
     }
     setShowScheduleForm(false);
@@ -218,20 +254,22 @@ export default function BranchDetailPage({ initialTab }) {
   const handleToggleScheduleComplete = async (schedule) => {
     const done = schedule.status === 'completed' || schedule.status === 'complete';
     await updateSchedule(schedule.id, { status: done ? 'pending' : 'completed' });
+    queueNotion('schedule', schedule.id);
     addLog('schedule_update', `일정 ${done ? '완료 취소' : '완료'}: ${schedule.title}`);
   };
   const handleDeleteSchedule = async (scheduleId) => {
     const sc = schedules.find(s => s.id === scheduleId);
     await deleteSchedule(scheduleId);
+    archiveNotionPage(sc?.notionPageId);
     addLog('schedule_delete', `일정 삭제: ${sc?.title || ''}`);
   };
 
-  // 설계사 표준 신축공정 19종 일괄 등록 핸들러
   // 설계사 표준 신축공정 일정 일괄 등록 (시작일 기준으로 계산된 일정)
   const handleAddArchitectPreset = async (items) => {
     try {
       for (const item of items) {
-        await addSchedule(item);
+        const created = await addSchedule(item);
+        queueNotion('schedule', created?.id);
       }
       addLog('schedule_add', `설계사 표준 신축공정 ${items.length}개 일괄 등록 (시작일 ${items[0]?.startDate})`);
       setShowPresetModal(false);
@@ -246,9 +284,11 @@ export default function BranchDetailPage({ initialTab }) {
   const handleCostSubmit = async (data) => {
     if (editingCost) {
       await updateCost(editingCost.id, data);
+      queueNotion('cost', editingCost.id);
       addLog('cost_update', `비용 수정: ${data.title} (${data.amount}원)`);
     } else {
-      await addCost(data);
+      const created = await addCost(data);
+      queueNotion('cost', created?.id);
       addLog('cost_add', `비용 추가: ${data.title} (${data.amount}원)`);
     }
     setShowCostForm(false);
@@ -257,11 +297,13 @@ export default function BranchDetailPage({ initialTab }) {
   };
   const handleMarkCostPaid = async (cost) => {
     await updateCost(cost.id, { paymentStatus: 'paid', date: toDateInputValue(new Date()) });
+    queueNotion('cost', cost.id);
     addLog('cost_update', `지급 완료 처리: ${cost.title} (${cost.amount}원)`);
   };
   const handleDeleteCost = async (costId) => {
     const c = costs.find(x => x.id === costId);
     await deleteCost(costId);
+    archiveNotionPage(c?.notionPageId);
     addLog('cost_delete', `비용 삭제: ${c?.title || ''}`);
   };
 
@@ -312,28 +354,99 @@ export default function BranchDetailPage({ initialTab }) {
 
   // 현장 일일 일지 핸들러
   const handleAddDailyLog = async (data) => {
-    await addDailyLog(data);
+    const created = await addDailyLog(data);
+    queueNotion('dailyLog', created?.id);
     addLog('dailylog_add', `현장 일지 작성: ${data.date} (${data.summary})`);
   };
   const handleUpdateDailyLog = async (logId, data) => {
     await updateDailyLog(logId, data);
+    queueNotion('dailyLog', logId);
     addLog('dailylog_update', `현장 일지 수정: ${data.date} (${data.summary})`);
   };
   const handleDeleteDailyLog = async (logId) => {
+    const target = dailyLogs.find(l => l.id === logId);
     await deleteDailyLog(logId);
+    archiveNotionPage(target?.notionPageId);
     addLog('dailylog_delete', `현장 일지 삭제`);
   };
   const handleAddDailyLogEntry = async (logId, entryData) => {
     await addDailyLogEntry(logId, entryData);
+    queueNotion('dailyLog', logId);
     addLog('dailylog_entry_add', `현장 일지 추가 작업/조치 등록: ${entryData.summary}`);
   };
   const handleUpdateDailyLogEntry = async (logId, entryId, entryData) => {
     await updateDailyLogEntry(logId, entryId, entryData);
+    queueNotion('dailyLog', logId);
     addLog('dailylog_entry_update', `현장 일지 추가 작업/조치 수정`);
   };
   const handleDeleteDailyLogEntry = async (logId, entryId) => {
     await deleteDailyLogEntry(logId, entryId);
+    queueNotion('dailyLog', logId);
     addLog('dailylog_entry_delete', `현장 일지 추가 작업/조치 삭제`);
+  };
+
+  // 오픈 계획 핸들러
+  const handleSavePlan = async (data) => {
+    const editing = planEditor?.plan;
+    if (editing) {
+      await updatePlan(editing.id, data);
+      queueNotion('plan', editing.id);
+      addLog('plan_update', `오픈 계획 수정: ${data.title}`);
+    } else {
+      const created = await addPlan({ ...data, order: Date.now() });
+      queueNotion('plan', created?.id);
+      addLog('plan_add', `오픈 계획 추가: ${data.title}`);
+    }
+    setPlanEditor(null);
+  };
+  const handleMovePlan = async (plan, status) => {
+    await updatePlan(plan.id, { status });
+    queueNotion('plan', plan.id);
+    addLog('plan_update', `오픈 계획 상태 변경: ${plan.title}`);
+  };
+  const handleDeletePlan = async (plan) => {
+    await removePlan(plan.id);
+    archiveNotionPage(plan.notionPageId);
+    addLog('plan_delete', `오픈 계획 삭제: ${plan.title}`);
+    setPlanEditor(null);
+  };
+
+  // 오픈 준비 스케줄 핸들러
+  const taskGroups = Array.from(new Set([...OPEN_TASK_GROUPS, ...tasks.map(t => t.group).filter(Boolean)]));
+  const taskCategories = Array.from(new Set([...OPEN_TASK_CATEGORIES, ...tasks.map(t => t.category).filter(Boolean)]));
+  const handleSaveTask = async (data) => {
+    const editing = taskEditor?.task;
+    if (editing) {
+      await updateTask(editing.id, data);
+      queueNotion('task', editing.id);
+      addLog('task_update', `오픈 준비 수정: ${data.title}`);
+    } else {
+      const created = await addTask({ ...data, order: Date.now() });
+      queueNotion('task', created?.id);
+      addLog('task_add', `오픈 준비 추가: ${data.title}`);
+    }
+    setTaskEditor(null);
+  };
+  const handleToggleTask = async (task) => {
+    if (!task) return;
+    await updateTask(task.id, { done: !task.done });
+    queueNotion('task', task.id);
+  };
+  const handleDeleteTask = async (task) => {
+    if (!task) return;
+    await removeTask(task.id);
+    archiveNotionPage(task.notionPageId);
+    addLog('task_delete', `오픈 준비 삭제: ${task.title}`);
+    setTaskEditor(null);
+  };
+  const handleImportTasks = async (items) => {
+    const base = Date.now();
+    for (const [i, item] of items.entries()) {
+      const created = await addTask({ ...item, order: base + i });
+      queueNotion('task', created?.id);
+    }
+    addLog('task_add', `오픈 준비 항목 ${items.length}개 가져오기`);
+    setShowImportTasks(false);
   };
 
   // 예산 핸들러
@@ -529,6 +642,43 @@ export default function BranchDetailPage({ initialTab }) {
           />
         )}
 
+        {/* 오픈 계획 (노션 '오픈 계획' 보드 양식) */}
+        {activeTab === 'plans' && (
+          <div className="tab-plans">
+            <div className="tab-header">
+              <h3>오픈 계획</h3>
+              <button className="btn btn-primary btn-sm" onClick={() => setPlanEditor({ status: 'todo' })}>+ 새 항목</button>
+            </div>
+            <p className="text-secondary text-sm" style={{ marginBottom: 'var(--space-md)' }}>
+              큰 할 일·회의록을 카드로 관리해요. 카드를 눌러 세부 내용을 쓰고, PC에서는 카드를 다른 칸으로 끌어 상태를 바꿀 수 있어요.
+            </p>
+            <OpenPlanBoard
+              plans={plans}
+              onOpen={(plan) => setPlanEditor({ plan })}
+              onCreate={(status) => setPlanEditor({ status })}
+              onMove={handleMovePlan}
+            />
+          </div>
+        )}
+
+        {/* 오픈 준비 스케줄 (노션 '구리OPEN 스케쥴' 표 양식) */}
+        {activeTab === 'tasks' && (
+          <div className="tab-tasks">
+            <div className="tab-header">
+              <h3>오픈 준비 스케줄</h3>
+            </div>
+            <OpenTaskTable
+              tasks={tasks}
+              onAdd={(defaults) => setTaskEditor({ defaults })}
+              onEdit={(task) => task && setTaskEditor({ task })}
+              onToggleDone={handleToggleTask}
+              onDelete={handleDeleteTask}
+              onImport={() => setShowImportTasks(true)}
+              onRetryNotion={(task) => queueNotion('task', task.id)}
+            />
+          </div>
+        )}
+
         {/* 2. 일정 타임라인 & 현장 일일 작업일지 */}
         {activeTab === 'schedule' && (
           <div className="tab-schedule" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2xl)' }}>
@@ -715,6 +865,42 @@ export default function BranchDetailPage({ initialTab }) {
           defaultStageId={formStageId}
           onSubmit={handleCostSubmit}
           onClose={() => { setShowCostForm(false); setEditingCost(null); setFormStageId(''); }}
+        />
+      )}
+
+      {planEditor && (
+        <OpenPlanEditor
+          plan={planEditor.plan}
+          defaultStatus={planEditor.status}
+          people={people}
+          onSave={handleSavePlan}
+          onDelete={handleDeletePlan}
+          onRetryNotion={() => planEditor.plan && queueNotion('plan', planEditor.plan.id)}
+          onClose={() => setPlanEditor(null)}
+        />
+      )}
+
+      {taskEditor && (
+        <OpenTaskForm
+          task={taskEditor.task}
+          defaults={taskEditor.defaults}
+          branchId={branchId}
+          people={people}
+          groups={taskGroups}
+          categories={taskCategories}
+          onSave={handleSaveTask}
+          onDelete={handleDeleteTask}
+          onRetryNotion={() => taskEditor.task && queueNotion('task', taskEditor.task.id)}
+          onClose={() => setTaskEditor(null)}
+        />
+      )}
+
+      {showImportTasks && (
+        <ImportTasksModal
+          branches={branches}
+          currentBranchId={branchId}
+          onImport={handleImportTasks}
+          onClose={() => setShowImportTasks(false)}
         />
       )}
 

@@ -1,9 +1,11 @@
-// 지점 상세 탭: 자주 쓰는 4개(primary)는 바로 보이고, 나머지는 '더보기'에 모음
+// 지점 상세 탭: 자주 쓰는 5개(primary)는 바로 보이고, 나머지는 '더보기'에 모음
 export const BRANCH_TABS = [
   { id: 'stages', label: '단계별 기록', shortLabel: '단계별', iconName: 'building', color: 'emerald', primary: true },
-  { id: 'schedule', label: '일정/현장 일지', shortLabel: '일정/일지', iconName: 'calendar', color: 'blue', primary: true },
+  { id: 'plans', label: '오픈 계획', shortLabel: '오픈계획', iconName: 'dashboard', color: 'cyan', primary: true },
+  { id: 'tasks', label: '오픈 준비', shortLabel: '오픈준비', iconName: 'check', color: 'emerald', primary: true },
+  { id: 'schedule', label: '일정/현장 일지', shortLabel: '일정', iconName: 'calendar', color: 'blue', primary: true },
   { id: 'cost', label: '비용/예산', shortLabel: '비용', iconName: 'money', color: 'amber', primary: true },
-  { id: 'documents', label: '서류/사진', shortLabel: '서류/사진', iconName: 'document', color: 'emerald', primary: true },
+  { id: 'documents', label: '서류/사진', shortLabel: '서류/사진', iconName: 'document', color: 'emerald', primary: false },
   { id: 'timeline', label: '날짜순 타임라인', shortLabel: '날짜순', iconName: 'timeline', color: 'cyan', primary: false },
   { id: 'equipment', label: '장비/시설인허가', shortLabel: '장비', iconName: 'equipment', color: 'violet', primary: false },
   { id: 'partner', label: '협력업체', shortLabel: '협력업체', iconName: 'partner', color: 'coral', primary: false },
