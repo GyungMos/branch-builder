@@ -222,3 +222,124 @@
 .cost-item.is-scheduled .cost-item-actions {
   opacity: 1;
 }
+
+/* ===== 비용 찾기 ===== */
+.cost-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.cost-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cost-filter-field {
+  width: auto;
+  min-width: 96px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.cost-filter-search {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+
+.cost-filter-search input {
+  width: 100%;
+  padding-left: 32px;
+  border-radius: var(--radius-full);
+}
+
+.cost-filter-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.cost-filter-status,
+.cost-filter-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cost-filter .filter-pill {
+  padding: 5px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cost-filter .filter-pill.on {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  color: var(--color-text-primary);
+}
+
+.cost-filter-label {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.cost-filter-date {
+  width: 200px;
+}
+
+.cost-filter-tilde {
+  color: var(--color-text-tertiary);
+}
+
+.cost-filter-reset {
+  margin-left: auto;
+}
+
+.cost-filter-result {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.cost-filter-result strong {
+  color: var(--color-text-primary);
+}
+
+.cost-filter-empty {
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--color-text-tertiary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+@media (max-width: 600px) {
+  .cost-filter-date {
+    width: calc(50% - 16px);
+    flex: 1;
+  }
+
+  .cost-filter-search {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+
+  .cost-filter-reset {
+    margin-left: 0;
+  }
+}
