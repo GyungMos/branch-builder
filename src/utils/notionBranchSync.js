@@ -181,12 +181,12 @@ export async function ensureBranchNotion(branch, updateBranch) {
   if (cached && cached.name === branch.name) return cached.ids;
   const res = await callNotion('ensureBranch', { branch: { id: branch.id, name: branch.name }, ids: branch.notion || {} });
   if (res.skipped) return null;
-  const { branchPageId, plansDbId, tasksDbId, schedulesDbId, costsDbId, logsDbId, docsDbId, viewsVersion } = res;
-  const ids = { branchPageId, plansDbId, tasksDbId, schedulesDbId, costsDbId, logsDbId, docsDbId, viewsVersion: viewsVersion || null };
+  // 노션 쪽 정보(지점 페이지·표·자료 보관함·네모 칸 목차·보기 설정 버전)는 받은 그대로 지점 기록에 저장
+  const { viewsError, layoutError, skipped, ...ids } = res;
   if (JSON.stringify(branch.notion || {}) !== JSON.stringify(ids)) {
     await updateBranch(branch.id, { notion: ids });
   }
-  ensured.set(branch.id, { name: branch.name, ids, viewsError: res.viewsError || null });
+  ensured.set(branch.id, { name: branch.name, ids, viewsError: [viewsError, layoutError].filter(Boolean).join(' / ') || null });
   return ids;
 }
 

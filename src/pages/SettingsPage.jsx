@@ -375,7 +375,7 @@ function NotionSection() {
       failed += res.failed;
       if (res.viewsError) viewErrors.push(`${b.name}: ${res.viewsError}`);
     }
-    setProgress({ text: `끝났어요. ${total}건 중 ${total - failed}건 보냄${failed ? `, ${failed}건 실패 (각 기록의 'N!' 표시를 눌러 다시 보낼 수 있어요)` : ''}.${viewErrors.length ? ` (노션 보기 설정 실패 — ${viewErrors.join(' / ')})` : ''}`, done: true });
+    setProgress({ text: `끝났어요. ${total}건 중 ${total - failed}건 보냄${failed ? `, ${failed}건 실패 (각 기록의 'N!' 표시를 눌러 다시 보낼 수 있어요)` : ''}.${viewErrors.length ? ` (노션 화면 정리 실패 — ${viewErrors.join(' / ')})` : ''}`, done: true });
   };
 
   return (

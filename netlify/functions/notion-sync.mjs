@@ -304,6 +304,17 @@ const KINDS = {
   },
 };
 
+// 지점 페이지 네모 칸에 쓰는 그림과 짧은 설명
+const BOX_INFO = {
+  plan: ['📋', '큰 할 일 · 회의록'],
+  task: ['✅', '그룹별 오픈 준비 항목'],
+  schedule: ['📅', '공사 · 단계 일정'],
+  cost: ['💰', '지급 완료 · 지급 예정'],
+  dailyLog: ['📝', '날짜별 현장 작업 기록'],
+  document: ['📁', '계약서 · 도면 · 사진'],
+};
+Object.entries(BOX_INFO).forEach(([k, [icon, boxDesc]]) => Object.assign(KINDS[k], { icon, boxDesc }));
+
 // ---------- 로그인 확인 ----------
 async function verifyCaller(req) {
   const projectId = process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
@@ -347,7 +358,7 @@ async function getAlive(path) {
   }
 }
 
-async function ensureDatabase(dbId, parentPageId, dbTitle, schema) {
+async function ensureDatabase(dbId, parentPageId, dbTitle, schema, { inline = true, icon } = {}) {
   const existing = dbId ? await getAlive(`/databases/${dbId}`) : null;
   if (existing) {
     // 제목 칸 이름이 바뀌었으면 (예: 현장 일지 '작업내용' → '제목') 노션 표의 칸 이름도 바꿈
@@ -366,10 +377,63 @@ async function ensureDatabase(dbId, parentPageId, dbTitle, schema) {
   const created = await notion('/databases', 'POST', {
     parent: { type: 'page_id', page_id: parentPageId },
     title: [{ type: 'text', text: { content: dbTitle } }],
-    is_inline: true,
+    is_inline: inline,
+    ...(icon ? { icon: { type: 'emoji', emoji: icon } } : {}),
     properties: schema,
   });
   return created.id;
+}
+
+// ---------- 지점 페이지 모양: 위에는 네모 칸 목차, 표들은 '자료 보관함' 안에 ----------
+const LAYOUT_VERSION = 2;
+// 표 옮기기는 새 버전 API에서만 됨
+const MOVE_VERSION = '2026-03-11';
+const BOX_COLORS = ['blue_background', 'green_background', 'purple_background', 'yellow_background', 'orange_background', 'pink_background'];
+
+/** 표를 자료 보관함으로 옮기고, 들어가서 보는 전체 페이지 표로 바꿈 */
+async function moveDatabase(dbId, storePageId, kind) {
+  await notion(`/databases/${dbId}`, 'PATCH', {
+    parent: { type: 'page_id', page_id: storePageId },
+    is_inline: false,
+    icon: { type: 'emoji', emoji: kind.icon },
+  }, MOVE_VERSION);
+}
+
+/** 지점 페이지 맨 위(안내 바로 아래)에 표마다 네모 칸을 만듦: 3칸 × 2줄 */
+async function buildBoxGrid(branchPageId, out, oldGridId) {
+  if (oldGridId) await notion(`/blocks/${oldGridId}`, 'DELETE').catch(() => {});
+  const kinds = Object.values(KINDS);
+  const box = (kind, i, linkAsMention) => block('callout', {
+    icon: { type: 'emoji', emoji: kind.icon },
+    color: BOX_COLORS[i % BOX_COLORS.length],
+    rich_text: linkAsMention
+      ? [
+        { type: 'mention', mention: { type: 'database', database: { id: out[kind.idKey] } }, annotations: { bold: true } },
+        { type: 'text', text: { content: `\n${kind.boxDesc}` }, annotations: { color: 'gray' } },
+      ]
+      : [
+        { type: 'text', text: { content: kind.dbTitle }, annotations: { bold: true } },
+        { type: 'text', text: { content: `\n${kind.boxDesc}` }, annotations: { color: 'gray' } },
+      ],
+    ...(linkAsMention ? {} : { children: [block('link_to_page', { type: 'database_id', database_id: out[kind.idKey] })] }),
+  });
+  const grid = (linkAsMention) => block('column_list', {
+    children: [0, 1, 2].map(c => block('column', {
+      children: [kinds[c], kinds[c + 3]].map((k, row) => k && box(k, c + row * 3, linkAsMention)).filter(Boolean),
+    })),
+  });
+
+  const children = await notion(`/blocks/${branchPageId}/children?page_size=20`);
+  const notice = (children.results || []).find(b => b.type === 'callout');
+  const append = (g) => notion(`/blocks/${branchPageId}/children`, 'PATCH', { children: [g], ...(notice ? { after: notice.id } : {}) });
+  let res;
+  try {
+    res = await append(grid(true));
+  } catch {
+    // 표 이름을 바로 누르는 방식이 안 되면, 칸 안에 표로 가는 링크를 넣음
+    res = await append(grid(false));
+  }
+  return res.results?.[0]?.id || null;
 }
 
 async function ensureBranch({ branch, ids = {} }) {
@@ -393,13 +457,51 @@ async function ensureBranch({ branch, ids = {} }) {
     branchPageId = page.id;
   }
 
-  const out = { branchPageId };
-  for (const kind of Object.values(KINDS)) {
-    out[kind.idKey] = await ensureDatabase(ids[kind.idKey], branchPageId, kind.dbTitle, kind.schema);
+  // 자료 보관함: 표들이 들어가는 페이지 (지점 페이지에는 네모 칸 목차만 보이게)
+  let storePageId = ids.storePageId && (await getAlive(`/pages/${ids.storePageId}`)) ? ids.storePageId : null;
+  if (!storePageId) {
+    const store = await notion('/pages', 'POST', {
+      parent: { page_id: branchPageId },
+      icon: { type: 'emoji', emoji: '🗂️' },
+      properties: { title: { title: richText('자료 보관함') } },
+      children: [para('지점 페이지 위의 네모 칸을 누르면 각 표가 바로 열려요. 이 안의 표들은 사이트에서 자동으로 채워져요.')],
+    });
+    storePageId = store.id;
   }
 
-  // 사이트 화면처럼 보이게: 오픈 계획은 상태별 보드, 오픈 준비는 그룹별로 묶은 표 (지점마다 한 번만)
+  const out = { branchPageId, storePageId };
+  const relayout = ids.layoutVersion !== LAYOUT_VERSION;
+  for (const kind of Object.values(KINDS)) {
+    const existed = ids[kind.idKey];
+    out[kind.idKey] = await ensureDatabase(existed, storePageId, kind.dbTitle, kind.schema, { inline: false, icon: kind.icon });
+    // 예전처럼 지점 페이지에 바로 있던 표는 자료 보관함으로 옮김 (이미 보낸 기록은 그대로 따라감)
+    if (relayout && existed && out[kind.idKey] === existed) {
+      try {
+        await moveDatabase(existed, storePageId, kind);
+      } catch (e) {
+        console.warn('표 옮기기 실패:', kind.dbTitle, e.message);
+        out.layoutError = e.message;
+      }
+    }
+  }
+
+  // 지점 페이지 위 네모 칸 목차
   const sameDbs = Object.values(KINDS).every(k => out[k.idKey] === ids[k.idKey]);
+  const gridAlive = ids.gridBlockId ? await getAlive(`/blocks/${ids.gridBlockId}`) : null;
+  if (relayout || !sameDbs || !gridAlive || storePageId !== ids.storePageId) {
+    try {
+      out.gridBlockId = await buildBoxGrid(branchPageId, out, gridAlive ? ids.gridBlockId : null);
+    } catch (e) {
+      console.warn('네모 칸 목차 만들기 실패:', e.message);
+      out.layoutError = e.message;
+      out.gridBlockId = gridAlive ? ids.gridBlockId : null;
+    }
+  } else {
+    out.gridBlockId = ids.gridBlockId;
+  }
+  if (!out.layoutError) out.layoutVersion = LAYOUT_VERSION;
+
+  // 사이트 화면처럼 보이게: 오픈 계획은 상태별 보드, 오픈 준비는 그룹별로 묶은 표 (지점마다 한 번만)
   if (ids.viewsVersion === VIEWS_VERSION && sameDbs) {
     out.viewsVersion = VIEWS_VERSION;
   } else {
