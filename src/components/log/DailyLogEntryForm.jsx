@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import NeonIcon from '../common/NeonIcon';
+import PhotoPickButtons from '../common/PhotoPickButtons';
 import ModalPortal from '../common/ModalPortal';
 import { uploadDailyLogPhoto } from '../../utils/photoUpload';
 
@@ -277,14 +278,7 @@ export default function DailyLogEntryForm({
                 <NeonIcon name="photo" size="xs" color="rose" badge={false} />
                 <span>조치 현장 사진 첨부</span>
               </label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handlePhotoUpload}
-                disabled={uploadingPhotos}
-                style={{ fontSize: 12 }}
-              />
+              <PhotoPickButtons onChange={handlePhotoUpload} disabled={uploadingPhotos} />
 
               {/* 사진 업로드 중 알림 바 */}
               {uploadingPhotos && (

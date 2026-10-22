@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
+import { addDoc } from '../utils/offlineWrite';
 import { db, isFirebaseConfigured } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/formatters';

@@ -27,6 +27,8 @@ export function useDashboardData() {
     recentActivities: [],
     scheduledPayments: [],
     allSchedules: [],
+    allOpenTasks: [],
+    allOpenPlans: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +47,8 @@ export function useDashboardData() {
       const allCosts = [];
       const allActivities = [];
       const allScheduledPayments = [];
+      const allOpenTasks = [];
+      const allOpenPlans = [];
 
       for (const branch of branches) {
         let stages = [];
@@ -53,6 +57,8 @@ export function useDashboardData() {
         let logs = [];
         let equipments = [];
         let partners = [];
+        let openTasks = [];
+        let openPlans = [];
         let budgetObj = { totalBudget: 0 };
 
         if (demoMode) {
@@ -63,6 +69,8 @@ export function useDashboardData() {
           equipments = getLocalData(`equipments_${branch.id}`);
           partners = getLocalData(`partners_${branch.id}`);
           budgetObj = getLocalData(`budget_${branch.id}`, { totalBudget: 0 });
+          openTasks = getLocalData(`openTasks_${branch.id}`);
+          openPlans = getLocalData(`openPlans_${branch.id}`);
         } else {
           try {
             const stagesSnap = await getDocs(query(collection(db, 'branches', branch.id, 'stages'), orderBy('order', 'asc')));
@@ -76,6 +84,12 @@ export function useDashboardData() {
 
             const logsSnap = await getDocs(query(collection(db, 'branches', branch.id, 'logs'), orderBy('createdAt', 'desc')));
             logs = logsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            const tasksSnap = await getDocs(collection(db, 'branches', branch.id, 'openTasks'));
+            openTasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            const plansSnap = await getDocs(collection(db, 'branches', branch.id, 'openPlans'));
+            openPlans = plansSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           } catch (e) {
             console.error(`Error fetching sub-collections for branch ${branch.id}:`, e);
           }
@@ -132,6 +146,10 @@ export function useDashboardData() {
           });
         });
 
+        // 오픈 준비·오픈 계획 (진행률과 마감 알림에 씀)
+        openTasks.forEach(t => allOpenTasks.push({ ...t, branchId: branch.id, branchName: branch.name }));
+        openPlans.forEach(p => allOpenPlans.push({ ...p, branchId: branch.id, branchName: branch.name }));
+
         // 다가오는 일정 2개 추출
         const now = new Date();
         now.setHours(0, 0, 0, 0);
@@ -166,6 +184,11 @@ export function useDashboardData() {
           equipmentsCount: equipments.length,
           installedEquipmentsCount: equipments.filter(eq => eq.installed).length,
           partnersCount: partners.length,
+          openTasksCount: openTasks.length,
+          openTasksDone: openTasks.filter(t => t.done).length,
+          openPlansCount: openPlans.length,
+          openPlansDoing: openPlans.filter(p => p.status === 'doing').length,
+          openPlansDone: openPlans.filter(p => p.status === 'done').length,
           property: branch.property || {},
         });
       }
@@ -220,6 +243,8 @@ export function useDashboardData() {
 
       setDashboardData({
         allSchedules,
+        allOpenTasks,
+        allOpenPlans,
         scheduledPayments,
         branchesSummary,
         upcomingSchedules,

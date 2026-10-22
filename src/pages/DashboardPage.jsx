@@ -2,24 +2,13 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useBranches } from '../hooks/useFirestore';
-import { formatCurrency, formatDateShort, formatRelativeTime } from '../utils/formatters';
+import { formatCurrency, formatRelativeTime } from '../utils/formatters';
 import { BRANCH_STATUS, COST_CATEGORIES } from '../utils/constants';
 import { daysUntilDue } from '../utils/costs';
+import { buildAlerts } from '../utils/alerts';
 import BranchForm from '../components/branch/BranchForm';
 import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
 import './DashboardPage.css';
-
-const DAY = 86400000;
-
-function toDate(v) {
-  if (!v) return null;
-  const d = v.toDate ? v.toDate() : new Date(v);
-  if (isNaN(d.getTime())) return null;
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-const isDone = (s) => s.status === 'completed' || s.status === 'complete';
 
 /**
  * 전체 지점 대시보드: '이번 주 할 일'과 '지점별 지금 단계' 중심으로 단순화
@@ -31,6 +20,8 @@ export default function DashboardPage() {
     branchesSummary,
     allSchedules = [],
     scheduledPayments = [],
+    allOpenTasks = [],
+    allOpenPlans = [],
     costByCategory,
     totalCost,
     recentActivities,
@@ -41,47 +32,11 @@ export default function DashboardPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // 이번 주 할 일: 기한 지난 일정 + 7일 안에 시작·끝나는 일정 + 7일 안(또는 지난) 지급 예정
-  const weekTasks = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(today.getTime() + 7 * DAY);
-    const inWeek = (d) => d && d >= today && d <= weekEnd;
-    const tasks = [];
-
-    allSchedules.forEach(s => {
-      if (isDone(s)) return;
-      const start = toDate(s.startDate);
-      const end = toDate(s.endDate) || start;
-      if (!start) return;
-      const base = { key: `s-${s.branchId}-${s.id}`, title: s.title, branchId: s.branchId, branchName: s.branchName, tab: 'schedule' };
-      if (end < today) {
-        tasks.push({ ...base, kind: 'overdue', when: end, badge: `${Math.round((today - end) / DAY)}일 지남` });
-      } else if (inWeek(start)) {
-        tasks.push({ ...base, kind: 'start', when: start, badge: start.getTime() === today.getTime() ? '오늘 시작' : `${formatDateShort(start)} 시작` });
-      } else if (inWeek(end)) {
-        tasks.push({ ...base, kind: 'end', when: end, badge: end.getTime() === today.getTime() ? '오늘 마감' : `${formatDateShort(end)} 마감` });
-      }
-    });
-
-    scheduledPayments.forEach(c => {
-      const days = daysUntilDue(c);
-      if (days === null || days > 7) return;
-      tasks.push({
-        key: `c-${c.branchId}-${c.id}`,
-        kind: days < 0 ? 'overdue' : 'payment',
-        when: toDate(c.date),
-        title: `${c.title} · ${formatCurrency(Number(c.amount) || 0)}`,
-        branchId: c.branchId,
-        branchName: c.branchName,
-        tab: 'cost',
-        badge: days < 0 ? `지급일 ${-days}일 지남` : days === 0 ? '오늘 지급' : `지급 D-${days}`,
-      });
-    });
-
-    const rank = { overdue: 0, start: 1, end: 1, payment: 1 };
-    return tasks.sort((a, b) => (rank[a.kind] - rank[b.kind]) || ((a.when || 0) - (b.when || 0)));
-  }, [allSchedules, scheduledPayments]);
+  // 이번 주 할 일: 기한 지난 것 + 7일 안에 시작·마감·지급인 일정·지급 예정·오픈 준비·오픈 계획
+  const weekTasks = useMemo(
+    () => buildAlerts({ schedules: allSchedules, costs: scheduledPayments, openTasks: allOpenTasks, openPlans: allOpenPlans }, { days: 7 }),
+    [allSchedules, scheduledPayments, allOpenTasks, allOpenPlans],
+  );
 
   const filteredBranches = branchesSummary.filter(b => statusFilter === 'all' || b.status === statusFilter);
   const countBy = (st) => branchesSummary.filter(b => b.status === st).length;
@@ -146,7 +101,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               {weekTasks.length === 0 ? (
-                <div className="dashboard-empty">이번 주에 챙길 일정이나 지급이 없어요.</div>
+                <div className="dashboard-empty">이번 주에 챙길 일정·지급·오픈 준비가 없어요.</div>
               ) : (
                 <ul className="week-task-list">
                   {weekTasks.map(t => (
@@ -197,6 +152,18 @@ export default function DashboardPage() {
                       <div className="branch-progress-bar-bg">
                         <div className="branch-progress-bar-fill" style={{ width: `${branch.progress}%` }} />
                       </div>
+                      {branch.openTasksCount > 0 && (
+                        <div className="branch-open-progress">
+                          <span className="branch-open-label">오픈 준비 <strong>{branch.openTasksDone}/{branch.openTasksCount}</strong></span>
+                          <span className="branch-open-bar" aria-hidden="true">
+                            <span style={{ width: `${Math.round((branch.openTasksDone / branch.openTasksCount) * 100)}%` }} />
+                          </span>
+                          <span className="branch-open-pct">{Math.round((branch.openTasksDone / branch.openTasksCount) * 100)}%</span>
+                        </div>
+                      )}
+                      {branch.openPlansCount > 0 && (
+                        <div className="branch-open-plans">오픈 계획 진행 중 {branch.openPlansDoing} · 완료 {branch.openPlansDone}/{branch.openPlansCount}</div>
+                      )}
                       <div className="branch-card-stats">
                         <span>쓴 비용 {formatCurrency(branch.totalCost)}</span>
                         <span className="branch-next">

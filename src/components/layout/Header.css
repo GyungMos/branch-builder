@@ -300,3 +300,13 @@
     gap: 4px;
   }
 }
+
+/* 인터넷 끊김 안내 */
+.offline-banner {
+  padding: 6px 16px;
+  background: var(--color-warning-bg, rgba(234, 179, 8, 0.15));
+  color: var(--color-warning, #b45309);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-align: center;
+}

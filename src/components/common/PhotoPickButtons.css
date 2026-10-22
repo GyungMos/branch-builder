@@ -1,0 +1,24 @@
+.photo-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.photo-pick-btn {
+  cursor: pointer;
+}
+
+.photo-pick-btn.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 휴대폰: 엄지로 누르기 쉽게 크게 */
+@media (max-width: 768px) {
+  .photo-pick-btn {
+    flex: 1;
+    min-height: 44px;
+    justify-content: center;
+    font-size: var(--font-size-base);
+  }
+}

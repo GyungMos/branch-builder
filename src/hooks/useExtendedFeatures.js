@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
-  collection, doc, addDoc, updateDoc, deleteDoc,
-  onSnapshot, query, orderBy, serverTimestamp, setDoc
+  collection, doc,
+  onSnapshot, query, orderBy, serverTimestamp,
 } from 'firebase/firestore';
+import { addDoc, updateDoc, deleteDoc, setDoc } from '../utils/offlineWrite';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/formatters';

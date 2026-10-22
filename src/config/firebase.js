@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
 // Firebase 설정 - 환경변수에서 읽어옴
 // .env 파일에 아래 값들을 설정하세요:
@@ -35,7 +35,12 @@ if (isFirebaseConfigured) {
   try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
-    db = getFirestore(app);
+    // 불러온 기록과 저장할 내용을 이 기기에도 담아 둠 → 인터넷이 끊겨도 보고 쓸 수 있고, 연결되면 자동으로 올라감
+    try {
+      db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+    } catch {
+      db = getFirestore(app);
+    }
   } catch (error) {
     console.warn('Firebase 초기화 실패:', error.message);
   }

@@ -602,3 +602,48 @@
 .recent-activity-plain li:last-child {
   border-bottom: none;
 }
+
+/* 지점 카드: 오픈 준비 진행률 */
+.branch-open-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.branch-open-label {
+  flex-shrink: 0;
+}
+
+.branch-open-label strong {
+  color: var(--color-text-primary);
+}
+
+.branch-open-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-bg-tertiary);
+  overflow: hidden;
+}
+
+.branch-open-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-success);
+}
+
+.branch-open-pct {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.branch-open-plans {
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}

@@ -1,10 +1,11 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useBranches } from '../../hooks/useFirestore';
 import { exportAllDataAsJSON, importDataFromJSON } from '../../utils/backupRestore';
 import NeonIcon from '../common/NeonIcon';
+import AlertBell from './AlertBell';
 import './Header.css';
 
 export default function Header() {
@@ -14,6 +15,19 @@ export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const fileInputRef = useRef(null);
+  const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+
+  // 인터넷 연결이 끊기면 위에 안내 (현장에서 저장한 내용은 연결되면 자동으로 올라감)
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -167,6 +181,8 @@ export default function Header() {
             />
           </div>
 
+          {user && <AlertBell />}
+
           <button
             className="btn-ghost btn-icon header-search-btn"
             onClick={() => navigate('/search')}
@@ -232,6 +248,11 @@ export default function Header() {
           )}
         </div>
       </div>
+      {!online && !demoMode && (
+        <div className="offline-banner" role="status">
+          인터넷이 끊겼어요. 지금 쓰는 내용은 이 기기에 먼저 저장되고, 연결되면 자동으로 올라가요.
+        </div>
+      )}
     </header>
   );
 }
