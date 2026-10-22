@@ -1,0 +1,109 @@
+.rich-editor {
+  position: relative;
+  min-height: 320px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  line-height: 1.75;
+  outline: none;
+  overflow-wrap: anywhere;
+  cursor: text;
+  transition: border-color var(--transition-fast);
+}
+
+.rich-editor:focus {
+  border-color: var(--color-accent);
+}
+
+/* 비어 있을 때 안내 글 */
+.rich-editor:has(> p:only-child > br:only-child)::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+  white-space: pre-line;
+}
+
+.rich-editor p {
+  margin: 2px 0;
+  min-height: 1.75em;
+}
+
+.rich-editor a {
+  color: var(--color-info);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.rich-editor figure {
+  margin: 8px 0;
+  display: inline-block;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.rich-editor figure img {
+  display: block;
+  max-width: 100%;
+  max-height: 420px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.rich-editor figure:hover img {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
+}
+
+/* 할 일 목록: 앞의 네모를 누르면 체크 */
+.rich-editor ul.todo-list,
+.minidoc ul.todo-list {
+  list-style: none;
+  padding-left: 4px;
+}
+
+.rich-editor ul.todo-list > li {
+  position: relative;
+  padding-left: 28px;
+}
+
+.rich-editor ul.todo-list > li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.35em;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-text-tertiary);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.rich-editor ul.todo-list > li[data-checked='true']::before {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.rich-editor ul.todo-list > li[data-checked='true']::after {
+  content: '✓';
+  position: absolute;
+  left: 5px;
+  top: 0.05em;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.rich-editor ul.todo-list > li[data-checked='true'] {
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+}
+
+/* 목록 아래 들여 쓴 글 (점 없이) */
+.rich-editor ul.plain-list {
+  list-style: none;
+  padding-left: 1.2em;
+}

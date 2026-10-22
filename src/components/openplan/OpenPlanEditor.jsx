@@ -1,9 +1,9 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import ModalPortal from '../common/ModalPortal';
 import DateInput from '../common/DateInput';
 import PeoplePicker from '../common/PeoplePicker';
-import MiniDocView from '../common/MiniDocView';
 import NotionBadge from '../common/NotionBadge';
+import RichDocEditor from '../common/RichDocEditor';
 import { PLAN_COLUMNS } from './OpenPlanBoard';
 import { usePeopleContext } from '../../contexts/PeopleContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,14 +11,16 @@ import { toDateInputValue, generateId } from '../../utils/formatters';
 import { DOC_COLORS, safeUrl } from '../../utils/miniDoc';
 import { uploadAttachment, uploadDocPhoto } from '../../utils/fileUpload';
 
-// 본문 도구 단추: 지금 줄 앞에 표시를 넣음
+// 본문 도구 단추 (편집기에 바로 적용)
 const TOOLS = [
-  { label: '제목', prefix: '# ', title: '큰 제목' },
-  { label: '소제목', prefix: '## ', title: '작은 제목' },
-  { label: '• 목록', prefix: '- ', title: '점 목록' },
-  { label: '1. 번호', prefix: '1. ', title: '번호 목록' },
-  { label: '☐ 할 일', prefix: '[ ] ', title: '체크 목록' },
-  { label: '→ 들여쓰기', prefix: '  ', title: '바로 위 목록의 하위 항목' },
+  { label: '제목', title: '큰 제목 (줄 맨 앞에 # 띄어쓰기)', run: (ed) => ed.heading(1) },
+  { label: '소제목', title: '작은 제목 (## 띄어쓰기)', run: (ed) => ed.heading(2) },
+  { label: '본문', title: '보통 글로', run: (ed) => ed.heading(0) },
+  { label: '• 목록', title: '점 목록 (- 띄어쓰기)', run: (ed) => ed.bullet() },
+  { label: '1. 번호', title: '번호 목록 (1. 띄어쓰기)', run: (ed) => ed.number() },
+  { label: '☐ 할 일', title: '체크 목록 ([] 띄어쓰기)', run: (ed) => ed.todo() },
+  { label: '→ 들여쓰기', title: '목록 안으로 (Tab)', run: (ed) => ed.indent() },
+  { label: '← 내어쓰기', title: '목록 밖으로 (Shift+Tab)', run: (ed) => ed.outdent() },
 ];
 
 // 본문 글자 수 한도 (사진을 본문에 바로 넣을 때 저장 한도 1MB를 넘지 않게)
@@ -26,38 +28,8 @@ const BODY_LIMIT = 900000;
 
 const cleanLabel = (s) => String(s).replace(/[[\]]/g, '');
 
-// 작성 칸에서 색을 보여줄 표시들: 색 {{..:..}} · 링크 [..](..) · 사진 ![..](..)
-const MARK_RE = /\{\{([a-z,-]+):([^\n]*?)\}\}|!?\[[^\]\n]*\]\([^\s)]+\)/g;
-
-function colorClasses(spec) {
-  return spec.split(',').map(s => (s.startsWith('bg-') ? s : `tc-${s}`)).join(' ');
-}
-
-/** 작성 칸 뒤에 깔리는 색 입힌 글자 (글자 폭이 바뀌지 않게 색만 바꿈) */
-function HighlightedBody({ text }) {
-  const out = [];
-  let last = 0;
-  let key = 0;
-  text.replace(MARK_RE, (whole, spec, inner, offset) => {
-    if (offset > last) out.push(text.slice(last, offset));
-    if (spec !== undefined) {
-      out.push(<span key={key++} className="mark-sign">{`{{${spec}:`}</span>);
-      out.push(<span key={key++} className={colorClasses(spec)}>{inner}</span>);
-      out.push(<span key={key++} className="mark-sign">{'}}'}</span>);
-    } else {
-      out.push(<span key={key++} className="mark-link">{whole}</span>);
-    }
-    last = offset + whole.length;
-    return whole;
-  });
-  out.push(text.slice(last));
-  // 마지막 줄이 비어 있어도 높이가 맞도록
-  out.push('​');
-  return out;
-}
-
 /** 글씨색·배경색 고르기 */
-function ColorMenu({ kind, onPick }) {
+function ColorMenu({ kind, onPick, onClear }) {
   return (
     <div className="doc-menu doc-color-menu" role="menu" aria-label={kind === 'bg' ? '배경색' : '글씨색'}>
       {DOC_COLORS.map(c => (
@@ -67,12 +39,15 @@ function ColorMenu({ kind, onPick }) {
           role="menuitem"
           className="doc-color-item"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onPick(kind === 'bg' ? `bg-${c.id}` : c.id)}
+          onClick={() => onPick(c.id)}
         >
           <span className={`doc-swatch ${kind === 'bg' ? `bg-${c.id}` : `tc-${c.id}`}`}>가</span>
           {c.label}
         </button>
       ))}
+      <button type="button" role="menuitem" className="doc-color-item doc-color-clear" onMouseDown={(e) => e.preventDefault()} onClick={onClear}>
+        <span className="doc-swatch">가</span>색 지우기
+      </button>
     </div>
   );
 }
@@ -124,25 +99,15 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', branchId,
   const [assignee2, setAssignee2] = useState(plan?.assignee2 || []);
   const [dueDate, setDueDate] = useState(toDateInputValue(plan?.dueDate));
   const [body, setBody] = useState(plan?.body || '');
-  // 사진·파일 주소는 본문 밖에 따로 두고, 본문에는 (att:번호)만 적음 (긴 주소가 본문에 보이지 않게)
+  // 사진·파일 주소는 본문 밖에 따로 두고, 본문에는 (att:번호)만 적음
   const [attachments, setAttachments] = useState(plan?.attachments || {});
-  const [mode, setMode] = useState(isNew || !plan?.body ? 'edit' : 'view');
   const [saving, setSaving] = useState(false);
   const [menu, setMenu] = useState(null); // color | bg | link
   const [uploading, setUploading] = useState('');
   const [error, setError] = useState('');
-  const bodyRef = useRef(null);
-  const selRef = useRef({ start: 0, end: 0 });
+  const editorRef = useRef(null);
   const photoRef = useRef(null);
   const fileRef = useRef(null);
-
-  // 작성 칸이 글 길이에 맞춰 늘어나게 (뒤에 깔린 색 글자와 줄이 어긋나지 않도록 칸 안 스크롤 없앰)
-  useLayoutEffect(() => {
-    const el = bodyRef.current;
-    if (!el || mode !== 'edit') return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight + 2}px`;
-  }, [body, mode]);
 
   const dirty = isNew
     || title !== (plan.title || '') || status !== (plan.status || 'todo') || body !== (plan.body || '')
@@ -155,63 +120,8 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', branchId,
     onClose();
   };
 
-  const insertPrefix = (prefix) => {
-    const el = bodyRef.current;
-    if (!el) return;
-    const start = el.selectionStart;
-    const lineStart = body.lastIndexOf('\n', start - 1) + 1;
-    const next = body.slice(0, lineStart) + prefix + body.slice(lineStart);
-    setBody(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.selectionStart = el.selectionEnd = start + prefix.length;
-    });
-  };
-
-  // 도구를 누르기 전 본문에서 고른 위치를 기억
-  const rememberSelection = () => {
-    const el = bodyRef.current;
-    if (el) selRef.current = { start: el.selectionStart, end: el.selectionEnd };
-  };
-
-  const focusAt = (start, end = start) => {
-    requestAnimationFrame(() => {
-      const el = bodyRef.current;
-      if (!el) return;
-      el.focus();
-      el.selectionStart = start;
-      el.selectionEnd = end;
-    });
-  };
-
-  // 고른 글자를 색 표시로 감쌈 (고른 글자가 없으면 '글자'를 넣고 골라 둠)
-  const wrapColor = (spec) => {
-    setMenu(null);
-    const { start, end } = selRef.current;
-    const picked = body.slice(start, end) || '글자';
-    const open = `{{${spec}:`;
-    setBody(body.slice(0, start) + open + picked + '}}' + body.slice(end));
-    focusAt(start + open.length, start + open.length + picked.length);
-  };
-
-  // 지금 위치에 글자 넣기 (block이면 따로 한 줄로)
-  // 위치는 넣는 순간 작성 칸의 실제 커서에서 읽음 (파일을 올리는 동안 글을 더 써도 엉뚱한 곳에 끼어들지 않게)
-  const insertText = (text, block = false) => {
-    const el = bodyRef.current;
-    const current = el ? el.value : body;
-    const { start, end } = el ? { start: el.selectionStart, end: el.selectionEnd } : selRef.current;
-    const before = current.slice(0, start);
-    const after = current.slice(end);
-    const pre = block && before && !before.endsWith('\n') ? '\n' : '';
-    const post = block && !after.startsWith('\n') ? '\n' : '';
-    const head = before + pre + text + post;
-    setBody(head + after);
-    selRef.current = { start: head.length, end: head.length };
-    focusAt(head.length);
-  };
-
   const openMenu = (name) => {
-    rememberSelection();
+    editorRef.current?.saveRange();
     setMenu(m => (m === name ? null : name));
   };
 
@@ -222,22 +132,21 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', branchId,
     setError('');
     setUploading(kind === 'photo' ? '사진 넣는 중…' : '파일 올리는 중…');
     try {
-      const lines = [];
       const added = {};
       for (const f of list) {
         const id = generateId();
         if (kind === 'photo') {
           const name = cleanLabel(f.name.replace(/\.[^.]+$/, ''));
-          added[id] = { url: await uploadDocPhoto(f, { branchId, demoMode }), name };
-          lines.push(`![${name}](att:${id})`);
+          const url = await uploadDocPhoto(f, { branchId, demoMode });
+          added[id] = { url, name };
+          editorRef.current?.image(id, url, name);
         } else {
           const up = await uploadAttachment(f, { branchId, folder: 'openPlans', demoMode });
           added[id] = { url: up.url, name: up.name, storagePath: up.storagePath };
-          lines.push(`📎 [${cleanLabel(up.name)}](att:${id})`);
+          editorRef.current?.file(id, up.url, cleanLabel(up.name));
         }
       }
       setAttachments(prev => ({ ...prev, ...added }));
-      insertText(lines.join('\n'), true);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -329,81 +238,65 @@ export default function OpenPlanEditor({ plan, defaultStatus = 'todo', branchId,
               )}
             </div>
 
-            <div className="plan-body-head">
-              {mode === 'edit' ? (
-                <div className="plan-tools" role="toolbar" aria-label="본문 도구">
-                  {TOOLS.map(t => (
-                    <button key={t.label} type="button" title={t.title} onClick={() => insertPrefix(t.prefix)}>{t.label}</button>
-                  ))}
-                  <span className="plan-tools-sep" aria-hidden="true" />
-                  <button type="button" title="고른 글자의 색" className={menu === 'color' ? 'on' : ''}
-                    onMouseDown={keepSelection} onClick={() => openMenu('color')}>
-                    <span className="tool-a tool-a-color">가</span> 글씨색 ▾
+            <div className="plan-body-head plan-body-head-sticky">
+              <div className="plan-tools" role="toolbar" aria-label="본문 도구">
+                {TOOLS.map(t => (
+                  <button key={t.label} type="button" title={t.title} onMouseDown={keepSelection}
+                    onClick={() => { setMenu(null); t.run(editorRef.current); }}>
+                    {t.label}
                   </button>
-                  <button type="button" title="고른 글자의 배경색" className={menu === 'bg' ? 'on' : ''}
-                    onMouseDown={keepSelection} onClick={() => openMenu('bg')}>
-                    <span className="tool-a tool-a-bg">가</span> 배경색 ▾
-                  </button>
-                  <button type="button" title="링크 넣기" className={menu === 'link' ? 'on' : ''}
-                    onMouseDown={keepSelection} onClick={() => openMenu('link')}>
-                    🔗 링크
-                  </button>
-                  <button type="button" title="사진 넣기" disabled={Boolean(uploading)}
-                    onMouseDown={keepSelection} onClick={() => { rememberSelection(); setMenu(null); photoRef.current?.click(); }}>
-                    🖼 사진
-                  </button>
-                  <button type="button" title="파일 넣기" disabled={Boolean(uploading)}
-                    onMouseDown={keepSelection} onClick={() => { rememberSelection(); setMenu(null); fileRef.current?.click(); }}>
-                    📎 파일
-                  </button>
-                  <input ref={photoRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleUpload(e, 'photo')} />
-                  <input ref={fileRef} type="file" multiple hidden onChange={(e) => handleUpload(e, 'file')} />
+                ))}
+                <span className="plan-tools-sep" aria-hidden="true" />
+                <button type="button" title="고른 글자의 색" className={menu === 'color' ? 'on' : ''}
+                  onMouseDown={keepSelection} onClick={() => openMenu('color')}>
+                  <span className="tool-a tool-a-color">가</span> 글씨색 ▾
+                </button>
+                <button type="button" title="고른 글자의 배경색" className={menu === 'bg' ? 'on' : ''}
+                  onMouseDown={keepSelection} onClick={() => openMenu('bg')}>
+                  <span className="tool-a tool-a-bg">가</span> 배경색 ▾
+                </button>
+                <button type="button" title="링크 넣기" className={menu === 'link' ? 'on' : ''}
+                  onMouseDown={keepSelection} onClick={() => openMenu('link')}>
+                  🔗 링크
+                </button>
+                <button type="button" title="사진 넣기" disabled={Boolean(uploading)}
+                  onMouseDown={keepSelection} onClick={() => { editorRef.current?.saveRange(); setMenu(null); photoRef.current?.click(); }}>
+                  🖼 사진
+                </button>
+                <button type="button" title="파일 넣기" disabled={Boolean(uploading)}
+                  onMouseDown={keepSelection} onClick={() => { editorRef.current?.saveRange(); setMenu(null); fileRef.current?.click(); }}>
+                  📎 파일
+                </button>
+                <input ref={photoRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleUpload(e, 'photo')} />
+                <input ref={fileRef} type="file" multiple hidden onChange={(e) => handleUpload(e, 'file')} />
 
-                  {(menu === 'color' || menu === 'bg') && <ColorMenu kind={menu} onPick={wrapColor} />}
-                  {menu === 'link' && (
-                    <LinkMenu
-                      initialLabel={body.slice(selRef.current.start, selRef.current.end)}
-                      onCancel={() => setMenu(null)}
-                      onInsert={(label, url) => {
-                        setMenu(null);
-                        insertText(label ? `[${cleanLabel(label)}](${url})` : url);
-                      }}
-                    />
-                  )}
-                </div>
-              ) : <span className="plan-body-label">본문</span>}
-              <div className="seg-toggle" role="tablist">
-                <button type="button" role="tab" aria-selected={mode === 'edit'} className={mode === 'edit' ? 'on' : ''} onClick={() => setMode('edit')}>{isNew ? '작성' : '편집'}</button>
-                <button type="button" role="tab" aria-selected={mode === 'view'} className={mode === 'view' ? 'on' : ''} onClick={() => { setMode('view'); setMenu(null); }}>미리보기</button>
+                {(menu === 'color' || menu === 'bg') && (
+                  <ColorMenu
+                    kind={menu}
+                    onPick={(id) => { setMenu(null); if (menu === 'bg') editorRef.current?.background(id); else editorRef.current?.color(id); }}
+                    onClear={() => { setMenu(null); editorRef.current?.clearColor(); }}
+                  />
+                )}
+                {menu === 'link' && (
+                  <LinkMenu
+                    initialLabel={editorRef.current?.selectedText() || ''}
+                    onCancel={() => setMenu(null)}
+                    onInsert={(label, url) => { setMenu(null); editorRef.current?.link(cleanLabel(label), url); }}
+                  />
+                )}
               </div>
             </div>
 
-            {mode === 'edit' ? (
-              <div className="plan-body-editor">
-                {/* 글자 뒤에 같은 내용을 색까지 입혀 깔아서, 작성 중에도 글씨색·배경색이 보이게 함 */}
-                <div className="plan-body-input plan-body-mirror minidoc" aria-hidden="true">
-                  <HighlightedBody text={body} />
-                </div>
-                <textarea
-                  ref={bodyRef}
-                  className="plan-body-input plan-body-typing"
-                  spellCheck={false}
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  onSelect={rememberSelection}
-                  onBlur={rememberSelection}
-                  rows={14}
-                  placeholder={'내용을 자유롭게 적어 주세요.\n\n# 1. 자동차관리사업 신규 등록\n- 링크 : https://www.guri.go.kr/...\n1. 구비서류\n  - 자동차관리사업 등록 신청서\n  - 사업장 위치도 및 평면도'}
-                />
-              </div>
-            ) : (
-              <div className="plan-body-view"><MiniDocView text={body} attachments={attachments} /></div>
-            )}
-            {mode === 'edit' && (
-              <p className="plan-body-tip">
-                {uploading || '글자를 고른 뒤 글씨색·배경색을 누르면 색이 들어가요. 실제 모양은 미리보기에서 볼 수 있어요.'}
-              </p>
-            )}
+            <RichDocEditor
+              ref={editorRef}
+              initialValue={plan?.body || ''}
+              attachments={plan?.attachments || {}}
+              onChange={setBody}
+              placeholder={'내용을 자유롭게 적어 주세요.\n줄 맨 앞에 # 를 치고 띄어쓰면 제목, - 를 치면 목록이 돼요.'}
+            />
+            <p className="plan-body-tip">
+              {uploading || '글자를 고른 뒤 글씨색·배경색을 누르면 바로 칠해져요. 할 일 앞의 네모를 누르면 체크돼요.'}
+            </p>
             {error && <p className="plan-body-error" role="alert">{error}</p>}
           </div>
 
