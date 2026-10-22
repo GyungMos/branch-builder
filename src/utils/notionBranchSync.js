@@ -181,12 +181,12 @@ export async function ensureBranchNotion(branch, updateBranch) {
   if (cached && cached.name === branch.name) return cached.ids;
   const res = await callNotion('ensureBranch', { branch: { id: branch.id, name: branch.name }, ids: branch.notion || {} });
   if (res.skipped) return null;
-  const { branchPageId, plansDbId, tasksDbId, schedulesDbId, costsDbId, logsDbId, docsDbId } = res;
-  const ids = { branchPageId, plansDbId, tasksDbId, schedulesDbId, costsDbId, logsDbId, docsDbId };
+  const { branchPageId, plansDbId, tasksDbId, schedulesDbId, costsDbId, logsDbId, docsDbId, viewsVersion } = res;
+  const ids = { branchPageId, plansDbId, tasksDbId, schedulesDbId, costsDbId, logsDbId, docsDbId, viewsVersion: viewsVersion || null };
   if (JSON.stringify(branch.notion || {}) !== JSON.stringify(ids)) {
     await updateBranch(branch.id, { notion: ids });
   }
-  ensured.set(branch.id, { name: branch.name, ids });
+  ensured.set(branch.id, { name: branch.name, ids, viewsError: res.viewsError || null });
   return ids;
 }
 
@@ -231,6 +231,12 @@ export async function archiveNotionPage(pageId) {
 
 /** 지점 하나의 기록을 전부 노션으로 (처음 연결할 때·실패분 다시 보내기) */
 export async function syncBranchAll(branch, data, { updateBranch, onProgress, onlyUnsynced = false }) {
+  // 보낼 기록이 없어도 지점 페이지·표·보기(상태별 보드 등)는 맞춰 둠
+  let viewsError = null;
+  try {
+    await ensureBranchNotion(branch, updateBranch);
+    viewsError = ensured.get(branch.id)?.viewsError || null;
+  } catch { /* 각 기록을 보낼 때 다시 시도 */ }
   const jobs = [];
   Object.entries(NOTION_COLLECTIONS).forEach(([kind, name]) => {
     (data[name] || []).forEach(rec => {
@@ -246,5 +252,5 @@ export async function syncBranchAll(branch, data, { updateBranch, onProgress, on
     if (res.error) failed += 1;
     onProgress?.({ done, total: jobs.length, failed });
   }
-  return { total: jobs.length, failed };
+  return { total: jobs.length, failed, viewsError };
 }

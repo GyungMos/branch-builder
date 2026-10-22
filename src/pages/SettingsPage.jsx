@@ -362,6 +362,7 @@ function NotionSection() {
     if (!window.confirm(`지점 ${branches.length}곳의 기록을 노션으로 보낼까요? 기록이 많으면 몇 분 걸려요. 이 화면을 닫지 말고 기다려 주세요.`)) return;
     let total = 0;
     let failed = 0;
+    const viewErrors = [];
     for (const [i, b] of branches.entries()) {
       setProgress({ text: `${b.name} 준비 중… (${i + 1}/${branches.length})` });
       const data = await loadBranchData(b.id, demoMode);
@@ -372,8 +373,9 @@ function NotionSection() {
       });
       total += res.total;
       failed += res.failed;
+      if (res.viewsError) viewErrors.push(`${b.name}: ${res.viewsError}`);
     }
-    setProgress({ text: `끝났어요. ${total}건 중 ${total - failed}건 보냄${failed ? `, ${failed}건 실패 (각 기록의 'N!' 표시를 눌러 다시 보낼 수 있어요)` : ''}.`, done: true });
+    setProgress({ text: `끝났어요. ${total}건 중 ${total - failed}건 보냄${failed ? `, ${failed}건 실패 (각 기록의 'N!' 표시를 눌러 다시 보낼 수 있어요)` : ''}.${viewErrors.length ? ` (노션 보기 설정 실패 — ${viewErrors.join(' / ')})` : ''}`, done: true });
   };
 
   return (

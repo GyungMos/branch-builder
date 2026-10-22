@@ -13,6 +13,8 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { parseMiniDoc, parseInline, splitLinks } from '../../src/utils/miniDoc.js';
 
 const NOTION_VERSION = '2022-06-28';
+// 표 보기(보드·그룹) 설정은 새 버전 API에서만 됨
+const VIEW_VERSION = '2025-09-03';
 const NOTION_API = 'https://api.notion.com/v1';
 const FIREBASE_JWKS = createRemoteJWKSet(
   new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'),
@@ -33,13 +35,13 @@ class NotionError extends Error {
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function notion(path, method = 'GET', body) {
+async function notion(path, method = 'GET', body, version = NOTION_VERSION) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const res = await fetch(`${NOTION_API}${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${process.env.NOTION_TOKEN}`,
-        'Notion-Version': NOTION_VERSION,
+        'Notion-Version': version,
         'Content-Type': 'application/json',
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -395,7 +397,61 @@ async function ensureBranch({ branch, ids = {} }) {
   for (const kind of Object.values(KINDS)) {
     out[kind.idKey] = await ensureDatabase(ids[kind.idKey], branchPageId, kind.dbTitle, kind.schema);
   }
+
+  // 사이트 화면처럼 보이게: 오픈 계획은 상태별 보드, 오픈 준비는 그룹별로 묶은 표 (지점마다 한 번만)
+  const sameDbs = Object.values(KINDS).every(k => out[k.idKey] === ids[k.idKey]);
+  if (ids.viewsVersion === VIEWS_VERSION && sameDbs) {
+    out.viewsVersion = VIEWS_VERSION;
+  } else {
+    try {
+      await ensureGroupedView(out.plansDbId, { name: '상태별', type: 'board', prop: '상태' });
+      await ensureGroupedView(out.tasksDbId, { name: '그룹별', type: 'table', prop: '그룹' });
+      out.viewsVersion = VIEWS_VERSION;
+    } catch (e) {
+      // 보기 설정이 안 돼도 기록 보내기는 계속 (다음 연결 때 다시 시도)
+      console.warn('노션 보기 설정 실패:', e.message);
+      out.viewsError = e.message;
+    }
+  }
   return out;
+}
+
+const VIEWS_VERSION = 1;
+
+/**
+ * 표에 '칸 하나로 묶어 보는' 보기를 만듦 (이미 같은 이름이 있으면 그대로)
+ * 처음 만들어질 때 생긴 기본 표 보기 하나뿐이었다면 지워서 새 보기가 먼저 보이게 함
+ */
+async function ensureGroupedView(dbId, { name, type, prop }) {
+  if (!dbId) return;
+  const db = await notion(`/databases/${dbId}`, 'GET', undefined, VIEW_VERSION);
+  const dataSourceId = db.data_sources?.[0]?.id;
+  if (!dataSourceId) return;
+  const ds = await notion(`/data_sources/${dataSourceId}`, 'GET', undefined, VIEW_VERSION);
+  const property = ds.properties?.[prop];
+  if (!property) return;
+
+  const list = await notion(`/views?database_id=${dbId}`, 'GET', undefined, VIEW_VERSION);
+  const views = [];
+  for (const v of list.results || []) {
+    views.push(v.name !== undefined ? v : await notion(`/views/${v.id}`, 'GET', undefined, VIEW_VERSION));
+  }
+  if (views.some(v => v.name === name)) return;
+
+  await notion('/views', 'POST', {
+    database_id: dbId,
+    data_source_id: dataSourceId,
+    name,
+    type,
+    configuration: {
+      type,
+      group_by: { type: property.type, property_id: property.id, sort: { type: 'manual' } },
+    },
+  }, VIEW_VERSION);
+
+  if (views.length === 1 && views[0].type === 'table') {
+    await notion(`/views/${views[0].id}`, 'DELETE', undefined, VIEW_VERSION).catch(() => {});
+  }
 }
 
 // ---------- 기록 보내기 ----------
