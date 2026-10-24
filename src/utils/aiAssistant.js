@@ -13,18 +13,26 @@ export async function askAssistant({ message, model = 'haiku', context }) {
   const user = auth?.currentUser;
   if (!user) throw new Error('데모 화면에서는 AI 비서를 쓸 수 없어요. 실제 사이트에서 로그인한 뒤 써 주세요.');
   const token = await user.getIdToken();
-  const res = await fetch('/.netlify/functions/ai-assistant', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ message, model, context }),
-  });
-  let body = {};
-  try { body = await res.json(); } catch { /* 응답이 JSON이 아닐 때 (시간 초과 등) */ }
-  if (!res.ok) {
-    if (res.status === 502 || res.status === 504) throw new Error('AI가 답하는 데 너무 오래 걸렸어요. 조금 짧게 나눠서 다시 부탁해 주세요.');
-    throw new Error(body.error || `AI 비서 오류 (${res.status})`);
-  }
-  return body;
+
+  const once = async () => {
+    const res = await fetch('/.netlify/functions/ai-assistant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ message, model, context }),
+    });
+    let body = null;
+    try { body = await res.json(); } catch { /* 응답이 JSON이 아닐 때 (Netlify가 시간 초과로 끊음) */ }
+    // 시간 초과: AI 쪽이 늦었거나(code: timeout) Netlify가 끊음(JSON 아님)
+    const timedOut = (res.status === 504 && body?.code === 'timeout') || (!body && (res.status === 502 || res.status === 504));
+    return { res, body, timedOut };
+  };
+
+  // 처음 부탁은 준비 시간 때문에 늦을 수 있어서, 시간 초과면 한 번 더 자동으로 시도
+  let r = await once();
+  if (r.timedOut) r = await once();
+  if (r.timedOut) throw new Error('AI가 답하는 데 너무 오래 걸렸어요. 부탁을 두세 개로 나눠서 다시 해 주세요.');
+  if (!r.res.ok) throw new Error(r.body?.error || `AI 비서 오류 (${r.res.status})`);
+  return r.body;
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];

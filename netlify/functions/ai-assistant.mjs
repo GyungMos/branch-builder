@@ -23,11 +23,15 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 });
 
 class HttpError extends Error {
-  constructor(status, message) {
+  constructor(status, message, code) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
+
+// AI 답을 기다리는 최대 시간 (Netlify 함수가 끊기기 전에 멈춤)
+const AI_WAIT_MS = 8500;
 
 const str = (v) => (v === null || v === undefined ? '' : String(v));
 
@@ -235,14 +239,16 @@ async function ask({ message, model, context }) {
   if (!text) throw new HttpError(400, '부탁할 내용을 적어 주세요.');
   const modelId = MODELS[model] || MODELS.haiku;
 
-  const client = new Anthropic();
+  // Netlify 함수는 약 10초가 지나면 강제로 끊기므로, 그 전에 AI 대기를 멈추고 '시간 초과'를 알림
+  const startedAt = Date.now();
+  const client = new Anthropic({ timeout: AI_WAIT_MS, maxRetries: 0 });
   const params = {
     model: modelId,
     max_tokens: 8000,
     system: systemPrompt(context || {}),
     tools: TOOLS,
-    // 빠른 모드는 조금 더 생각, 정밀 모드는 모델이 강하니 응답 시간을 줄이려고 낮게
-    output_config: { effort: modelId === MODELS.haiku ? 'medium' : 'low' },
+    // 칸 나누기 정도의 일이라 깊이 생각할 필요가 없어서, 빨리 답하도록 둘 다 낮게
+    output_config: { effort: 'low' },
     messages: [{ role: 'user', content: text }],
   };
 
@@ -253,11 +259,18 @@ async function ask({ message, model, context }) {
       ? await client.beta.messages.create({ ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' })
       : await client.messages.create(params);
   } catch (err) {
+    if (err instanceof Anthropic.APIConnectionTimeoutError) {
+      throw new HttpError(504, 'AI 답이 늦어서 끊겼어요.', 'timeout');
+    }
     if (err instanceof Anthropic.AuthenticationError) throw new HttpError(500, 'Anthropic API 키가 맞지 않아요. Netlify의 ANTHROPIC_API_KEY를 확인해 주세요.');
-    if (err instanceof Anthropic.RateLimitError) throw new HttpError(429, 'AI 요청이 너무 많아요. 잠시 후 다시 해 주세요.');
-    if (err instanceof Anthropic.APIError) throw new HttpError(502, `AI 연결 오류 (${err.status}). 잠시 후 다시 해 주세요.`);
+    if (err instanceof Anthropic.PermissionDeniedError) throw new HttpError(500, `Anthropic 계정에서 이 모델을 쓸 수 없어요: ${str(err.message).slice(0, 200)}`);
+    if (err instanceof Anthropic.RateLimitError) throw new HttpError(429, 'AI 요청이 너무 많거나 크레딧이 부족해요. 콘솔에서 크레딧을 확인해 주세요.');
+    if (err instanceof Anthropic.BadRequestError) throw new HttpError(500, `AI 요청 형식 오류: ${str(err.message).slice(0, 300)}`);
+    if (err instanceof Anthropic.APIError) throw new HttpError(500, `AI 연결 오류 (${err.status}): ${str(err.message).slice(0, 200)}`);
+    if (err instanceof Anthropic.APIConnectionError) throw new HttpError(500, 'AI 서버에 연결하지 못했어요. 잠시 후 다시 해 주세요.');
     throw err;
   }
+  console.log(`ai-assistant ${modelId} ${Date.now() - startedAt}ms`, JSON.stringify(response.usage || {}));
 
   if (response.stop_reason === 'refusal') {
     return { proposals: [], reply: '이 부탁은 처리할 수 없어요. 문장을 바꿔서 다시 해 주세요.', model };
@@ -286,6 +299,6 @@ export default async (req) => {
     return json(await ask(body));
   } catch (e) {
     console.error('ai-assistant 오류:', e);
-    return json({ error: e.message || 'AI 비서 오류가 났어요.' }, e.status && e.status >= 400 ? e.status : 500);
+    return json({ error: e.message || 'AI 비서 오류가 났어요.', code: e.code || null }, e.status && e.status >= 400 ? e.status : 500);
   }
 };
