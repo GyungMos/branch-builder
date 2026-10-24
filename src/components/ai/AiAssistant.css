@@ -330,13 +330,11 @@
   padding: 10px 16px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 9999px;
-  background: linear-gradient(135deg, #b8a48c 0%, #7d6b5a 100%);
   color: #fff;
   font: inherit;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(110, 92, 74, 0.4);
 }
 
 .fab-ai:hover {
@@ -368,17 +366,39 @@ body:has(.modal-backdrop) .fab-ai {
   }
 }
 
-/* ===== AI 비서 창은 진한 베이지·우드 그레이 (오른쪽 아래 ✨ AI 비서 버튼과 같은 색) ===== */
+/* ===== AI 비서: 진한 돌(콘크리트) 그레이 + 결 무늬 (오른쪽 아래 ✨ AI 비서 버튼도 같은 무늬) ===== */
+.fab-ai,
 .ai-modal {
-  --color-accent: #8a7560;
-  --color-accent-subtle: rgba(160, 135, 105, 0.14);
-  --gradient-accent: linear-gradient(135deg, #b8a48c 0%, #8a7560 100%);
-  --gradient-accent-hover: linear-gradient(135deg, #a8937b 0%, #6f5e4e 100%);
-  --shadow-glow: 0 0 16px rgba(138, 117, 96, 0.35);
+  /* 고운 돌 알갱이 */
+  --stone-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.28 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  /* 비스듬한 결 (사진처럼 왼쪽 위 → 오른쪽 아래) */
+  --stone-streak: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='1000'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004 0.045' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.5 -0.12'/%3E%3C/filter%3E%3Cg transform='rotate(28 800 500)'%3E%3Crect x='-800' y='-800' width='3200' height='2600' filter='url(%23s)'/%3E%3C/g%3E%3C/svg%3E");
+  --stone-base: linear-gradient(160deg, #8e8b87 0%, #74716d 45%, #5e5b57 100%);
+  --stone: var(--stone-grain), var(--stone-streak), radial-gradient(ellipse at 22% 28%, rgba(255, 255, 255, 0.12), transparent 55%), radial-gradient(ellipse at 82% 78%, rgba(0, 0, 0, 0.16), transparent 60%), var(--stone-base);
+}
+
+.fab-ai {
+  background: var(--stone);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 8px 24px rgba(40, 38, 36, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.ai-modal {
+  --color-accent: #5f5c58;
+  --color-accent-subtle: rgba(95, 92, 88, 0.12);
+  --gradient-accent: var(--stone);
+  --gradient-accent-hover: var(--stone-grain), var(--stone-streak), linear-gradient(160deg, #7f7c78 0%, #63605c 50%, #4f4c49 100%);
+  --shadow-glow: 0 0 14px rgba(60, 58, 55, 0.35);
+}
+
+[data-theme="dark"] .ai-modal {
+  --color-accent: #b9b5b0;
+  --color-accent-subtle: rgba(185, 181, 176, 0.14);
 }
 
 [data-theme="light"] .ai-modal {
-  background: #fbf7f1;
+  background: #f4f3f1;
 }
 
 [data-theme="light"] .ai-modal .ai-card,
@@ -386,39 +406,35 @@ body:has(.modal-backdrop) .fab-ai {
   background: #ffffff;
 }
 
-/* 창 맨 위 우드 색 띠 */
-.ai-modal::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #c2ae95, #7d6b5a);
-  z-index: 1;
-}
-
-[data-theme="dark"] .ai-modal {
-  --color-accent: #c9b49a;
-  --color-accent-subtle: rgba(201, 180, 154, 0.14);
-  --gradient-accent: linear-gradient(135deg, #b8a48c 0%, #8a7560 100%);
+/* 창 머리: 돌 무늬 판 위에 흰 글씨 */
+.ai-modal .modal-header {
+  background: var(--stone);
+  border-bottom: none;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .ai-modal .modal-title {
-  background: linear-gradient(135deg, #a8937b, #6f5e4e);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-[data-theme="dark"] .ai-modal .modal-title {
-  background: linear-gradient(135deg, #e0cfb6, #bba78f);
-  -webkit-background-clip: text;
-  background-clip: text;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .ai-modal .ai-branch {
-  -webkit-text-fill-color: var(--color-text-tertiary);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.ai-modal .modal-header .modal-close {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.ai-modal .modal-header .modal-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* 보내기·반영 버튼도 돌 무늬 */
+.ai-modal .btn-primary {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), var(--shadow-sm);
 }
 
 .ai-modal .ai-input:focus,
