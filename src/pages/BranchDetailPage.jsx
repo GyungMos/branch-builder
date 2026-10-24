@@ -45,6 +45,7 @@ import OpenPlanBoard from '../components/openplan/OpenPlanBoard';
 import OpenPlanEditor from '../components/openplan/OpenPlanEditor';
 import OpenTaskTable from '../components/opentask/OpenTaskTable';
 import OpenTaskForm from '../components/opentask/OpenTaskForm';
+import AiAssistant from '../components/ai/AiAssistant';
 import ImportTasksModal from '../components/opentask/ImportTasksModal';
 import { syncToNotion, archiveNotionPage } from '../utils/notionBranchSync';
 import { OPEN_TASK_GROUPS, OPEN_TASK_CATEGORIES } from '../utils/constants';
@@ -126,6 +127,7 @@ export default function BranchDetailPage({ initialTab }) {
   const [planEditor, setPlanEditor] = useState(null); // { plan } 수정 또는 { status } 새 항목
   const [taskEditor, setTaskEditor] = useState(null); // { task } 수정 또는 { defaults } 새 항목
   const [showImportTasks, setShowImportTasks] = useState(false);
+  const [showAi, setShowAi] = useState(false);
 
   // 노션 자동 전송: 저장한 기록을 줄 세워 두었다가, 최신 내용이 화면 상태에 들어오면 보냄 (사이트 저장은 기다리지 않음)
   const [notionQueue, setNotionQueue] = useState([]);
@@ -411,6 +413,45 @@ export default function BranchDetailPage({ initialTab }) {
     archiveNotionPage(plan.notionPageId);
     addLog('plan_delete', `오픈 계획 삭제: ${plan.title}`);
     setPlanEditor(null);
+  };
+
+  // AI 비서가 제안한 내용 저장 (확인 후 [추가]를 누른 것만)
+  const handleAiSave = async (kind, v) => {
+    const isDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
+    const stageIdOf = (name) => (name ? stages.find(s => s.name === name)?.id || null : null);
+    if (kind === 'add_open_plan') {
+      const created = await addPlan({
+        title: v.title, status: v.status || 'todo', assignee1: v.assignee1 || [], assignee2: v.assignee2 || [],
+        dueDate: isDate(v.due_date) ? v.due_date : null, body: v.body || '', order: Date.now(),
+      });
+      queueNotion('plan', created?.id);
+      addLog('plan_add', `오픈 계획 추가 (AI): ${v.title}`);
+    } else if (kind === 'add_open_task') {
+      const created = await addTask({
+        title: v.title, group: v.group || '', category: v.category || '',
+        startDate: isDate(v.start_date) ? v.start_date : null,
+        endDate: isDate(v.end_date) && v.end_date >= v.start_date ? v.end_date : null,
+        done: Boolean(v.done), assignee1: v.assignee1 || [], assignee2: v.assignee2 || [], memo: v.memo || '', files: [], body: '',
+        order: Date.now(),
+      });
+      queueNotion('task', created?.id);
+      addLog('task_add', `오픈 준비 추가 (AI): ${v.title}`);
+    } else if (kind === 'add_schedule') {
+      if (!isDate(v.start_date)) throw new Error(`'${v.title}' 일정의 시작일을 YYYY-MM-DD로 적어 주세요.`);
+      const created = await addSchedule({
+        title: v.title, startDate: v.start_date, endDate: isDate(v.end_date) && v.end_date >= v.start_date ? v.end_date : v.start_date,
+        stageId: stageIdOf(v.stage), assignee: v.assignee || '', memo: v.memo || '',
+      });
+      queueNotion('schedule', created?.id);
+      addLog('schedule_add', `일정 추가 (AI): ${v.title}`);
+    } else if (kind === 'add_daily_log') {
+      if (!isDate(v.date)) throw new Error(`'${v.title}' 일지의 날짜를 YYYY-MM-DD로 적어 주세요.`);
+      await handleAddDailyLog({
+        date: v.date, title: v.title || '', summary: v.summary || v.title || '', weather: v.weather || 'sunny',
+        workersCount: Number(v.workers_count) || 0, equipmentUsed: v.equipment_used || '', issues: v.issues || '',
+        photos: [], stageId: stageIdOf(v.stage),
+      });
+    }
   };
 
   // 오픈 준비 스케줄 핸들러
@@ -825,6 +866,22 @@ export default function BranchDetailPage({ initialTab }) {
           </div>
         )}
       </div>
+
+      {/* AI 비서: 말로 부탁하면 오픈 계획·오픈 준비·일정·현장 일지에 넣을 내용을 만들어 줌 */}
+      <button type="button" className="fab-ai" onClick={() => setShowAi(true)} title="AI 비서에게 말로 부탁해서 기록 추가">
+        ✨ AI 비서
+      </button>
+      {showAi && (
+        <AiAssistant
+          branchName={branch?.name || ''}
+          people={people}
+          groups={taskGroups}
+          categories={taskCategories}
+          stages={[...stages].sort((a, b) => (a.order || 0) - (b.order || 0)).map(s => s.name)}
+          onSave={handleAiSave}
+          onClose={() => setShowAi(false)}
+        />
+      )}
 
       {/* 우측 하단 플로팅 퀵 버튼 (현장 일일 일지 즉시 작성) */}
       <button
