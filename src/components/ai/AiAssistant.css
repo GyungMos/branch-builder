@@ -291,6 +291,72 @@
   opacity: 0.6;
 }
 
+.ai-target.done {
+  border-style: dashed;
+  color: var(--color-success);
+  opacity: 0.85;
+}
+
+/* 카드 내용(본문·메모·작업 내용) 직접 고치기 */
+.ai-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.ai-text textarea {
+  min-height: 64px;
+  padding: 8px 10px;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  resize: vertical;
+}
+
+/* + 카드 추가 */
+.ai-add {
+  position: relative;
+  display: inline-block;
+}
+
+.ai-add-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  box-shadow: var(--shadow-lg);
+}
+
+.ai-examples .ai-add-menu {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+
+.ai-add-menu button {
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-add-menu button:hover {
+  background: var(--color-bg-hover);
+}
+
 /* 고치기 카드 */
 .ai-card-update {
   border-color: color-mix(in srgb, var(--color-info) 45%, var(--color-border));

@@ -154,6 +154,25 @@ function buildFor(target, kind, v) {
   return [];
 }
 
+// 카드마다 직접 고칠 수 있는 '내용' 칸
+const TEXT_FIELD = {
+  add_open_plan: ['body', '본문'],
+  add_open_task: ['memo', '비고'],
+  add_schedule: ['memo', '메모'],
+  add_daily_log: ['summary', '작업 내용'],
+};
+
+/** [+ 카드 추가]로 만드는 빈 카드 (날짜는 오늘) */
+function blankInput(kind) {
+  const { today } = todayInfo();
+  switch (kind) {
+    case 'add_open_plan': return { title: '', status: 'todo', assignee1: [], assignee2: [], due_date: '', body: '' };
+    case 'add_open_task': return { title: '', group: '', category: '', start_date: today, end_date: '', done: false, assignee1: [], assignee2: [], memo: '' };
+    case 'add_schedule': return { title: '', start_date: today, end_date: today, stage: '', assignee: '', memo: '' };
+    default: return { date: today, title: '', summary: '', weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', stage: '' };
+  }
+}
+
 /** AI가 고칠 기록을 찾을 수 있게 지점 기록을 한 줄씩 */
 function recordsForAi(records = {}, stageName) {
   const ppl = (a) => (a?.length ? `담당 ${a.join(', ')}` : '');
@@ -307,15 +326,39 @@ export default function AiAssistant({ branchName, people, groups, categories, st
   };
 
   // 넣을 곳 (처음에는 AI가 정한 곳 하나, 마지막 하나는 끌 수 없음)
+  // 이미 넣은 곳(savedTargets)은 그대로 두고, 새로 켠 곳만 다음 [반영] 때 넣음
   const targetsOf = (it) => it.targets || [it.kind];
+  const savedOf = (it) => it.savedTargets || [];
+  const pendingOf = (it) => targetsOf(it).filter(t => !savedOf(it).includes(t));
   const toggleTarget = (it, target) => {
+    if (savedOf(it).includes(target)) return;
     const cur = targetsOf(it);
     const next = cur.includes(target) ? cur.filter(t => t !== target) : [...cur, target];
     if (next.length) update(it.id, { targets: TARGETS.map(t => t.id).filter(id => next.includes(id)) });
   };
 
+  // [+ 카드 추가]: AI에게 묻지 않고 빈 카드를 직접 만들기
+  const [addMenu, setAddMenu] = useState(false);
+  const addCard = (kind) => {
+    setAddMenu(false);
+    const item = { id: `manual-${Date.now()}`, kind, input: blankInput(kind), include: true, saved: false };
+    setResult(r => (r ? { ...r, items: [...r.items, item] } : { reply: '', model: mode, items: [item] }));
+  };
+  const addCardButton = (
+    <div className="ai-add">
+      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setAddMenu(v => !v)} aria-expanded={addMenu}>+ 카드 추가</button>
+      {addMenu && (
+        <div className="ai-add-menu" role="menu">
+          {TARGETS.map(t => (
+            <button key={t.id} type="button" role="menuitem" onClick={() => addCard(t.id)}>{t.label}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   // 여러 개로 나뉜 일정 카드를 하나로 (AI에게 다시 묻지 않음)
-  const mergeable = result?.items.filter(it => it.kind === 'add_schedule' && it.include && !it.saved) || [];
+  const mergeable = result?.items.filter(it => it.kind === 'add_schedule' && it.include && !savedOf(it).length) || [];
   const mergeSchedules = () => {
     if (mergeable.length < 2) return;
     const merged = mergeScheduleInputs(mergeable.map(it => it.input));
@@ -335,8 +378,9 @@ export default function AiAssistant({ branchName, people, groups, categories, st
   };
 
   // 고칠 기록을 못 찾은 카드는 반영할 수 없으니 빼고 셈
-  const chosen = result?.items.filter(it => it.include && !it.saved
-    && (it.kind !== 'update_record' || findRecord(it.input.kind, it.input.id))) || [];
+  const chosen = result?.items.filter(it => it.include && (KIND[it.kind]
+    ? pendingOf(it).length > 0
+    : !it.saved && (it.kind !== 'update_record' || findRecord(it.input.kind, it.input.id)))) || [];
 
   const saveAll = async () => {
     if (!chosen.length) return;
@@ -349,12 +393,15 @@ export default function AiAssistant({ branchName, people, groups, categories, st
       try {
         if (!KIND[it.kind]) {
           await onSave(it.kind, it.input);
+          update(it.id, { saved: true });
         } else {
-          // 넣을 곳 여러 개: 먼저 모두 만들어 보고(날짜 없음 등 확인) 그다음 저장
-          const plan = targetsOf(it).flatMap(target => buildFor(target, it.kind, it.input).map(input => [target, input]));
+          if (!String(commonOf(it.kind, it.input).title || '').trim()) throw new Error('제목이 빈 카드가 있어요. 제목을 적어 주세요.');
+          // 아직 안 넣은 곳만: 먼저 모두 만들어 보고(날짜 없음 등 확인) 그다음 저장
+          const pending = pendingOf(it);
+          const plan = pending.flatMap(target => buildFor(target, it.kind, it.input).map(input => [target, input]));
           for (const [target, input] of plan) await onSave(target, input);
+          update(it.id, { saved: true, savedTargets: [...savedOf(it), ...pending] });
         }
-        update(it.id, { saved: true });
         n += 1;
       } catch (err) {
         problems.push(err.message);
@@ -407,6 +454,8 @@ export default function AiAssistant({ branchName, people, groups, categories, st
               {EXAMPLES.map(ex => (
                 <button key={ex} type="button" className="ai-example" onClick={() => setMessage(ex)}>{ex}</button>
               ))}
+              <p className="ai-hint">AI 없이 직접 적으려면 카드를 바로 만들 수도 있어요.</p>
+              {addCardButton}
             </div>
           )}
 
@@ -425,28 +474,34 @@ export default function AiAssistant({ branchName, people, groups, categories, st
                     {result.items.map(it => {
                       if (it.kind === 'update_record') return renderUpdateCard(it);
                       const k = KIND[it.kind] || { icon: '•', label: it.kind };
-                      const body = it.kind === 'add_open_plan' ? it.input.body : it.kind === 'add_daily_log' ? it.input.summary : it.kind === 'add_schedule' ? it.input.memo : '';
+                      const [textKey, textLabel] = TEXT_FIELD[it.kind] || [];
+                      const savedLabels = TARGETS.filter(t => savedOf(it).includes(t.id)).map(t => t.label.split(' ').slice(1).join(' '));
                       return (
-                        <li key={it.id} className={`ai-card ${it.saved ? 'saved' : ''} ${!it.include ? 'off' : ''}`}>
+                        <li key={it.id} className={`ai-card ${savedOf(it).length ? 'saved' : ''} ${!it.include ? 'off' : ''}`}>
                           <div className="ai-card-head">
                             <label className="ai-card-check">
-                              <input type="checkbox" checked={it.include} disabled={it.saved} onChange={(e) => update(it.id, { include: e.target.checked })} />
-                              <span className="ai-kind">{k.icon} {k.label}</span>
+                              <input type="checkbox" checked={it.include} onChange={(e) => update(it.id, { include: e.target.checked })} />
+                              <span className="ai-kind">{k.icon} {k.label}{it.id.startsWith('manual-') ? ' (직접 작성)' : ''}</span>
                             </label>
-                            {it.saved && <span className="ai-saved">✓ 추가함</span>}
+                            {savedLabels.length > 0 && <span className="ai-saved">✓ {savedLabels.join('·')}에 추가함</span>}
                           </div>
                           <div className="ai-targets" role="group" aria-label="넣을 곳 (여러 개 고를 수 있어요)">
                             <span className="ai-targets-label">넣을 곳</span>
                             {TARGETS.map(t => {
+                              const done = savedOf(it).includes(t.id);
                               const on = targetsOf(it).includes(t.id);
                               return (
-                                <button key={t.id} type="button" aria-pressed={on} disabled={it.saved}
-                                  className={`ai-target ${on ? 'on' : ''}`} onClick={() => toggleTarget(it, t.id)}>
-                                  {on ? '✓ ' : ''}{t.label}
+                                <button key={t.id} type="button" aria-pressed={on} disabled={done}
+                                  title={done ? '이미 넣었어요' : undefined}
+                                  className={`ai-target ${on ? 'on' : ''} ${done ? 'done' : ''}`} onClick={() => toggleTarget(it, t.id)}>
+                                  {done ? '✓ ' : on ? '✓ ' : ''}{t.label}{done ? ' (넣음)' : ''}
                                 </button>
                               );
                             })}
                           </div>
+                          {savedLabels.length > 0 && pendingOf(it).length === 0 && (
+                            <p className="ai-hint">다른 곳에도 넣으려면 위에서 더 고른 뒤 [반영]을 누르세요.</p>
+                          )}
                           <div className="ai-fields">
                             {editableFields(it.kind).map(([key, label]) => (
                               <label key={key} className={`ai-field ${key === 'title' ? 'wide' : ''}`}>
@@ -454,15 +509,20 @@ export default function AiAssistant({ branchName, people, groups, categories, st
                                 <input
                                   value={it.input[key] ?? ''}
                                   onChange={(e) => setField(it.id, key, e.target.value)}
-                                  disabled={it.saved}
-                                  placeholder={key === 'title' ? '' : 'YYYY-MM-DD'}
+                                  placeholder={key === 'title' ? '제목' : 'YYYY-MM-DD'}
                                   inputMode={key === 'title' ? undefined : 'numeric'}
                                 />
                               </label>
                             ))}
                           </div>
                           {detailText(it.kind, it.input) && <p className="ai-detail">{detailText(it.kind, it.input)}</p>}
-                          {body && <p className="ai-body-preview">{body}</p>}
+                          {textKey && (
+                            <label className="ai-text">
+                              <span>{textLabel}</span>
+                              <textarea rows={3} value={it.input[textKey] ?? ''} onChange={(e) => setField(it.id, textKey, e.target.value)}
+                                placeholder="자세한 내용 (줄마다 - 로 적으면 목록이 돼요)" />
+                            </label>
+                          )}
                         </li>
                       );
                     })}
@@ -482,6 +542,7 @@ export default function AiAssistant({ branchName, people, groups, categories, st
                     🔗 일정 {mergeable.length}개를 하나로 합치기
                   </button>
                 )}
+                {addCardButton}
                 <span className="ai-actions-spacer" />
                 {savedCount > 0 && <span className="ai-saved-msg">{savedCount}개 반영했어요</span>}
                 {result.items.length > 0 && (
