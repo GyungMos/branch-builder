@@ -82,6 +82,47 @@ export function mergeScheduleInputs(list) {
   };
 }
 
+// ---------- 일정 ↔ 현장 일지 바꿔 넣기 ----------
+const TARGETS = [
+  { id: 'schedule', label: '📅 일정' },
+  { id: 'daily_log', label: '📝 현장 일지' },
+  { id: 'both', label: '둘 다' },
+];
+const MAX_LOG_DAYS = 14;
+
+/** 카드 내용을 일정 하나로 */
+function asSchedule(kind, v) {
+  if (kind === 'add_schedule') return v;
+  return {
+    title: v.title || String(v.summary || '').split('\n')[0],
+    start_date: v.date || '',
+    end_date: v.date || '',
+    stage: v.stage || '',
+    assignee: '',
+    memo: v.summary && v.summary !== v.title ? v.summary : '',
+  };
+}
+
+/** 카드 내용을 현장 일지로 (기간이면 날짜마다 하나씩) */
+function asDailyLogs(kind, v) {
+  if (kind === 'add_daily_log') return [v];
+  const start = v.start_date;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start || '')) throw new Error(`'${v.title}'의 날짜를 YYYY-MM-DD로 적어 주세요.`);
+  const end = /^\d{4}-\d{2}-\d{2}$/.test(v.end_date || '') && v.end_date >= start ? v.end_date : start;
+  const days = [];
+  const d = new Date(`${start}T00:00:00`);
+  while (days.length < MAX_LOG_DAYS) {
+    const ymdText = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (ymdText > end) break;
+    days.push(ymdText);
+    d.setDate(d.getDate() + 1);
+  }
+  const summary = [v.title, v.memo].filter(Boolean).join('\n');
+  return days.map(date => ({
+    date, title: v.title || '', summary, weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', stage: v.stage || '',
+  }));
+}
+
 /** AI가 고칠 기록을 찾을 수 있게 지점 기록을 한 줄씩 */
 function recordsForAi(records = {}, stageName) {
   const ppl = (a) => (a?.length ? `담당 ${a.join(', ')}` : '');
@@ -265,7 +306,17 @@ export default function AiAssistant({ branchName, people, groups, categories, st
     let n = 0;
     try {
       for (const it of chosen) {
-        await onSave(it.kind, it.input);
+        const isPlace = it.kind === 'add_schedule' || it.kind === 'add_daily_log';
+        if (!isPlace) {
+          await onSave(it.kind, it.input);
+        } else {
+          // 넣을 곳: 일정 · 현장 일지 · 둘 다
+          const target = it.target || (it.kind === 'add_daily_log' ? 'daily_log' : 'schedule');
+          if (target === 'schedule' || target === 'both') await onSave('add_schedule', asSchedule(it.kind, it.input));
+          if (target === 'daily_log' || target === 'both') {
+            for (const log of asDailyLogs(it.kind, it.input)) await onSave('add_daily_log', log);
+          }
+        }
         update(it.id, { saved: true });
         n += 1;
       }
@@ -347,6 +398,20 @@ export default function AiAssistant({ branchName, people, groups, categories, st
                             </label>
                             {it.saved && <span className="ai-saved">✓ 추가함</span>}
                           </div>
+                          {(it.kind === 'add_schedule' || it.kind === 'add_daily_log') && (
+                            <div className="ai-targets" role="radiogroup" aria-label="넣을 곳">
+                              <span className="ai-targets-label">넣을 곳</span>
+                              {TARGETS.map(t => {
+                                const current = it.target || (it.kind === 'add_daily_log' ? 'daily_log' : 'schedule');
+                                return (
+                                  <button key={t.id} type="button" role="radio" aria-checked={current === t.id} disabled={it.saved}
+                                    className={`ai-target ${current === t.id ? 'on' : ''}`} onClick={() => update(it.id, { target: t.id })}>
+                                    {t.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                           <div className="ai-fields">
                             {editableFields(it.kind).map(([key, label]) => (
                               <label key={key} className={`ai-field ${key === 'title' ? 'wide' : ''}`}>

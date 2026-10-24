@@ -357,7 +357,7 @@ export function useDailyLogs(branchId) {
         id: generateId(),
         createdAt: new Date().toISOString(),
       };
-      const updated = [newLog, ...dailyLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+      const updated = [newLog, ...getLocalData(`dailyLogs_${branchId}`)].sort((a, b) => new Date(b.date) - new Date(a.date));
       setLocalData(`dailyLogs_${branchId}`, updated);
       setDailyLogs(updated);
       return { id: newLog.id };
@@ -378,7 +378,7 @@ export function useDailyLogs(branchId) {
         createdAt: new Date().toISOString(),
         _offline: true,
       };
-      const updated = [fallbackLog, ...dailyLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+      const updated = [fallbackLog, ...getLocalData(`dailyLogs_${branchId}`)].sort((a, b) => new Date(b.date) - new Date(a.date));
       setLocalData(`dailyLogs_${branchId}`, updated);
       setDailyLogs(updated);
       return { id: fallbackLog.id, fallback: true };

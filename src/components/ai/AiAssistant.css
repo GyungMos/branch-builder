@@ -252,6 +252,45 @@
   color: var(--color-success);
 }
 
+/* 넣을 곳 고르기 (일정 · 현장 일지 · 둘 다) */
+.ai-targets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.ai-targets-label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  margin-right: 2px;
+}
+
+.ai-target {
+  padding: 4px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ai-target.on {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  color: var(--color-text-primary);
+}
+
+.ai-target:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 /* 고치기 카드 */
 .ai-card-update {
   border-color: color-mix(in srgb, var(--color-info) 45%, var(--color-border));
