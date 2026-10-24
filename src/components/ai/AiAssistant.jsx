@@ -82,45 +82,76 @@ export function mergeScheduleInputs(list) {
   };
 }
 
-// ---------- 일정 ↔ 현장 일지 바꿔 넣기 ----------
+// ---------- 넣을 곳 여러 개 고르기: 같은 내용을 메뉴마다 모양에 맞게 바꿔 넣음 ----------
 const TARGETS = [
-  { id: 'schedule', label: '📅 일정' },
-  { id: 'daily_log', label: '📝 현장 일지' },
-  { id: 'both', label: '둘 다' },
+  { id: 'add_open_plan', label: '📋 오픈 계획' },
+  { id: 'add_open_task', label: '✅ 오픈 준비' },
+  { id: 'add_schedule', label: '📅 일정' },
+  { id: 'add_daily_log', label: '📝 현장 일지' },
 ];
 const MAX_LOG_DAYS = 14;
+const isYmd = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
 
-/** 카드 내용을 일정 하나로 */
-function asSchedule(kind, v) {
-  if (kind === 'add_schedule') return v;
-  return {
-    title: v.title || String(v.summary || '').split('\n')[0],
-    start_date: v.date || '',
-    end_date: v.date || '',
-    stage: v.stage || '',
-    assignee: '',
-    memo: v.summary && v.summary !== v.title ? v.summary : '',
-  };
+/** 어느 카드든 공통 모양으로: 제목 · 기간 · 담당자 · 세부 내용 */
+function commonOf(kind, v) {
+  const firstLine = (s) => String(s || '').split('\n').find(l => l.trim()) || '';
+  switch (kind) {
+    case 'add_open_plan':
+      return { title: v.title, start: v.due_date, end: v.due_date, people1: v.assignee1 || [], people2: v.assignee2 || [], text: v.body, stage: '', status: v.status };
+    case 'add_open_task':
+      return { title: v.title, start: v.start_date, end: v.end_date || v.start_date, people1: v.assignee1 || [], people2: v.assignee2 || [], text: v.memo, stage: '', group: v.group, category: v.category, done: v.done };
+    case 'add_schedule':
+      return { title: v.title, start: v.start_date, end: v.end_date || v.start_date, people1: v.assignee ? [v.assignee] : [], people2: [], text: v.memo, stage: v.stage };
+    case 'add_daily_log':
+      return { title: v.title || firstLine(v.summary), start: v.date, end: v.date, people1: [], people2: [], text: v.summary !== v.title ? v.summary : '', stage: v.stage, log: v };
+    default:
+      return { title: v.title || '', start: '', end: '', people1: [], people2: [], text: '', stage: '' };
+  }
 }
 
-/** 카드 내용을 현장 일지로 (기간이면 날짜마다 하나씩) */
-function asDailyLogs(kind, v) {
-  if (kind === 'add_daily_log') return [v];
-  const start = v.start_date;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(start || '')) throw new Error(`'${v.title}'의 날짜를 YYYY-MM-DD로 적어 주세요.`);
-  const end = /^\d{4}-\d{2}-\d{2}$/.test(v.end_date || '') && v.end_date >= start ? v.end_date : start;
-  const days = [];
-  const d = new Date(`${start}T00:00:00`);
-  while (days.length < MAX_LOG_DAYS) {
-    const ymdText = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    if (ymdText > end) break;
-    days.push(ymdText);
-    d.setDate(d.getDate() + 1);
+const needDate = (c, where) => {
+  if (!isYmd(c.start)) throw new Error(`'${c.title}'을(를) ${where}에 넣으려면 날짜가 필요해요. 카드에서 날짜를 넣어 주세요.`);
+};
+
+/** 공통 모양 → 넣을 곳에 맞는 내용 (현장 일지는 날짜마다 하나씩이라 목록) */
+function buildFor(target, kind, v) {
+  if (target === kind && target !== 'add_daily_log') return [v];
+  const c = commonOf(kind, v);
+  const end = isYmd(c.end) && c.end >= c.start ? c.end : c.start;
+  if (target === 'add_open_plan') {
+    return [{
+      title: c.title, status: c.status || (c.done ? 'done' : 'todo'), assignee1: c.people1, assignee2: c.people2,
+      due_date: isYmd(end) ? end : '', body: c.text || '',
+    }];
   }
-  const summary = [v.title, v.memo].filter(Boolean).join('\n');
-  return days.map(date => ({
-    date, title: v.title || '', summary, weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', stage: v.stage || '',
-  }));
+  if (target === 'add_open_task') {
+    return [{
+      title: c.title, group: c.group || '', category: c.category || '',
+      start_date: isYmd(c.start) ? c.start : '', end_date: isYmd(end) && end !== c.start ? end : '',
+      done: Boolean(c.done || c.status === 'done'), assignee1: c.people1, assignee2: c.people2, memo: c.text || '',
+    }];
+  }
+  if (target === 'add_schedule') {
+    needDate(c, '일정');
+    return [{ title: c.title, start_date: c.start, end_date: end, stage: c.stage || '', assignee: [...c.people1, ...c.people2].join(', '), memo: c.text || '' }];
+  }
+  if (target === 'add_daily_log') {
+    if (kind === 'add_daily_log') return [v];
+    needDate(c, '현장 일지');
+    const days = [];
+    const d = new Date(`${c.start}T00:00:00`);
+    while (days.length < MAX_LOG_DAYS) {
+      const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (day > end) break;
+      days.push(day);
+      d.setDate(d.getDate() + 1);
+    }
+    const summary = [c.title, c.text].filter(Boolean).join('\n');
+    return days.map(date => ({
+      date, title: c.title || '', summary, weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', stage: c.stage || '',
+    }));
+  }
+  return [];
 }
 
 /** AI가 고칠 기록을 찾을 수 있게 지점 기록을 한 줄씩 */
@@ -275,6 +306,14 @@ export default function AiAssistant({ branchName, people, groups, categories, st
     );
   };
 
+  // 넣을 곳 (처음에는 AI가 정한 곳 하나, 마지막 하나는 끌 수 없음)
+  const targetsOf = (it) => it.targets || [it.kind];
+  const toggleTarget = (it, target) => {
+    const cur = targetsOf(it);
+    const next = cur.includes(target) ? cur.filter(t => t !== target) : [...cur, target];
+    if (next.length) update(it.id, { targets: TARGETS.map(t => t.id).filter(id => next.includes(id)) });
+  };
+
   // 여러 개로 나뉜 일정 카드를 하나로 (AI에게 다시 묻지 않음)
   const mergeable = result?.items.filter(it => it.kind === 'add_schedule' && it.include && !it.saved) || [];
   const mergeSchedules = () => {
@@ -304,28 +343,26 @@ export default function AiAssistant({ branchName, people, groups, categories, st
     setSaving(true);
     setError('');
     let n = 0;
-    try {
-      for (const it of chosen) {
-        const isPlace = it.kind === 'add_schedule' || it.kind === 'add_daily_log';
-        if (!isPlace) {
+    const problems = [];
+    // 한 카드에 문제가 있어도 나머지 카드는 계속 저장
+    for (const it of chosen) {
+      try {
+        if (!KIND[it.kind]) {
           await onSave(it.kind, it.input);
         } else {
-          // 넣을 곳: 일정 · 현장 일지 · 둘 다
-          const target = it.target || (it.kind === 'add_daily_log' ? 'daily_log' : 'schedule');
-          if (target === 'schedule' || target === 'both') await onSave('add_schedule', asSchedule(it.kind, it.input));
-          if (target === 'daily_log' || target === 'both') {
-            for (const log of asDailyLogs(it.kind, it.input)) await onSave('add_daily_log', log);
-          }
+          // 넣을 곳 여러 개: 먼저 모두 만들어 보고(날짜 없음 등 확인) 그다음 저장
+          const plan = targetsOf(it).flatMap(target => buildFor(target, it.kind, it.input).map(input => [target, input]));
+          for (const [target, input] of plan) await onSave(target, input);
         }
         update(it.id, { saved: true });
         n += 1;
+      } catch (err) {
+        problems.push(err.message);
       }
-    } catch (err) {
-      setError(`저장 중 문제가 생겼어요: ${err.message}`);
-    } finally {
-      setSaving(false);
-      setSavedCount(c => c + n);
     }
+    if (problems.length) setError(`반영하지 못한 카드가 있어요: ${problems.join(' / ')}`);
+    setSaving(false);
+    setSavedCount(c => c + n);
   };
 
   return (
@@ -398,20 +435,18 @@ export default function AiAssistant({ branchName, people, groups, categories, st
                             </label>
                             {it.saved && <span className="ai-saved">✓ 추가함</span>}
                           </div>
-                          {(it.kind === 'add_schedule' || it.kind === 'add_daily_log') && (
-                            <div className="ai-targets" role="radiogroup" aria-label="넣을 곳">
-                              <span className="ai-targets-label">넣을 곳</span>
-                              {TARGETS.map(t => {
-                                const current = it.target || (it.kind === 'add_daily_log' ? 'daily_log' : 'schedule');
-                                return (
-                                  <button key={t.id} type="button" role="radio" aria-checked={current === t.id} disabled={it.saved}
-                                    className={`ai-target ${current === t.id ? 'on' : ''}`} onClick={() => update(it.id, { target: t.id })}>
-                                    {t.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
+                          <div className="ai-targets" role="group" aria-label="넣을 곳 (여러 개 고를 수 있어요)">
+                            <span className="ai-targets-label">넣을 곳</span>
+                            {TARGETS.map(t => {
+                              const on = targetsOf(it).includes(t.id);
+                              return (
+                                <button key={t.id} type="button" aria-pressed={on} disabled={it.saved}
+                                  className={`ai-target ${on ? 'on' : ''}`} onClick={() => toggleTarget(it, t.id)}>
+                                  {on ? '✓ ' : ''}{t.label}
+                                </button>
+                              );
+                            })}
+                          </div>
                           <div className="ai-fields">
                             {editableFields(it.kind).map(([key, label]) => (
                               <label key={key} className={`ai-field ${key === 'title' ? 'wide' : ''}`}>
