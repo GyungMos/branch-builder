@@ -330,13 +330,13 @@
   padding: 10px 16px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 9999px;
-  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  background: linear-gradient(135deg, #b8a48c 0%, #7d6b5a 100%);
   color: #fff;
   font: inherit;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.45);
+  box-shadow: 0 8px 24px rgba(110, 92, 74, 0.4);
 }
 
 .fab-ai:hover {
@@ -368,16 +368,25 @@ body:has(.modal-backdrop) .fab-ai {
   }
 }
 
-/* ===== AI 비서 창은 보라·남보라 색 (오른쪽 아래 ✨ AI 비서 버튼과 같은 색) ===== */
+/* ===== AI 비서 창은 진한 베이지·우드 그레이 (오른쪽 아래 ✨ AI 비서 버튼과 같은 색) ===== */
 .ai-modal {
-  --color-accent: #7c3aed;
-  --color-accent-subtle: rgba(124, 58, 237, 0.1);
-  --gradient-accent: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-  --gradient-accent-hover: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
-  --shadow-glow: 0 0 18px rgba(124, 58, 237, 0.35);
+  --color-accent: #8a7560;
+  --color-accent-subtle: rgba(160, 135, 105, 0.14);
+  --gradient-accent: linear-gradient(135deg, #b8a48c 0%, #8a7560 100%);
+  --gradient-accent-hover: linear-gradient(135deg, #a8937b 0%, #6f5e4e 100%);
+  --shadow-glow: 0 0 16px rgba(138, 117, 96, 0.35);
 }
 
-/* 창 맨 위 보라색 띠 */
+[data-theme="light"] .ai-modal {
+  background: #fbf7f1;
+}
+
+[data-theme="light"] .ai-modal .ai-card,
+[data-theme="light"] .ai-modal .ai-input {
+  background: #ffffff;
+}
+
+/* 창 맨 위 우드 색 띠 */
 .ai-modal::before {
   content: '';
   position: absolute;
@@ -385,24 +394,25 @@ body:has(.modal-backdrop) .fab-ai {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #8b5cf6, #6366f1);
+  background: linear-gradient(90deg, #c2ae95, #7d6b5a);
   z-index: 1;
 }
 
 [data-theme="dark"] .ai-modal {
-  --color-accent: #a78bfa;
-  --color-accent-subtle: rgba(139, 92, 246, 0.16);
+  --color-accent: #c9b49a;
+  --color-accent-subtle: rgba(201, 180, 154, 0.14);
+  --gradient-accent: linear-gradient(135deg, #b8a48c 0%, #8a7560 100%);
 }
 
 .ai-modal .modal-title {
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  background: linear-gradient(135deg, #a8937b, #6f5e4e);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 [data-theme="dark"] .ai-modal .modal-title {
-  background: linear-gradient(135deg, #c4b5fd, #a5b4fc);
+  background: linear-gradient(135deg, #e0cfb6, #bba78f);
   -webkit-background-clip: text;
   background-clip: text;
 }
@@ -424,4 +434,8 @@ body:has(.modal-backdrop) .fab-ai {
 
 .ai-modal .ai-card-update {
   border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+}
+
+.ai-modal input[type="checkbox"] {
+  accent-color: var(--color-accent);
 }
