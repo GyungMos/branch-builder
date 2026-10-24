@@ -252,6 +252,72 @@
   color: var(--color-success);
 }
 
+/* 고치기 카드 */
+.ai-card-update {
+  border-color: color-mix(in srgb, var(--color-info) 45%, var(--color-border));
+}
+
+.ai-target {
+  margin: 0 0 8px;
+  font-weight: 800;
+}
+
+.ai-changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-change {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) auto minmax(0, 1.3fr);
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+}
+
+.ai-change-field {
+  color: var(--color-text-tertiary);
+  font-weight: 700;
+}
+
+.ai-change-before {
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+  overflow-wrap: anywhere;
+}
+
+.ai-change-arrow {
+  color: var(--color-text-tertiary);
+}
+
+.ai-change-after {
+  color: var(--color-text-primary);
+}
+
+.ai-change-input {
+  padding: 6px 10px;
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 600px) {
+  .ai-change {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .ai-change-arrow {
+    display: none;
+  }
+
+  .ai-change-after,
+  .ai-change-input {
+    grid-column: 2;
+  }
+}
+
 /* 지점 화면 오른쪽 아래 AI 비서 버튼 (일지 작성 버튼 위) */
 .fab-ai {
   position: fixed;

@@ -144,7 +144,53 @@ const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'update_record',
+    description: '이미 있는 기록 하나를 고치자고 제안. 아래 "지금 있는 기록" 목록의 id를 그대로 쓰고, 바꿀 칸만 changes에 넣어. 지우기는 할 수 없음.',
+    strict: true,
+    input_schema: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', enum: ['open_plan', 'open_task', 'schedule', 'daily_log'], description: '고칠 기록의 종류' },
+        id: { type: 'string', description: '목록에 있는 기록 id (그대로 복사)' },
+        changes: {
+          type: 'array',
+          description: '바꿀 칸과 새 값. 바꾸지 않는 칸은 넣지 않음',
+          items: {
+            type: 'object',
+            properties: {
+              field: {
+                type: 'string',
+                enum: ['title', 'status', 'assignee1', 'assignee2', 'due_date', 'body_add', 'group', 'category', 'start_date', 'end_date',
+                  'done', 'memo', 'stage', 'assignee', 'date', 'summary', 'weather', 'workers_count', 'equipment_used', 'issues'],
+                description: '오픈 계획: title, status, assignee1, assignee2, due_date, body_add(본문 끝에 덧붙일 글) / 오픈 준비: title, group, category, start_date, end_date, done, assignee1, assignee2, memo / 일정: title, start_date, end_date, stage, assignee, memo, done / 현장 일지: title, date, summary, weather, workers_count, equipment_used, issues, stage',
+              },
+              value: { type: 'string', description: '새 값. 날짜는 YYYY-MM-DD, done은 true/false, status는 todo/doing/done, weather는 sunny/cloudy/rain/snow, 담당자 여럿은 쉼표로 (예: 김홍우, 진경태), 비우려면 빈 문자열' },
+            },
+            required: ['field', 'value'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['kind', 'id', 'changes'],
+      additionalProperties: false,
+    },
+  },
 ];
+
+const KIND_LABEL = { open_plan: '오픈 계획', open_task: '오픈 준비', schedule: '일정', daily_log: '현장 일지' };
+
+/** 고칠 때 찾을 수 있게 지금 있는 기록을 한 줄씩 (id | 내용) */
+function recordLines(records = {}) {
+  const lines = [];
+  Object.entries(KIND_LABEL).forEach(([kind, label]) => {
+    const items = (records[kind] || []).slice(0, 300);
+    if (!items.length) return;
+    lines.push(`[${label}] ${items.length}개`);
+    items.forEach(r => lines.push(`${str(r.id)} | ${str(r.text).slice(0, 120)}`));
+  });
+  return lines.length ? lines.join('\n') : '(없음)';
+}
 
 const list = (items) => (items?.length ? items.map(s => `- ${s}`).join('\n') : '(없음)');
 
@@ -167,6 +213,9 @@ ${list(ctx.categories)}
 단계 목록:
 ${list(ctx.stages)}
 
+지금 있는 기록 (고칠 때 여기서 찾음, 형식: id | 내용):
+${recordLines(ctx.records)}
+
 규칙:
 - 어디에 넣을지: 큰 할 일·회의록·계획은 오픈 계획, 체크해 나가는 준비 항목은 오픈 준비, 기간이 있는 공사·작업은 일정, 그날 현장에서 한 일은 현장 일지.
 - 한 문장에 여러 개를 부탁하면 도구를 여러 번 불러서 하나씩 제안해.
@@ -174,7 +223,10 @@ ${list(ctx.stages)}
 - 담당자는 명단의 이름과 맞춰 적어 (예: "홍우 씨" → 김홍우).
 - 말하지 않은 내용은 지어내지 말고 빈 값으로 둬.
 - 무엇을 넣을지 정말 알 수 없으면 도구를 부르지 말고, 무엇이 필요한지 한두 문장으로 짧게 물어봐.
-- 도구를 부른 뒤에는 무엇을 제안했는지 한 줄로 짧게 말해. 기록을 지우거나 고치는 일은 할 수 없어.`;
+- 이미 있는 기록을 바꿔 달라고 하면 update_record로 바꿀 칸만 제안해. 새로 만들지 말 것.
+- 고칠 기록이 목록에 없거나 비슷한 것이 여러 개라 하나로 정할 수 없으면, 도구를 부르지 말고 후보 제목들을 보여 주며 어느 것인지 물어봐.
+- 기록을 지우는 일은 할 수 없어. 지워 달라고 하면 화면에서 직접 지워 달라고 안내해.
+- 도구를 부른 뒤에는 무엇을 제안했는지 한 줄로 짧게 말해.`;
 }
 
 async function ask({ message, model, context }) {

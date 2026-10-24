@@ -415,6 +415,70 @@ export default function BranchDetailPage({ initialTab }) {
     setPlanEditor(null);
   };
 
+  // AI 비서가 제안한 '고치기' 적용: 바꾸라고 한 칸만 바꿈 (지우기는 하지 않음)
+  const applyAiUpdate = async ({ kind, id, changes = [] }, { isDate, stageIdOf }) => {
+    const list = { open_plan: plans, open_task: tasks, schedule: schedules, daily_log: dailyLogs }[kind] || [];
+    const rec = list.find(r => r.id === id);
+    if (!rec) throw new Error('고칠 기록을 찾지 못했어요.');
+    const names = (s) => String(s || '').split(/[,，、]/).map(x => x.trim()).filter(Boolean);
+    const day = (s) => {
+      if (!String(s || '').trim()) return null;
+      if (!isDate(s)) throw new Error(`날짜는 YYYY-MM-DD로 적어 주세요: ${s}`);
+      return s;
+    };
+    const data = {};
+    changes.forEach(({ field, value }) => {
+      const val = String(value ?? '').trim();
+      switch (field) {
+        case 'title': if (val) data.title = val; break;
+        case 'status': if (['todo', 'doing', 'done'].includes(val)) data.status = val; break;
+        case 'assignee1': data.assignee1 = names(val); break;
+        case 'assignee2': data.assignee2 = names(val); break;
+        case 'due_date': data.dueDate = day(val); break;
+        case 'body_add': if (val) data.body = `${rec.body || ''}${rec.body ? '\n' : ''}${val}`; break;
+        case 'group': data.group = val; break;
+        case 'category': data.category = val; break;
+        case 'start_date': data.startDate = day(val); break;
+        case 'end_date': data.endDate = day(val); break;
+        case 'done':
+          if (kind === 'schedule') data.status = val === 'true' ? 'completed' : 'pending';
+          else data.done = val === 'true';
+          break;
+        case 'memo': data.memo = val; break;
+        case 'stage': data.stageId = stageIdOf(val); break;
+        case 'assignee': data.assignee = val; break;
+        case 'date': if (day(val)) data.date = val; break;
+        case 'summary': if (val) data.summary = val; break;
+        case 'weather': if (['sunny', 'cloudy', 'rain', 'snow'].includes(val)) data.weather = val; break;
+        case 'workers_count': data.workersCount = Number(val) || 0; break;
+        case 'equipment_used': data.equipmentUsed = val; break;
+        case 'issues': data.issues = val; break;
+        default: break;
+      }
+    });
+    if (!Object.keys(data).length) return;
+    const title = data.title || rec.title || '';
+    if (kind === 'open_plan') {
+      await updatePlan(id, data);
+      queueNotion('plan', id);
+      addLog('plan_update', `오픈 계획 수정 (AI): ${title}`);
+    } else if (kind === 'open_task') {
+      await updateTask(id, data);
+      queueNotion('task', id);
+      addLog('task_update', `오픈 준비 수정 (AI): ${title}`);
+    } else if (kind === 'schedule') {
+      // 일정은 시작·끝 날짜가 항상 있어야 함
+      if (data.startDate === null) delete data.startDate;
+      if (data.endDate === null) data.endDate = data.startDate || toDateInputValue(rec.startDate);
+      await updateSchedule(id, data);
+      queueNotion('schedule', id);
+      addLog('schedule_update', `일정 수정 (AI): ${title}`);
+    } else if (kind === 'daily_log') {
+      // 일지 저장은 사진·추가 작업까지 통째로 다시 쓰므로 기존 내용을 함께 넘김 (사진이 지워지지 않게)
+      await handleUpdateDailyLog(id, { ...rec, ...data });
+    }
+  };
+
   // AI 비서가 제안한 내용 저장 (확인 후 [추가]를 누른 것만)
   const handleAiSave = async (kind, v) => {
     const isDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
@@ -444,6 +508,8 @@ export default function BranchDetailPage({ initialTab }) {
       });
       queueNotion('schedule', created?.id);
       addLog('schedule_add', `일정 추가 (AI): ${v.title}`);
+    } else if (kind === 'update_record') {
+      await applyAiUpdate(v, { isDate, stageIdOf });
     } else if (kind === 'add_daily_log') {
       if (!isDate(v.date)) throw new Error(`'${v.title}' 일지의 날짜를 YYYY-MM-DD로 적어 주세요.`);
       await handleAddDailyLog({
@@ -877,7 +943,8 @@ export default function BranchDetailPage({ initialTab }) {
           people={people}
           groups={taskGroups}
           categories={taskCategories}
-          stages={[...stages].sort((a, b) => (a.order || 0) - (b.order || 0)).map(s => s.name)}
+          stageList={[...stages].sort((a, b) => (a.order || 0) - (b.order || 0))}
+          records={{ plans, tasks, schedules, dailyLogs }}
           onSave={handleAiSave}
           onClose={() => setShowAi(false)}
         />

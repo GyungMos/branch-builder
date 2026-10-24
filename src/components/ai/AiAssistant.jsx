@@ -1,7 +1,67 @@
 import { useState } from 'react';
 import ModalPortal from '../common/ModalPortal';
 import { askAssistant, todayInfo } from '../../utils/aiAssistant';
+import { toDateInputValue } from '../../utils/formatters';
 import './AiAssistant.css';
+
+// ---------- 고치기(수정) ----------
+const RECORD_KIND = {
+  open_plan: { icon: '📋', label: '오픈 계획', list: 'plans' },
+  open_task: { icon: '✅', label: '오픈 준비', list: 'tasks' },
+  schedule: { icon: '📅', label: '일정', list: 'schedules' },
+  daily_log: { icon: '📝', label: '현장 일지', list: 'dailyLogs' },
+};
+
+const FIELD_LABEL = {
+  title: '제목', status: '상태', assignee1: '담당자1', assignee2: '담당자2', due_date: '종료일', body_add: '본문에 덧붙임',
+  group: '그룹', category: '구분', start_date: '시작', end_date: '끝', done: '완료', memo: '메모', stage: '단계',
+  assignee: '담당', date: '날짜', summary: '작업 내용', weather: '날씨', workers_count: '인원', equipment_used: '장비', issues: '이슈',
+};
+
+const ymd = (v) => toDateInputValue(v) || '';
+const isScheduleDone = (s) => s.status === 'completed' || s.status === 'complete';
+
+/** 고칠 기록의 지금 값 (카드에 '전'으로 보여 줌) */
+function currentValue(kind, rec, field, stageName) {
+  if (!rec) return '';
+  const join = (a) => (Array.isArray(a) ? a.join(', ') : '');
+  switch (field) {
+    case 'title': return rec.title || '';
+    case 'status': return STATUS_LABEL[rec.status] || rec.status || '';
+    case 'assignee1': return join(rec.assignee1);
+    case 'assignee2': return join(rec.assignee2);
+    case 'due_date': return ymd(rec.dueDate);
+    case 'body_add': return '';
+    case 'start_date': return ymd(rec.startDate);
+    case 'end_date': return ymd(rec.endDate);
+    case 'done': return (kind === 'schedule' ? isScheduleDone(rec) : rec.done) ? '완료' : '미완료';
+    case 'stage': return stageName(rec.stageId);
+    case 'date': return ymd(rec.date);
+    case 'weather': return WEATHER_LABEL[rec.weather] || '';
+    case 'workers_count': return rec.workersCount ? `${rec.workersCount}명` : '';
+    case 'equipment_used': return rec.equipmentUsed || '';
+    default: return rec[field] ?? '';
+  }
+}
+
+const shownValue = (field, value) => {
+  if (field === 'status') return STATUS_LABEL[value] || value;
+  if (field === 'done') return value === 'true' ? '완료' : value === 'false' ? '미완료' : value;
+  if (field === 'weather') return WEATHER_LABEL[value] || value;
+  return value;
+};
+
+/** AI가 고칠 기록을 찾을 수 있게 지점 기록을 한 줄씩 */
+function recordsForAi(records = {}, stageName) {
+  const ppl = (a) => (a?.length ? `담당 ${a.join(', ')}` : '');
+  const line = (...parts) => parts.filter(Boolean).join(' · ');
+  return {
+    open_plan: (records.plans || []).map(p => ({ id: p.id, text: line(p.title, STATUS_LABEL[p.status] || '시작 전', ymd(p.dueDate) && `종료 ${ymd(p.dueDate)}`, ppl(p.assignee1)) })),
+    open_task: (records.tasks || []).map(t => ({ id: t.id, text: line(t.title, t.group, t.done ? '완료' : '미완료', ymd(t.startDate) && `${ymd(t.startDate)}${ymd(t.endDate) ? `~${ymd(t.endDate)}` : ''}`, ppl(t.assignee1)) })),
+    schedule: (records.schedules || []).map(s => ({ id: s.id, text: line(s.title, `${ymd(s.startDate)}~${ymd(s.endDate)}`, isScheduleDone(s) && '완료', stageName(s.stageId), s.assignee && `담당 ${s.assignee}`) })),
+    daily_log: (records.dailyLogs || []).map(l => ({ id: l.id, text: line(ymd(l.date), l.title || String(l.summary || '').slice(0, 40)) })),
+  };
+}
 
 const MODES = [
   { id: 'haiku', label: '⚡ 빠른 모드', sub: 'Haiku 5.5 · 평소에' },
@@ -23,6 +83,7 @@ const EXAMPLES = [
   '오픈 준비에 공기압축기 설치, 타이어 탈착기 구입 추가해줘',
   '다음 주 월요일부터 금요일까지 마당 바닥 공구리 일정 넣어줘',
   '오늘 현장 일지: 외부 판넬 마무리, 인원 6명, 맑음',
+  "'간판 시안 확정' 종료일을 11월 10일로 바꾸고 진행 중으로 해줘",
 ];
 
 const readMode = () => {
@@ -52,7 +113,10 @@ function detailText(kind, v) {
  * AI 비서: 말로 부탁하면 오픈 계획·오픈 준비·일정·현장 일지에 넣을 내용을 제안하고, 확인 후 추가
  * onSave(kind, input) → 저장 (지점 화면의 기존 저장 방식 사용)
  */
-export default function AiAssistant({ branchName, people, groups, categories, stages, onSave, onClose }) {
+export default function AiAssistant({ branchName, people, groups, categories, stageList = [], records = {}, onSave, onClose }) {
+  const stages = stageList.map(s => s.name);
+  const stageName = (id) => stageList.find(s => s.id === id)?.name || '';
+  const findRecord = (kind, id) => (records[RECORD_KIND[kind]?.list] || []).find(r => r.id === id);
   const [mode, setMode] = useState(readMode);
   const [message, setMessage] = useState('');
   const [lastMessage, setLastMessage] = useState('');
@@ -77,7 +141,7 @@ export default function AiAssistant({ branchName, people, groups, categories, st
       const res = await askAssistant({
         message: msg,
         model: useMode,
-        context: { branchName, people, groups, categories, stages, ...todayInfo() },
+        context: { branchName, people, groups, categories, stages, records: recordsForAi(records, stageName), ...todayInfo() },
       });
       setLastMessage(msg);
       setResult({
@@ -94,8 +158,54 @@ export default function AiAssistant({ branchName, people, groups, categories, st
 
   const update = (id, patch) => setResult(r => ({ ...r, items: r.items.map(it => (it.id === id ? { ...it, ...patch } : it)) }));
   const setField = (id, key, value) => setResult(r => ({ ...r, items: r.items.map(it => (it.id === id ? { ...it, input: { ...it.input, [key]: value } } : it)) }));
+  const setChange = (id, index, value) => setResult(r => ({
+    ...r,
+    items: r.items.map(it => (it.id === id
+      ? { ...it, input: { ...it.input, changes: it.input.changes.map((c, i) => (i === index ? { ...c, value } : c)) } }
+      : it)),
+  }));
 
-  const chosen = result?.items.filter(it => it.include && !it.saved) || [];
+  /** 고치기 카드: 어느 기록의 어떤 칸이 전 → 후로 바뀌는지 */
+  const renderUpdateCard = (it) => {
+    const k = RECORD_KIND[it.input.kind] || { icon: '✏️', label: '' };
+    const rec = findRecord(it.input.kind, it.input.id);
+    if (!rec) {
+      return (
+        <li key={it.id} className="ai-card off">
+          <div className="ai-card-head"><span className="ai-kind">✏️ 고치기 · {k.label}</span></div>
+          <p className="ai-detail">고칠 기록을 찾지 못했어요. 제목을 더 정확히 말해 주세요.</p>
+        </li>
+      );
+    }
+    return (
+      <li key={it.id} className={`ai-card ai-card-update ${it.saved ? 'saved' : ''} ${!it.include ? 'off' : ''}`}>
+        <div className="ai-card-head">
+          <label className="ai-card-check">
+            <input type="checkbox" checked={it.include} disabled={it.saved} onChange={(e) => update(it.id, { include: e.target.checked })} />
+            <span className="ai-kind">✏️ 고치기 · {k.icon} {k.label}</span>
+          </label>
+          {it.saved && <span className="ai-saved">✓ 고침</span>}
+        </div>
+        <p className="ai-target">{rec.title || ymd(rec.date) || '(제목 없음)'}</p>
+        <ul className="ai-changes">
+          {it.input.changes.map((c, i) => (
+            <li key={`${c.field}-${i}`} className="ai-change">
+              <span className="ai-change-field">{FIELD_LABEL[c.field] || c.field}</span>
+              <span className="ai-change-before">{currentValue(it.input.kind, rec, c.field, stageName) || '(비어 있음)'}</span>
+              <span className="ai-change-arrow" aria-hidden="true">→</span>
+              {['status', 'done', 'weather'].includes(c.field)
+                ? <strong className="ai-change-after">{shownValue(c.field, c.value) || '(비움)'}</strong>
+                : <input className="ai-change-input" value={c.value} disabled={it.saved} onChange={(e) => setChange(it.id, i, e.target.value)} aria-label={`${FIELD_LABEL[c.field] || c.field} 새 값`} />}
+            </li>
+          ))}
+        </ul>
+      </li>
+    );
+  };
+
+  // 고칠 기록을 못 찾은 카드는 반영할 수 없으니 빼고 셈
+  const chosen = result?.items.filter(it => it.include && !it.saved
+    && (it.kind !== 'update_record' || findRecord(it.input.kind, it.input.id))) || [];
 
   const saveAll = async () => {
     if (!chosen.length) return;
@@ -171,9 +281,10 @@ export default function AiAssistant({ branchName, people, groups, categories, st
 
               {result.items.length > 0 && (
                 <>
-                  <p className="ai-hint">아래 내용으로 추가할까요? 제목과 날짜는 여기서 바로 고칠 수 있어요.</p>
+                  <p className="ai-hint">아래 내용으로 반영할까요? 새 값은 여기서 바로 고칠 수 있어요.</p>
                   <ul className="ai-cards">
                     {result.items.map(it => {
+                      if (it.kind === 'update_record') return renderUpdateCard(it);
                       const k = KIND[it.kind] || { icon: '•', label: it.kind };
                       const body = it.kind === 'add_open_plan' ? it.input.body : it.kind === 'add_daily_log' ? it.input.summary : '';
                       return (
@@ -216,10 +327,10 @@ export default function AiAssistant({ branchName, people, groups, categories, st
                   </button>
                 )}
                 <span className="ai-actions-spacer" />
-                {savedCount > 0 && <span className="ai-saved-msg">{savedCount}개 추가했어요</span>}
+                {savedCount > 0 && <span className="ai-saved-msg">{savedCount}개 반영했어요</span>}
                 {result.items.length > 0 && (
                   <button type="button" className="btn btn-primary" disabled={saving || !chosen.length} onClick={saveAll}>
-                    {saving ? '추가하는 중…' : `선택한 ${chosen.length}개 추가`}
+                    {saving ? '반영하는 중…' : `선택한 ${chosen.length}개 반영`}
                   </button>
                 )}
               </div>
