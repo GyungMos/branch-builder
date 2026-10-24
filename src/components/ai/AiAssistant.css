@@ -367,3 +367,61 @@ body:has(.modal-backdrop) .fab-ai {
     width: calc(50% - 4px);
   }
 }
+
+/* ===== AI 비서 창은 보라·남보라 색 (오른쪽 아래 ✨ AI 비서 버튼과 같은 색) ===== */
+.ai-modal {
+  --color-accent: #7c3aed;
+  --color-accent-subtle: rgba(124, 58, 237, 0.1);
+  --gradient-accent: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  --gradient-accent-hover: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  --shadow-glow: 0 0 18px rgba(124, 58, 237, 0.35);
+}
+
+/* 창 맨 위 보라색 띠 */
+.ai-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #8b5cf6, #6366f1);
+  z-index: 1;
+}
+
+[data-theme="dark"] .ai-modal {
+  --color-accent: #a78bfa;
+  --color-accent-subtle: rgba(139, 92, 246, 0.16);
+}
+
+.ai-modal .modal-title {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+[data-theme="dark"] .ai-modal .modal-title {
+  background: linear-gradient(135deg, #c4b5fd, #a5b4fc);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.ai-modal .ai-branch {
+  -webkit-text-fill-color: var(--color-text-tertiary);
+}
+
+.ai-modal .ai-input:focus,
+.ai-modal .ai-field input:focus,
+.ai-modal .ai-change-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+
+.ai-modal .ai-reply {
+  background: var(--color-accent-subtle);
+}
+
+.ai-modal .ai-card-update {
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+}
