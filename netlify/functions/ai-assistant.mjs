@@ -198,6 +198,18 @@ function recordLines(records = {}) {
 
 const list = (items) => (items?.length ? items.map(s => `- ${s}`).join('\n') : '(없음)');
 
+// AI가 '값 없음'을 "" 같은 따옴표 글자나 '없음'으로 적는 경우가 있어 빈 값으로 정리
+const EMPTY_WORDS = new Set(['""', "''", '“”', '-', '없음', '(없음)', 'none', 'null', 'N/A']);
+function cleanValue(v) {
+  if (typeof v === 'string') return EMPTY_WORDS.has(v.trim()) ? '' : v.trim();
+  if (Array.isArray(v)) return v.map(cleanValue).filter(x => x !== '');
+  if (v && typeof v === 'object') return cleanInput(v);
+  return v;
+}
+function cleanInput(input) {
+  return Object.fromEntries(Object.entries(input || {}).map(([k, v]) => [k, cleanValue(v)]));
+}
+
 function systemPrompt(ctx) {
   return `너는 자동차 정비소 지점 오픈을 관리하는 사이트의 기록 도우미야. 직원이 한국어로 부탁하면 알맞은 도구를 불러 '추가할 기록'을 제안해.
 제안은 바로 저장되지 않고, 직원이 미리보기에서 확인한 뒤 저장해.
@@ -222,7 +234,9 @@ ${recordLines(ctx.records)}
 
 규칙:
 - 어디에 넣을지: 큰 할 일·회의록·계획은 오픈 계획, 체크해 나가는 준비 항목은 오픈 준비, 기간이 있는 공사·작업은 일정, 그날 현장에서 한 일은 현장 일지.
-- 한 문장에 여러 개를 부탁하면 도구를 여러 번 불러서 하나씩 제안해.
+- 한 문장에 서로 다른 일 여러 개를 부탁하면 도구를 여러 번 불러서 하나씩 제안해.
+- 같은 날(같은 기간)에 하는 같은 종류의 작업을 여러 곳에 한다고 하면 (예: "1층 화장실 벽, 2층 화장실 벽, 2층 샤워실 벽 타일 설치") 일정은 하나로 합쳐서 제안해. 제목은 "벽 타일 설치 (1층 화장실 · 2층 화장실 · 2층 샤워실)"처럼, 메모에는 세부 장소를 줄마다 "- "로 적어. 직원이 "각각", "따로"라고 하면 그때만 나눠.
+- 값이 없으면 빈 문자열로 둬. 따옴표("")나 "없음" 같은 글자를 값으로 쓰지 마.
 - "내일", "다음 주 화요일", "11월 3일~7일" 같은 날짜는 오늘을 기준으로 YYYY-MM-DD로 바꿔. 연도를 말하지 않으면 오늘과 가장 가까운 앞날로.
 - 담당자는 명단의 이름과 맞춰 적어 (예: "홍우 씨" → 김홍우).
 - 말하지 않은 내용은 지어내지 말고 빈 값으로 둬.
@@ -280,7 +294,7 @@ async function ask({ message, model, context }) {
   let reply = '';
   for (const block of response.content) {
     if (block.type === 'tool_use' && TOOLS.some(t => t.name === block.name)) {
-      proposals.push({ kind: block.name, input: block.input });
+      proposals.push({ kind: block.name, input: cleanInput(block.input) });
     } else if (block.type === 'text') {
       reply += block.text;
     }

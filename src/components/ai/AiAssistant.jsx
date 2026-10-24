@@ -51,6 +51,37 @@ const shownValue = (field, value) => {
   return value;
 };
 
+/**
+ * 일정 여러 개를 하나로: "1층 화장실 벽 타일 설치" 등 → "벽 타일 설치 (1층 화장실 · 2층 화장실 · …)"
+ * 기간은 가장 이른 시작 ~ 가장 늦은 끝, 메모에 세부 항목
+ */
+export function mergeScheduleInputs(list) {
+  const titles = list.map(v => String(v.title || '').trim()).filter(Boolean);
+  const words = titles.map(t => t.split(/\s+/));
+  // 뒤에서부터 같은 낱말 찾기 (예: "벽 타일 설치")
+  let common = [];
+  for (let i = 1; i <= Math.min(...words.map(w => w.length)); i++) {
+    const w = words[0][words[0].length - i];
+    if (words.every(ws => ws[ws.length - i] === w)) common = [w, ...common];
+    else break;
+  }
+  const rests = words.map(ws => ws.slice(0, ws.length - common.length).join(' ')).filter(Boolean);
+  const title = common.length && rests.length === titles.length
+    ? `${common.join(' ')} (${rests.join(' · ')})`
+    : titles.join(' · ');
+  const starts = list.map(v => v.start_date).filter(Boolean).sort();
+  const ends = list.map(v => v.end_date || v.start_date).filter(Boolean).sort();
+  const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
+  return {
+    title,
+    start_date: starts[0] || '',
+    end_date: ends[ends.length - 1] || starts[0] || '',
+    stage: list.find(v => v.stage)?.stage || '',
+    assignee: uniq(list.map(v => v.assignee)).join(', '),
+    memo: [...titles.map(t => `- ${t}`), ...uniq(list.map(v => v.memo))].join('\n'),
+  };
+}
+
 /** AI가 고칠 기록을 찾을 수 있게 지점 기록을 한 줄씩 */
 function recordsForAi(records = {}, stageName) {
   const ppl = (a) => (a?.length ? `담당 ${a.join(', ')}` : '');
@@ -103,7 +134,7 @@ function detailText(kind, v) {
   const parts = {
     add_open_plan: [STATUS_LABEL[v.status], ppl(v.assignee1) && `담당 ${ppl(v.assignee1)}`, ppl(v.assignee2) && `담당2 ${ppl(v.assignee2)}`],
     add_open_task: [v.group && `그룹 ${v.group}`, v.category && `구분 ${v.category}`, v.done && '완료', ppl(v.assignee1) && `담당 ${ppl(v.assignee1)}`, ppl(v.assignee2) && `담당2 ${ppl(v.assignee2)}`, v.memo && `비고 ${v.memo}`],
-    add_schedule: [v.stage && `단계 ${v.stage}`, v.assignee && `담당 ${v.assignee}`, v.memo && `메모 ${v.memo}`],
+    add_schedule: [v.stage && `단계 ${v.stage}`, v.assignee && `담당 ${v.assignee}`],
     add_daily_log: [WEATHER_LABEL[v.weather], v.workers_count ? `인원 ${v.workers_count}명` : '', v.stage && `단계 ${v.stage}`, v.equipment_used && `장비 ${v.equipment_used}`, v.issues && `이슈 ${v.issues}`],
   }[kind] || [];
   return parts.filter(Boolean).join(' · ');
@@ -203,6 +234,26 @@ export default function AiAssistant({ branchName, people, groups, categories, st
     );
   };
 
+  // 여러 개로 나뉜 일정 카드를 하나로 (AI에게 다시 묻지 않음)
+  const mergeable = result?.items.filter(it => it.kind === 'add_schedule' && it.include && !it.saved) || [];
+  const mergeSchedules = () => {
+    if (mergeable.length < 2) return;
+    const merged = mergeScheduleInputs(mergeable.map(it => it.input));
+    const ids = new Set(mergeable.map(it => it.id));
+    setResult(r => {
+      const items = [];
+      let placed = false;
+      r.items.forEach(it => {
+        if (!ids.has(it.id)) { items.push(it); return; }
+        if (!placed) {
+          items.push({ id: `${it.id}-merged`, kind: 'add_schedule', input: merged, include: true, saved: false });
+          placed = true;
+        }
+      });
+      return { ...r, items };
+    });
+  };
+
   // 고칠 기록을 못 찾은 카드는 반영할 수 없으니 빼고 셈
   const chosen = result?.items.filter(it => it.include && !it.saved
     && (it.kind !== 'update_record' || findRecord(it.input.kind, it.input.id))) || [];
@@ -286,7 +337,7 @@ export default function AiAssistant({ branchName, people, groups, categories, st
                     {result.items.map(it => {
                       if (it.kind === 'update_record') return renderUpdateCard(it);
                       const k = KIND[it.kind] || { icon: '•', label: it.kind };
-                      const body = it.kind === 'add_open_plan' ? it.input.body : it.kind === 'add_daily_log' ? it.input.summary : '';
+                      const body = it.kind === 'add_open_plan' ? it.input.body : it.kind === 'add_daily_log' ? it.input.summary : it.kind === 'add_schedule' ? it.input.memo : '';
                       return (
                         <li key={it.id} className={`ai-card ${it.saved ? 'saved' : ''} ${!it.include ? 'off' : ''}`}>
                           <div className="ai-card-head">
@@ -324,6 +375,11 @@ export default function AiAssistant({ branchName, people, groups, categories, st
                   <button type="button" className="btn btn-secondary btn-sm" disabled={busy}
                     onClick={() => { pickMode('opus'); send(lastMessage, 'opus'); }}>
                     🧠 정밀 모드로 다시 해보기
+                  </button>
+                )}
+                {mergeable.length >= 2 && (
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={mergeSchedules}>
+                    🔗 일정 {mergeable.length}개를 하나로 합치기
                   </button>
                 )}
                 <span className="ai-actions-spacer" />
