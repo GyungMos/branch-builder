@@ -4,8 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useBranches } from '../../hooks/useFirestore';
 import { exportAllDataAsJSON, importDataFromJSON } from '../../utils/backupRestore';
-import { downloadCloudBackup, autoBackupIfDue } from '../../utils/cloudBackup';
-import { useMembers } from '../../hooks/useSettings';
+import { downloadCloudBackup } from '../../utils/cloudBackup';
 import NeonIcon from '../common/NeonIcon';
 import AlertBell from './AlertBell';
 import './Header.css';
@@ -18,14 +17,7 @@ export default function Header() {
   const location = useLocation();
   const fileInputRef = useRef(null);
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
-  const { isAdmin } = useMembers();
   const [backingUp, setBackingUp] = useState(false);
-
-  // 관리자가 열면 일주일에 한 번 전체 기록을 저장소에 자동 백업 (조용히, 실패해도 화면에는 영향 없음)
-  useEffect(() => {
-    if (demoMode || !user || !isAdmin) return;
-    autoBackupIfDue().catch(err => console.warn('자동 백업 실패:', err));
-  }, [demoMode, user, isAdmin]);
 
   // 인터넷 연결이 끊기면 위에 안내 (현장에서 저장한 내용은 연결되면 자동으로 올라감)
   useEffect(() => {

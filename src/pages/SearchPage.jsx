@@ -41,7 +41,7 @@ function buildEntries(branch, data) {
     // 예전 단계 메모의 '잘된 점' (아쉬운 점·다음 지점 메모는 '부족했던 점'으로 함께 찾음)
     if (s.lessons?.good) push('lesson', s.name, s.lessons.good);
   });
-  collectLessons({ branchId: branch.id, branchName: branch.name, dailyLogs: data.dailyLogs, stages: data.stages })
+  collectLessons({ branchId: branch.id, branchName: branch.name, dailyLogs: data.dailyLogs, stages: data.stages, shortfalls: data.shortfalls })
     .forEach(it => push('shortfall', it.text, [it.category, it.stageName, it.detail].filter(Boolean).join(' · '), it.date ? fmtDate(it.date) : it.sourceLabel));
   (data.openPlans || []).forEach(p => push('plan', p.title,
     [plainMiniDoc(p.body), ...(p.assignee1 || []), ...(p.assignee2 || [])].filter(Boolean).join(' · ').slice(0, 400), fmtDate(p.dueDate)));

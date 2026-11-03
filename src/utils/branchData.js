@@ -7,7 +7,7 @@ import { generateId, toDateInputValue } from './formatters';
 // 지점 하위 데이터 (Firestore: branches/{id}/{이름}, 로컬: bb_{이름}_{id})
 export const BRANCH_COLLECTIONS = [
   'stages', 'schedules', 'costs', 'documents', 'dailyLogs', 'partners', 'equipments', 'compliance',
-  'openPlans', 'openTasks', 'defects',
+  'openPlans', 'openTasks', 'defects', 'shortfalls',
 ];
 
 function readLocal(key, fallback = []) {

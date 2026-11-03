@@ -15,7 +15,7 @@ export const TRASH_DAYS = 30;
 const COLLECTION_LABEL = {
   stages: '단계', schedules: '일정', costs: '비용', documents: '서류·사진', dailyLogs: '현장 일지',
   partners: '협력업체', equipments: '장비', compliance: '인허가 항목', openPlans: '오픈 계획', openTasks: '오픈 준비',
-  defects: '하자·A/S',
+  defects: '하자·A/S', shortfalls: '부족했던 점',
 };
 export const trashLabel = (coll) => COLLECTION_LABEL[coll] || coll;
 

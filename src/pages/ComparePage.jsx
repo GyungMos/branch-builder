@@ -40,10 +40,10 @@ export default function ComparePage() {
       setLoading(true);
       const result = {};
       await Promise.all(branches.map(async b => {
-        const data = await loadBranchData(b.id, demoMode, ['stages', 'schedules', 'costs', 'dailyLogs']);
+        const data = await loadBranchData(b.id, demoMode, ['stages', 'schedules', 'costs', 'dailyLogs', 'shortfalls']);
         result[b.id] = {
           ...computeBranchStageStats(data),
-          shortfalls: collectLessons({ branchId: b.id, branchName: b.name, dailyLogs: data.dailyLogs, stages: data.stages }),
+          shortfalls: collectLessons({ branchId: b.id, branchName: b.name, dailyLogs: data.dailyLogs, stages: data.stages, shortfalls: data.shortfalls }),
         };
       }));
       if (!cancelled) {

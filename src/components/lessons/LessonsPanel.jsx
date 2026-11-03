@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { groupByStage, SHORTFALL_CATEGORIES } from '../../utils/lessons';
 import { formatDateShort } from '../../utils/formatters';
 import ShortfallTitle from './ShortfallTitle';
+import ShortfallForm from './ShortfallForm';
+import '../defect/DefectList.css';
 import './Lessons.css';
 
 const sourceText = (it, withBranch) => [withBranch && it.branchName, it.date ? formatDateShort(it.date) : it.sourceLabel].filter(Boolean).join(' · ');
 
 /** 항목 하나: [적용했어요] 체크 + 어떻게 적용했는지 메모 (칸을 벗어나면 저장) */
-function LessonItem({ item, checked, note, withBranch, added, onToggle, onSaveNote, onAddTask }) {
+function LessonItem({ item, checked, note, withBranch, added, onToggle, onSaveNote, onAddTask, onEdit }) {
   const [draft, setDraft] = useState(note || '');
   const [open, setOpen] = useState(Boolean(note));
   useEffect(() => { setDraft(note || ''); }, [note]);
@@ -37,6 +39,11 @@ function LessonItem({ item, checked, note, withBranch, added, onToggle, onSaveNo
         {!open && !note && (
           <button type="button" className="lessons-note-btn" onClick={() => setOpen(true)}>+ 적용 내용 적기</button>
         )}
+        {onEdit && (
+          <button type="button" className="lessons-note-btn" onClick={() => onEdit(item)}>
+            ✎ {item.source === 'log' ? '일지에서 고치기' : '고치기'}
+          </button>
+        )}
       </div>
       {(open || note) && (
         <textarea
@@ -59,8 +66,17 @@ function LessonItem({ item, checked, note, withBranch, added, onToggle, onSaveNo
  * - 이 지점에서 나온 부족했던 점: 현장 일지 '부족했던 점' 칸에서 자동으로 모임 (예전 단계별 메모도 함께)
  * 항목마다 [적용했어요] 체크와 적용 내용 메모 (지점마다 따로 기억), 분야별로 골라 보기
  */
-export default function LessonsPanel({ previous, previousLoading, mine, checks = {}, notes = {}, stageOrder = [], currentStage, addedToTasks = new Set(), onToggleCheck, onSaveNote, onWriteLog, onAddTask }) {
+export default function LessonsPanel({
+  previous, previousLoading, mine, checks = {}, notes = {}, stageOrder = [], currentStage, addedToTasks = new Set(),
+  stages = [], defaultStageId = '', records = [], onToggleCheck, onSaveNote, onWriteLog, onAddTask, onSaveRecord, onDeleteRecord, onEditLog,
+}) {
   const [onlyOpen, setOnlyOpen] = useState(true);
+  const [form, setForm] = useState(null); // { record } 고치기 · {} 새로 적기
+  // 이 지점 항목 고치기: 메뉴에서 적은 것은 바로, 일지에서 온 것은 그 일지를 엶
+  const editMine = (it) => {
+    if (it.source === 'direct') setForm({ record: records.find(r => r.id === it.recordId) });
+    else if (it.source === 'log') onEditLog?.(it.logId);
+  };
   const [category, setCategory] = useState('');
   // 방금 체크한 항목은 바로 사라지지 않게 (이어서 적용 내용을 적을 수 있도록)
   const [justChecked, setJustChecked] = useState(() => new Set());
@@ -82,7 +98,8 @@ export default function LessonsPanel({ previous, previousLoading, mine, checks =
 
   const renderItem = (it, withBranch) => (
     <LessonItem key={it.key} item={it} checked={Boolean(checks[it.key])} note={notes[it.key]} withBranch={withBranch}
-      added={addedToTasks.has(it.key)} onToggle={toggle} onSaveNote={onSaveNote} onAddTask={withBranch ? onAddTask : null} />
+      added={addedToTasks.has(it.key)} onToggle={toggle} onSaveNote={onSaveNote} onAddTask={withBranch ? onAddTask : null}
+      onEdit={!withBranch && it.source !== 'stage' ? editMine : null} />
   );
 
   return (
@@ -90,9 +107,12 @@ export default function LessonsPanel({ previous, previousLoading, mine, checks =
       <div className="tab-header lessons-head">
         <div>
           <h3>⚠ 부족했던 점</h3>
-          <p className="lessons-help">현장 일지의 '부족했던 점' 칸에 적은 내용이 자동으로 모여요. 항목마다 실제로 적용했는지 체크하고, 어떻게 적용했는지 적어 둘 수 있어요. 이전 지점 것은 '오픈 준비'에 할 일로 바로 넣을 수 있어요.</p>
+          <p className="lessons-help">여기서 바로 적거나, 현장 일지의 '부족했던 점' 칸에 적으면 자동으로 모여요. 항목마다 실제로 적용했는지 체크하고, 어떻게 적용했는지 적어 둘 수 있어요. 이전 지점 것은 '오픈 준비'에 할 일로 바로 넣을 수 있어요.</p>
         </div>
-        {onWriteLog && <button type="button" className="btn btn-primary btn-sm" onClick={onWriteLog}>+ 일지에 적기</button>}
+        <div className="lessons-head-actions">
+          {onSaveRecord && <button type="button" className="btn btn-primary btn-sm" onClick={() => setForm({})}>+ 부족했던 점 추가</button>}
+          {onWriteLog && <button type="button" className="btn btn-secondary btn-sm" onClick={onWriteLog}>+ 일지에 적기</button>}
+        </div>
       </div>
 
       {(usedCategories.length > 0) && (
@@ -139,7 +159,7 @@ export default function LessonsPanel({ previous, previousLoading, mine, checks =
           <span className="lessons-count">{mineShown.length}개 · 다시 적용 {myApplied}개</span>
         </header>
         {mineShown.length === 0 ? (
-          <p className="lessons-empty">{category ? '이 분야에는 아직 없어요.' : "현장 일지를 쓸 때 '부족했던 점 · 미리 챙겼어야 할 것' 칸에 적으면 여기에 모여요."}</p>
+          <p className="lessons-empty">{category ? '이 분야에는 아직 없어요.' : "'+ 부족했던 점 추가'로 바로 적거나, 현장 일지의 '부족했던 점' 칸에 적으면 여기에 모여요."}</p>
         ) : (
           myGroups.map(g => (
             <div key={g.name} className="lessons-group">
@@ -149,6 +169,17 @@ export default function LessonsPanel({ previous, previousLoading, mine, checks =
           ))
         )}
       </section>
+
+      {form && (
+        <ShortfallForm
+          record={form.record}
+          stages={stages}
+          defaultStageId={defaultStageId}
+          onSave={(data) => onSaveRecord(form.record?.id, data)}
+          onDelete={onDeleteRecord}
+          onClose={() => setForm(null)}
+        />
+      )}
     </div>
   );
 }

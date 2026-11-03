@@ -307,3 +307,10 @@
   font-weight: 700;
   color: var(--color-success);
 }
+
+.lessons-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}

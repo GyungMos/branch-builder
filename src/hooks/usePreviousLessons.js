@@ -21,8 +21,8 @@ export function usePreviousLessons(branches = [], currentBranchId) {
       const all = [];
       for (const b of others) {
         try {
-          const data = await loadBranchData(b.id, demoMode, ['dailyLogs', 'stages']);
-          all.push(...collectLessons({ branchId: b.id, branchName: b.name, dailyLogs: data.dailyLogs, stages: data.stages }));
+          const data = await loadBranchData(b.id, demoMode, ['dailyLogs', 'stages', 'shortfalls']);
+          all.push(...collectLessons({ branchId: b.id, branchName: b.name, dailyLogs: data.dailyLogs, stages: data.stages, shortfalls: data.shortfalls }));
         } catch (err) {
           console.warn(`${b.name} 부족했던 점 불러오기 실패:`, err);
         }

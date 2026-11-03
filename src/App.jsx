@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PeopleProvider } from './contexts/PeopleContext';
-import Header from './components/layout/Header';
+import AppChrome from './components/layout/AppChrome';
+import { BranchNavProvider } from './contexts/BranchNavContext';
 import MobileNav from './components/layout/MobileNav';
 
 // 화면별로 나눠서 필요할 때만 내려받음 (첫 접속 시 받는 양을 줄여 빨리 뜨게)
@@ -63,7 +64,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <>
-              <Header />
+              <AppChrome />
               <BranchListPage />
               <MobileNav />
             </>
@@ -75,7 +76,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <>
-              <Header />
+              <AppChrome />
               <DashboardPage />
               <MobileNav />
             </>
@@ -87,7 +88,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <>
-              <Header />
+              <AppChrome />
               <SettingsPage />
               <MobileNav />
             </>
@@ -99,7 +100,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <>
-              <Header />
+              <AppChrome />
               <SearchPage />
               <MobileNav />
             </>
@@ -111,7 +112,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <>
-              <Header />
+              <AppChrome />
               <ComparePage />
               <MobileNav />
             </>
@@ -123,7 +124,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <>
-              <Header />
+              <AppChrome />
               <BranchReportPage />
             </>
           </ProtectedRoute>
@@ -134,7 +135,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <>
-              <Header />
+              <AppChrome />
               <BranchDetailPage />
             </>
           </ProtectedRoute>
@@ -145,7 +146,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <>
-              <Header />
+              <AppChrome />
               <BranchDetailPage initialTab="timeline" />
             </>
           </ProtectedRoute>
@@ -163,7 +164,9 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <PeopleProvider>
-            <AppRoutes />
+            <BranchNavProvider>
+              <AppRoutes />
+            </BranchNavProvider>
           </PeopleProvider>
         </AuthProvider>
       </ThemeProvider>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -18,7 +18,7 @@ import NeonIcon from '../components/common/NeonIcon';
 import BranchForm from '../components/branch/BranchForm';
 import StageBook from '../components/branch/StageBook';
 import CopyBranchModal from '../components/branch/CopyBranchModal';
-import BranchTabBar from '../components/branch/BranchTabBar';
+import { useBranchNav } from '../contexts/BranchNavContext';
 import { BRANCH_TABS } from '../constants/branchTabs';
 import { openDday, schedulesAfterOpen } from '../utils/openDate';
 import Timeline from '../components/schedule/Timeline';
@@ -67,21 +67,30 @@ export default function BranchDetailPage({ initialTab }) {
   const { branchId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // URL 경로 또는 파라미터 기반 초기 탭 결정
   const getInitialTab = () => {
-    if (initialTab) return initialTab;
-    if (location.pathname.endsWith('/timeline')) return 'timeline';
     const queryTab = searchParams.get('tab');
     if (queryTab === 'overview') return 'stages'; // 예전 주소 호환
-    if (queryTab && !BRANCH_TABS.some(t => t.id === queryTab)) return 'stages';
-    if (queryTab) return queryTab;
+    if (queryTab === 'schedule-log') return 'dailylog';
+    if (queryTab && BRANCH_TABS.some(t => t.id === queryTab)) return queryTab;
+    if (initialTab) return initialTab;
+    if (location.pathname.endsWith('/timeline')) return 'timeline';
     return 'stages';
   };
 
   const [branch, setBranch] = useState(null);
-  const [activeTab, setActiveTab] = useState(getInitialTab);
+  // 지금 메뉴는 주소(?tab=)에 담아 둠 → 왼쪽 전체 메뉴에서 눌러도, 새로 고침해도 같은 메뉴
+  const activeTab = getInitialTab();
+  const setActiveTab = useCallback((tab) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tab);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+  const { setCounts } = useBranchNav();
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [showCostForm, setShowCostForm] = useState(false);
   const [showDailyLogForm, setShowDailyLogForm] = useState(false);
@@ -137,6 +146,8 @@ export default function BranchDetailPage({ initialTab }) {
   const { items: plans, add: addPlan, update: updatePlan, remove: removePlan } = useSubcollection(branchId, 'openPlans');
   const { items: tasks, add: addTask, update: updateTask, remove: removeTask } = useSubcollection(branchId, 'openTasks');
   const { items: defects, add: addDefect, update: updateDefect, remove: removeDefect } = useSubcollection(branchId, 'defects');
+  const { items: shortfallRecords, add: addShortfall, update: updateShortfall, remove: removeShortfall } = useSubcollection(branchId, 'shortfalls');
+  const [editingLogFromLessons, setEditingLogFromLessons] = useState(null); // '부족했던 점' 메뉴에서 일지 고치기
   const { names: people } = usePeople();
   const canDelete = useCanDelete();
   const [planEditor, setPlanEditor] = useState(null); // { plan } 수정 또는 { status } 새 항목
@@ -184,10 +195,16 @@ export default function BranchDetailPage({ initialTab }) {
   const stageOrder = [...stages].sort((a, b) => (a.order || 0) - (b.order || 0)).map(s => s.name);
   const currentStageName = ([...stages].sort((a, b) => (a.order || 0) - (b.order || 0))
     .find(s => s.status === 'progress') || [...stages].sort((a, b) => (a.order || 0) - (b.order || 0)).find(s => s.status === 'waiting'))?.name || '';
-  const myLessons = collectLessons({ branchId, branchName: branch?.name || '', dailyLogs, stages });
+  const myLessons = collectLessons({ branchId, branchName: branch?.name || '', dailyLogs, stages, shortfalls: shortfallRecords });
   const { items: previousLessons, loading: previousLessonsLoading } = usePreviousLessons(branches, branchId);
   const lessonChecks = branch?.lessonChecks || {};
   // [적용했어요] 체크는 지점마다 따로 기억 (이 지점 기록에 저장)
+  const lessonsOpenCount = previousLessons.filter(it => !lessonChecks[it.key]).length;
+  const defectsOpenCount = defects.filter(d => d.status !== 'done').length;
+  useEffect(() => {
+    setCounts({ lessons: lessonsOpenCount, defects: defectsOpenCount });
+  }, [lessonsOpenCount, defectsOpenCount, setCounts]);
+  useEffect(() => () => setCounts({}), [setCounts]);
   const toggleLessonCheck = async (key) => {
     const next = { ...lessonChecks };
     if (next[key]) delete next[key];
@@ -636,6 +653,24 @@ export default function BranchDetailPage({ initialTab }) {
     addLog('defect_delete', `하자 삭제: ${d.title}`);
     return true;
   };
+  // '부족했던 점' 메뉴에서 바로 적기·고치기·지우기
+  const handleSaveShortfall = async (id, data) => {
+    if (id) {
+      await updateShortfall(id, data);
+      addLog('shortfall_update', `부족했던 점 수정: ${data.title}`);
+    } else {
+      await addShortfall(data);
+      addLog('shortfall_add', `부족했던 점 추가: ${data.title}`);
+    }
+  };
+  const handleDeleteShortfall = async (id) => {
+    if (denyDelete()) return false;
+    const rec = shortfallRecords.find(r => r.id === id);
+    if (!window.confirm(`'${rec?.title || ''}'을(를) 지울까요? 휴지통에 30일 동안 보관돼요.`)) return false;
+    await removeShortfall(id);
+    addLog('shortfall_delete', `부족했던 점 삭제: ${rec?.title || ''}`);
+    return true;
+  };
   const handleImportTasks = async (items) => {
     const base = Date.now();
     for (const [i, item] of items.entries()) {
@@ -650,12 +685,6 @@ export default function BranchDetailPage({ initialTab }) {
   const handleUpdateBudget = async (newBudget) => {
     await updateBudget(newBudget);
     addLog('budget_update', `목표 예산 변경: ${newBudget.totalBudget}원`);
-  };
-
-  // 왼쪽 메뉴 옆 숫자: 아직 적용 안 한 이전 지점 부족했던 점
-  const tabCounts = {
-    lessons: previousLessons.filter(it => !lessonChecks[it.key]).length,
-    defects: defects.filter(d => d.status !== 'done').length,
   };
 
   // 원형 프로그레스 계산 (반경 22, 둘레 138.2)
@@ -815,11 +844,7 @@ export default function BranchDetailPage({ initialTab }) {
         </div>
       </div>
 
-      {/* PC: 왼쪽 메뉴 목록 + 오른쪽 내용 (휴대폰은 아래 메뉴 막대) */}
-      <div className="branch-body">
-      <BranchTabBar activeTab={activeTab} onChange={setActiveTab} counts={tabCounts} />
-
-      {/* 탭 내용 영역 */}
+      {/* 탭 내용 영역 (메뉴는 PC 왼쪽 전체 메뉴 · 휴대폰 아래 막대) */}
       <div className="branch-tab-content animate-fade-in" key={activeTab}>
         {/* 0. 점포별 건축 통합 타임라인 피드 */}
         {activeTab === 'timeline' && (
@@ -1057,6 +1082,12 @@ export default function BranchDetailPage({ initialTab }) {
             previous={previousLessons}
             previousLoading={previousLessonsLoading}
             mine={myLessons}
+            stages={[...stages].sort((a, b) => (a.order || 0) - (b.order || 0))}
+            defaultStageId={currentStageId}
+            records={shortfallRecords}
+            onSaveRecord={handleSaveShortfall}
+            onDeleteRecord={handleDeleteShortfall}
+            onEditLog={(logId) => setEditingLogFromLessons(dailyLogs.find(l => l.id === logId) || null)}
             checks={lessonChecks}
             stageOrder={stageOrder}
             currentStage={currentStageName}
@@ -1086,7 +1117,6 @@ export default function BranchDetailPage({ initialTab }) {
             <ActivityLog logs={logs} />
           </div>
         )}
-      </div>
       </div>
 
       {showLessonsPopup && (
@@ -1118,6 +1148,18 @@ export default function BranchDetailPage({ initialTab }) {
           onClose={() => setShowAi(false)}
         />
       )}
+
+      {/* 오른쪽 아래 일지 작성 버튼: 어느 메뉴에서든 바로 현장 일지 작성 (PC·휴대폰) */}
+      <button
+        type="button"
+        className="fab-daily-log"
+        onClick={() => setShowDailyLogForm(true)}
+        title="현장 일지 바로 작성"
+        id="fab-quick-daily-log"
+      >
+        <NeonIcon name="log" size="sm" color="cyan" badge={false} />
+        <span className="fab-text">+ 일지 작성</span>
+      </button>
 
       {/* 모바일 하단 네비게이션 */}
       <MobileNav activeTab={activeTab} onTabChange={setActiveTab} />
@@ -1208,6 +1250,20 @@ export default function BranchDetailPage({ initialTab }) {
           defaultRequiredDoc={formRequiredDoc}
           onUpload={handleUploadDocument}
           onClose={() => { setShowDocUpload(false); setFormStageId(''); setFormRequiredDoc(''); }}
+        />
+      )}
+
+      {editingLogFromLessons && (
+        <DailyLogForm
+          branchId={branchId}
+          stages={stages}
+          initialData={editingLogFromLessons}
+          openShortfalls
+          onSubmit={async (data) => {
+            await handleUpdateDailyLog(editingLogFromLessons.id, data);
+            setEditingLogFromLessons(null);
+          }}
+          onClose={() => setEditingLogFromLessons(null)}
         />
       )}
 

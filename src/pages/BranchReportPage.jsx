@@ -133,7 +133,10 @@ export default function BranchReportPage() {
         const lessons = st?.lessons || {};
         const hasLessons = Object.keys(LESSON_LABELS).some(k => lessons[k]);
         // 이 단계 현장 일지의 '부족했던 점' (보고서에는 상세 내용까지)
-        const shortfalls = g.logs.flatMap(l => shortfallItemsOf(l).map(it => ({ ...it, when: l.when })));
+        const shortfalls = [
+          ...g.logs.flatMap(l => shortfallItemsOf(l).map(it => ({ ...it, when: l.when }))),
+          ...(data.shortfalls || []).filter(r => (st ? r.stageId === st.id : !r.stageId)).map(r => ({ ...r, when: r.date ? new Date(`${r.date}T00:00:00`) : null })),
+        ];
         const reqDocs = st ? requiredDocStatus(st, g.documents) : [];
         return (
           <section key={st?.id || 'unlinked'} className="report-section">

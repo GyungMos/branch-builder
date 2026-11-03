@@ -61,11 +61,28 @@ function hash(text = '') {
 
 /**
  * 한 지점의 부족했던 점 목록
- * { key, text(제목), detail(상세 내용), stageName, date, source: 'log' | 'stage', logId?, branchId, branchName }
+ * { key, text(제목), detail(상세 내용), stageName, date, source: 'log' | 'direct' | 'stage', logId?, recordId?, branchId, branchName }
+ * - shortfalls: '부족했던 점' 메뉴에서 바로 적은 것 (branches/{id}/shortfalls)
  */
-export function collectLessons({ branchId, branchName, dailyLogs = [], stages = [] }) {
+export function collectLessons({ branchId, branchName, dailyLogs = [], stages = [], shortfalls = [] }) {
   const stageName = (id) => stages.find(s => s.id === id)?.name || '';
   const out = [];
+  (shortfalls || []).forEach(rec => {
+    const [it] = cleanShortfallItems([rec]);
+    if (!it) return;
+    out.push({
+      key: `${branchId}:direct:${rec.id}`, // 기록 번호로 기억 → 제목을 고쳐도 체크·메모가 그대로 남음
+      text: it.title,
+      detail: it.detail,
+      category: it.category || '',
+      stageName: stageName(rec.stageId),
+      date: toDateInputValue(rec.date) || '',
+      source: 'direct',
+      recordId: rec.id,
+      branchId,
+      branchName,
+    });
+  });
   dailyLogs.forEach(log => {
     shortfallItemsOf(log).forEach(({ title: text, detail, category = '' }) => {
       out.push({

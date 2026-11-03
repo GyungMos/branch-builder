@@ -203,18 +203,6 @@ export default function DailyLogList({
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => {
-            setEditingLog(null);
-            if (onWriteNew) onWriteNew();
-            else setShowForm(true);
-          }}
-          id="btn-new-daily-log"
-        >
-          + 오늘 일지 작성
-        </button>
       </div>
 
       {/* 일지 목록 피드 */}
@@ -516,7 +504,7 @@ export default function DailyLogList({
           <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)', marginBottom: 'var(--space-md)' }}>
             현장 작업 내용, 투입 인원, 자재 입고 이슈를 날짜별로 기록해 두면 사후 공정 분석에 매우 유용합니다.
           </p>
-          <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>
+          <button className="btn btn-primary btn-sm" onClick={() => (onWriteNew ? onWriteNew() : setShowForm(true))}>
             <span>+</span> 첫 현장 일지 작성하기
           </button>
         </div>

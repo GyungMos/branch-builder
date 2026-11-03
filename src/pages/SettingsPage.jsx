@@ -11,7 +11,7 @@ import { callNotion } from '../utils/notionSync';
 import { loadBranchData } from '../utils/branchData';
 import { syncBranchAll } from '../utils/notionBranchSync';
 import { readNotionBundle, importNotionBundle } from '../utils/notionImport';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import './SettingsPage.css';
 import TrashSection from '../components/settings/TrashSection';
 import BackupSection from '../components/settings/BackupSection';
@@ -514,7 +514,10 @@ const TABS = [
 
 export default function SettingsPage() {
   const members = useMembers();
-  const [tab, setTab] = useState('people');
+  // 왼쪽 메뉴의 '휴지통'·'자동 백업'은 주소(?tab=)로 바로 열림
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') || 'people';
+  const setTab = (t) => setParams({ tab: t }, { replace: true });
 
   if (members.loading) {
     return <div className="loading-overlay"><div className="spinner spinner-lg" /></div>;

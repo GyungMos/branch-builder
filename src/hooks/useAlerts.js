@@ -32,14 +32,14 @@ export function useAlerts() {
       const lists = { schedules: [], costs: [], openTasks: [], openPlans: [], defects: [] };
       const withLessons = [];
       for (const b of branches) {
-        const data = await loadBranchData(b.id, demoMode, [...Object.keys(lists), 'stages', 'dailyLogs']);
+        const data = await loadBranchData(b.id, demoMode, [...Object.keys(lists), 'stages', 'dailyLogs', 'shortfalls']);
         Object.keys(lists).forEach(n => {
           (data[n] || []).forEach(r => lists[n].push({ ...r, branchId: b.id, branchName: b.name }));
         });
         withLessons.push({
           ...b,
           stages: data.stages || [],
-          lessons: collectLessons({ branchId: b.id, branchName: b.name, dailyLogs: data.dailyLogs, stages: data.stages }),
+          lessons: collectLessons({ branchId: b.id, branchName: b.name, dailyLogs: data.dailyLogs, stages: data.stages, shortfalls: data.shortfalls }),
         });
       }
       const items = buildAlerts(lists, { days: ALERT_DAYS });
