@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -46,10 +46,19 @@ import OpenPlanEditor from '../components/openplan/OpenPlanEditor';
 import OpenTaskTable from '../components/opentask/OpenTaskTable';
 import OpenTaskForm from '../components/opentask/OpenTaskForm';
 import AiAssistant from '../components/ai/AiAssistant';
+import LessonsPanel from '../components/lessons/LessonsPanel';
+import LessonsPopup from '../components/lessons/LessonsPopup';
+import { usePreviousLessons } from '../hooks/usePreviousLessons';
+import { collectLessons } from '../utils/lessons';
 import ImportTasksModal from '../components/opentask/ImportTasksModal';
 import { syncToNotion, archiveNotionPage } from '../utils/notionBranchSync';
 import { OPEN_TASK_GROUPS, OPEN_TASK_CATEGORIES } from '../utils/constants';
 import './BranchDetailPage.css';
+
+const todayYmd = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 export default function BranchDetailPage({ initialTab }) {
   const { branchId } = useParams();
@@ -128,6 +137,8 @@ export default function BranchDetailPage({ initialTab }) {
   const [taskEditor, setTaskEditor] = useState(null); // { task } 수정 또는 { defaults } 새 항목
   const [showImportTasks, setShowImportTasks] = useState(false);
   const [showAi, setShowAi] = useState(false);
+  const [showLessonsPopup, setShowLessonsPopup] = useState(false);
+  const lessonsPopupChecked = useRef(false);
 
   // 노션 자동 전송: 저장한 기록을 줄 세워 두었다가, 최신 내용이 화면 상태에 들어오면 보냄 (사이트 저장은 기다리지 않음)
   const [notionQueue, setNotionQueue] = useState([]);
@@ -162,6 +173,38 @@ export default function BranchDetailPage({ initialTab }) {
     });
     return unsubscribe;
   }, [branchId, navigate, demoMode, branches]);
+
+  // ----- 부족했던 점: 이 지점(일지·단계 메모에서 자동으로 모임) · 이전 지점들 -----
+  const stageOrder = [...stages].sort((a, b) => (a.order || 0) - (b.order || 0)).map(s => s.name);
+  const currentStageName = ([...stages].sort((a, b) => (a.order || 0) - (b.order || 0))
+    .find(s => s.status === 'progress') || [...stages].sort((a, b) => (a.order || 0) - (b.order || 0)).find(s => s.status === 'waiting'))?.name || '';
+  const myLessons = collectLessons({ branchId, branchName: branch?.name || '', dailyLogs, stages });
+  const { items: previousLessons, loading: previousLessonsLoading } = usePreviousLessons(branches, branchId);
+  const lessonChecks = branch?.lessonChecks || {};
+  // [적용했어요] 체크는 지점마다 따로 기억 (이 지점 기록에 저장)
+  const toggleLessonCheck = async (key) => {
+    const next = { ...lessonChecks };
+    if (next[key]) delete next[key];
+    else next[key] = true;
+    await updateBranch(branchId, { lessonChecks: next });
+  };
+  // 어떻게 적용했는지 메모 (지점마다 따로, 빈 칸이면 지움)
+  const lessonNotes = branch?.lessonNotes || {};
+  const saveLessonNote = async (key, text) => {
+    const next = { ...lessonNotes };
+    if (text) next[key] = text;
+    else delete next[key];
+    await updateBranch(branchId, { lessonNotes: next });
+  };
+  // 지점을 열면 아직 안 챙긴 '이전 지점에서 부족했던 점'을 한 번 알려 줌 ('오늘은 그만 보기'면 그날은 안 띄움)
+  useEffect(() => {
+    if (lessonsPopupChecked.current || previousLessonsLoading || !branch) return;
+    lessonsPopupChecked.current = true;
+    let snoozed = '';
+    try { snoozed = localStorage.getItem(`bb_lessons_snooze_${branchId}`) || ''; } catch { /* 저장 공간 없음 */ }
+    const open = previousLessons.filter(it => !(branch.lessonChecks || {})[it.key]);
+    if (open.length && snoozed !== todayYmd()) setShowLessonsPopup(true);
+  }, [previousLessonsLoading, previousLessons, branch, branchId]);
 
   if (loading || !branch) {
     return <div className="loading-overlay"><div className="spinner spinner-lg" /></div>;
@@ -453,6 +496,7 @@ export default function BranchDetailPage({ initialTab }) {
         case 'workers_count': data.workersCount = Number(val) || 0; break;
         case 'equipment_used': data.equipmentUsed = val; break;
         case 'issues': data.issues = val; break;
+        case 'shortfalls': data.shortfalls = val; break;
         default: break;
       }
     });
@@ -514,7 +558,7 @@ export default function BranchDetailPage({ initialTab }) {
       if (!isDate(v.date)) throw new Error(`'${v.title}' 일지의 날짜를 YYYY-MM-DD로 적어 주세요.`);
       await handleAddDailyLog({
         date: v.date, title: v.title || '', summary: v.summary || v.title || '', weather: v.weather || 'sunny',
-        workersCount: Number(v.workers_count) || 0, equipmentUsed: v.equipment_used || '', issues: v.issues || '',
+        workersCount: Number(v.workers_count) || 0, equipmentUsed: v.equipment_used || '', issues: v.issues || '', shortfalls: v.shortfalls || '',
         photos: [], stageId: stageIdOf(v.stage),
       });
     }
@@ -920,6 +964,21 @@ export default function BranchDetailPage({ initialTab }) {
         )}
 
         {/* 7. 활동 이력 로그 */}
+        {activeTab === 'lessons' && (
+          <LessonsPanel
+            previous={previousLessons}
+            previousLoading={previousLessonsLoading}
+            mine={myLessons}
+            checks={lessonChecks}
+            stageOrder={stageOrder}
+            currentStage={currentStageName}
+            onToggleCheck={toggleLessonCheck}
+            notes={lessonNotes}
+            onSaveNote={saveLessonNote}
+            onWriteLog={() => setShowDailyLogForm(true)}
+          />
+        )}
+
         {activeTab === 'log' && (
           <div className="tab-log">
             <div className="tab-header">
@@ -932,6 +991,19 @@ export default function BranchDetailPage({ initialTab }) {
           </div>
         )}
       </div>
+
+      {showLessonsPopup && (
+        <LessonsPopup
+          items={previousLessons.filter(it => !lessonChecks[it.key])}
+          currentStage={currentStageName}
+          onOpenAll={() => { setShowLessonsPopup(false); setActiveTab('lessons'); }}
+          onSnoozeToday={() => {
+            try { localStorage.setItem(`bb_lessons_snooze_${branchId}`, todayYmd()); } catch { /* 저장 공간 없음 */ }
+            setShowLessonsPopup(false);
+          }}
+          onClose={() => setShowLessonsPopup(false)}
+        />
+      )}
 
       {/* AI 비서: 말로 부탁하면 오픈 계획·오픈 준비·일정·현장 일지에 넣을 내용을 만들어 줌 */}
       <button type="button" className="fab-ai" onClick={() => setShowAi(true)} title="AI 비서에게 말로 부탁해서 기록 추가">

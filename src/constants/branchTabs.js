@@ -5,6 +5,7 @@ export const BRANCH_TABS = [
   { id: 'tasks', label: '오픈 준비', shortLabel: '오픈준비', iconName: 'check', color: 'emerald', primary: true },
   { id: 'schedule', label: '일정/현장 일지', shortLabel: '일정', iconName: 'calendar', color: 'blue', primary: true },
   { id: 'cost', label: '비용/예산', shortLabel: '비용', iconName: 'money', color: 'amber', primary: true },
+  { id: 'lessons', label: '부족했던 점', shortLabel: '부족한점', iconName: 'alert', color: 'amber', primary: true },
   { id: 'documents', label: '서류/사진', shortLabel: '서류/사진', iconName: 'document', color: 'emerald', primary: false },
   { id: 'timeline', label: '날짜순 타임라인', shortLabel: '날짜순', iconName: 'timeline', color: 'cyan', primary: false },
   { id: 'equipment', label: '장비/시설인허가', shortLabel: '장비', iconName: 'equipment', color: 'violet', primary: false },

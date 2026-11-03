@@ -15,7 +15,7 @@ const RECORD_KIND = {
 const FIELD_LABEL = {
   title: '제목', status: '상태', assignee1: '담당자1', assignee2: '담당자2', due_date: '종료일', body_add: '본문에 덧붙임',
   group: '그룹', category: '구분', start_date: '시작', end_date: '끝', done: '완료', memo: '메모', stage: '단계',
-  assignee: '담당', date: '날짜', summary: '작업 내용', weather: '날씨', workers_count: '인원', equipment_used: '장비', issues: '이슈',
+  assignee: '담당', date: '날짜', summary: '작업 내용', weather: '날씨', workers_count: '인원', equipment_used: '장비', issues: '이슈', shortfalls: '부족했던 점',
 };
 
 const ymd = (v) => toDateInputValue(v) || '';
@@ -148,7 +148,7 @@ function buildFor(target, kind, v) {
     }
     const summary = [c.title, c.text].filter(Boolean).join('\n');
     return days.map(date => ({
-      date, title: c.title || '', summary, weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', stage: c.stage || '',
+      date, title: c.title || '', summary, weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', shortfalls: '', stage: c.stage || '',
     }));
   }
   return [];
@@ -169,7 +169,7 @@ function blankInput(kind) {
     case 'add_open_plan': return { title: '', status: 'todo', assignee1: [], assignee2: [], due_date: '', body: '' };
     case 'add_open_task': return { title: '', group: '', category: '', start_date: today, end_date: '', done: false, assignee1: [], assignee2: [], memo: '' };
     case 'add_schedule': return { title: '', start_date: today, end_date: today, stage: '', assignee: '', memo: '' };
-    default: return { date: today, title: '', summary: '', weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', stage: '' };
+    default: return { date: today, title: '', summary: '', weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', shortfalls: '', stage: '' };
   }
 }
 
@@ -226,7 +226,7 @@ function detailText(kind, v) {
     add_open_plan: [STATUS_LABEL[v.status], ppl(v.assignee1) && `담당 ${ppl(v.assignee1)}`, ppl(v.assignee2) && `담당2 ${ppl(v.assignee2)}`],
     add_open_task: [v.group && `그룹 ${v.group}`, v.category && `구분 ${v.category}`, v.done && '완료', ppl(v.assignee1) && `담당 ${ppl(v.assignee1)}`, ppl(v.assignee2) && `담당2 ${ppl(v.assignee2)}`, v.memo && `비고 ${v.memo}`],
     add_schedule: [v.stage && `단계 ${v.stage}`, v.assignee && `담당 ${v.assignee}`],
-    add_daily_log: [WEATHER_LABEL[v.weather], v.workers_count ? `인원 ${v.workers_count}명` : '', v.stage && `단계 ${v.stage}`, v.equipment_used && `장비 ${v.equipment_used}`, v.issues && `이슈 ${v.issues}`],
+    add_daily_log: [WEATHER_LABEL[v.weather], v.workers_count ? `인원 ${v.workers_count}명` : '', v.stage && `단계 ${v.stage}`, v.equipment_used && `장비 ${v.equipment_used}`, v.issues && `이슈 ${v.issues}`, v.shortfalls && `부족했던 점 ${v.shortfalls.split('\n').filter(Boolean).join(', ')}`],
   }[kind] || [];
   return parts.filter(Boolean).join(' · ');
 }

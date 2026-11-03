@@ -5,6 +5,7 @@ import ModalPortal from '../common/ModalPortal';
 import DailyLogForm from './DailyLogForm';
 import DailyLogEntryForm from './DailyLogEntryForm';
 import { formatDate } from '../../utils/formatters';
+import { splitShortfalls } from '../../utils/lessons';
 import './DailyLogList.css';
 
 const WEATHER_CONFIG = {
@@ -304,6 +305,15 @@ export default function DailyLogList({
                           <span>작성자: <strong>{log.author || '현장 관리자'}</strong></span>
                         </span>
                       </div>
+
+                      {log.shortfalls && (
+                        <div className="daily-log-shortfall-box">
+                          <strong>⚠ 부족했던 점 · 미리 챙겼어야 할 것</strong>
+                          <ul>
+                            {splitShortfalls(log.shortfalls).map((s, i) => <li key={i}>{s}</li>)}
+                          </ul>
+                        </div>
+                      )}
 
                       {log.issues && (
                         <div className="daily-log-issue-box">

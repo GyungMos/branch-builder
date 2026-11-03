@@ -4,6 +4,7 @@ import PhotoPickButtons from '../common/PhotoPickButtons';
 import ModalPortal from '../common/ModalPortal';
 import DateInput from '../common/DateInput';
 import { uploadDailyLogPhoto } from '../../utils/photoUpload';
+import { splitShortfalls } from '../../utils/lessons';
 
 const WEATHER_OPTIONS = [
   { id: 'sunny', iconName: 'sun', color: 'amber', label: '맑음' },
@@ -28,6 +29,16 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
   );
   const [equipmentUsed, setEquipmentUsed] = useState(initialData?.equipmentUsed || '');
   const [issues, setIssues] = useState(initialData?.issues || '');
+  // 부족했던 점: 한 칸에 하나씩 (추가·삭제·편집), 저장할 때는 줄바꿈으로 이어 붙임
+  const [shortfallList, setShortfallList] = useState(() => {
+    const list = splitShortfalls(initialData?.shortfalls);
+    return list.length ? list : [''];
+  });
+  const shortfalls = shortfallList.map(s => s.trim()).filter(Boolean).join('\n');
+  const setShortfalls = (text) => {
+    const list = splitShortfalls(text);
+    setShortfallList(list.length ? list : ['']);
+  };
   const [photos, setPhotos] = useState(Array.isArray(initialData?.photos) ? [...initialData.photos] : []);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [uploadProgressText, setUploadProgressText] = useState('');
@@ -45,7 +56,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const draft = JSON.parse(saved);
-        if (draft.title || draft.summary || draft.workersCount || draft.equipmentUsed || draft.issues) {
+        if (draft.title || draft.summary || draft.workersCount || draft.equipmentUsed || draft.issues || draft.shortfalls) {
           if (draft.date) setDate(draft.date);
           if (draft.weather) setWeather(draft.weather);
           if (draft.title) setTitle(draft.title);
@@ -53,6 +64,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
           if (draft.workersCount) setWorkersCount(draft.workersCount);
           if (draft.equipmentUsed) setEquipmentUsed(draft.equipmentUsed);
           if (draft.issues) setIssues(draft.issues);
+          if (draft.shortfalls) setShortfalls(draft.shortfalls);
           if (Array.isArray(draft.photos)) setPhotos(draft.photos);
           setRestoredDraft(true);
         }
@@ -65,7 +77,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
   // 2. 신규 작성 시에만 작성 중인 내용 실시간 임시 보관
   useEffect(() => {
     if (isEdit) return;
-    if (!title && !summary && !workersCount && !equipmentUsed && !issues) return;
+    if (!title && !summary && !workersCount && !equipmentUsed && !issues && !shortfalls) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         date,
@@ -75,13 +87,14 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
         workersCount,
         equipmentUsed,
         issues,
+        shortfalls,
         photos,
         updatedAt: Date.now(),
       }));
     } catch {
       // quota exceeded ignore
     }
-  }, [isEdit, date, weather, title, summary, workersCount, equipmentUsed, issues, photos]);
+  }, [isEdit, date, weather, title, summary, workersCount, equipmentUsed, issues, shortfalls, photos]);
 
   const handlePhotoUpload = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -123,13 +136,14 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
         workersCount !== (initialData?.workersCount ? String(initialData.workersCount) : '') ||
         equipmentUsed !== (initialData?.equipmentUsed || '') ||
         issues !== (initialData?.issues || '') ||
+        shortfalls !== (initialData?.shortfalls || '') ||
         photos.length !== (initialData?.photos?.length || 0);
 
       if (isChanged) {
         const confirmed = window.confirm('수정 중인 내용이 있습니다. 저장하지 않고 닫으시겠습니까?');
         if (!confirmed) return;
       }
-    } else if (title.trim() || summary.trim() || workersCount || equipmentUsed || issues) {
+    } else if (title.trim() || summary.trim() || workersCount || equipmentUsed || issues || shortfalls.trim()) {
       const confirmed = window.confirm(
         '작성 중인 일지 내용이 있습니다. 창을 닫으시겠습니까?\n\n(작성하신 내용은 임시 보관되어 다시 열 때 복원됩니다)'
       );
@@ -169,6 +183,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
         workersCount: workersCount ? Number(workersCount) : 0,
         equipmentUsed: equipmentUsed.trim(),
         issues: issues.trim(),
+        shortfalls: shortfalls.trim(),
         photos,
         stageId: stageId || null,
       });
@@ -380,6 +395,42 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                 onChange={(e) => setIssues(e.target.value)}
                 placeholder="예: 오후 갑작스런 우천으로 외부 도색 작업 내일로 연기"
               />
+            </div>
+
+            <div className="form-group">
+              <label style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span aria-hidden="true">⚠</span>
+                <span>부족했던 점 · 미리 챙겼어야 할 것 (선택)</span>
+              </label>
+              <ul className="shortfall-edit-list">
+                {shortfallList.map((text, i) => (
+                  <li key={i}>
+                    <input
+                      type="text"
+                      value={text}
+                      onChange={(e) => setShortfallList(list => list.map((t, j) => (j === i ? e.target.value : t)))}
+                      onKeyDown={(e) => {
+                        // Enter: 아래에 새 칸
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          setShortfallList(list => [...list.slice(0, i + 1), '', ...list.slice(i + 1)]);
+                        }
+                      }}
+                      placeholder={i === 0 ? '예: 정화조 위치를 설계 때 미리 확인했어야 함' : '부족했던 점'}
+                      aria-label={`부족했던 점 ${i + 1}`}
+                      autoFocus={i > 0 && !text}
+                    />
+                    <button type="button" className="shortfall-del" aria-label={`부족했던 점 ${i + 1} 지우기`}
+                      onClick={() => setShortfallList(list => (list.length > 1 ? list.filter((_, j) => j !== i) : ['']))}>
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" className="btn btn-ghost btn-sm shortfall-add" onClick={() => setShortfallList(list => [...list, ''])}>
+                + 부족했던 점 추가
+              </button>
+              <p className="form-hint">여기 적은 내용은 '부족했던 점' 메뉴에 자동으로 모이고, 다음 지점을 열 때 알려 줘요.</p>
             </div>
 
             {/* 현장 사진 첨부 */}
