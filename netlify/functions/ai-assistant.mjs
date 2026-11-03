@@ -142,7 +142,19 @@ const TOOLS = [
         workers_count: { type: 'integer', description: '투입 인원. 말이 없으면 0' },
         equipment_used: { type: 'string', description: '투입 장비. 없으면 빈 문자열' },
         issues: { type: 'string', description: '특이사항·이슈. 없으면 빈 문자열' },
-        shortfalls: { type: 'string', description: '부족했던 점·미리 챙겼어야 할 것 (아쉬웠던 점, 미흡했던 점). 여러 개면 한 줄에 하나씩. 없으면 빈 문자열' },
+        shortfalls: {
+          type: 'array',
+          description: '부족했던 점·미리 챙겼어야 할 것 (아쉬웠던 점, 미흡했던 점). 항목마다 하나씩. 없으면 빈 목록',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: '짧은 제목 (예: 정화조 위치 미리 확인 못 함)' },
+              detail: { type: 'string', description: '상세 내용: 무엇이 문제였고 다음엔 어떻게 챙길지. 말이 없으면 빈 문자열' },
+            },
+            required: ['title', 'detail'],
+            additionalProperties: false,
+          },
+        },
         stage: { type: 'string', description: '단계 목록 중 맞는 단계 이름, 애매하면 빈 문자열' },
       },
       required: ['date', 'title', 'summary', 'weather', 'workers_count', 'equipment_used', 'issues', 'shortfalls', 'stage'],
@@ -168,7 +180,7 @@ const TOOLS = [
                 type: 'string',
                 enum: ['title', 'status', 'assignee1', 'assignee2', 'due_date', 'body_add', 'group', 'category', 'start_date', 'end_date',
                   'done', 'memo', 'stage', 'assignee', 'date', 'summary', 'weather', 'workers_count', 'equipment_used', 'issues', 'shortfalls'],
-                description: '오픈 계획: title, status, assignee1, assignee2, due_date, body_add(본문 끝에 덧붙일 글) / 오픈 준비: title, group, category, start_date, end_date, done, assignee1, assignee2, memo / 일정: title, start_date, end_date, stage, assignee, memo, done / 현장 일지: title, date, summary, weather, workers_count, equipment_used, issues, shortfalls(부족했던 점, 한 줄에 하나), stage',
+                description: '오픈 계획: title, status, assignee1, assignee2, due_date, body_add(본문 끝에 덧붙일 글) / 오픈 준비: title, group, category, start_date, end_date, done, assignee1, assignee2, memo / 일정: title, start_date, end_date, stage, assignee, memo, done / 현장 일지: title, date, summary, weather, workers_count, equipment_used, issues, shortfalls(부족했던 점 제목, 한 줄에 하나), stage',
               },
               value: { type: 'string', description: '새 값. 날짜는 YYYY-MM-DD, done은 true/false, status는 todo/doing/done, weather는 sunny/cloudy/rain/snow, 담당자 여럿은 쉼표로 (예: 김홍우, 진경태), 비우려면 빈 문자열' },
             },
@@ -236,7 +248,7 @@ ${recordLines(ctx.records)}
 규칙:
 - 어디에 넣을지: 큰 할 일·회의록·계획은 오픈 계획, 체크해 나가는 준비 항목은 오픈 준비, 기간이 있는 공사·작업은 일정, 그날 현장에서 한 일은 현장 일지.
 - 직원이 넣을 곳을 말하면 그대로 따라: "현장 일지", "일지", "작업일지", "일일 작업", "이슈노트"는 현장 일지(add_daily_log), "일정", "타임라인"은 일정(add_schedule). "일정이랑 일지 둘 다", "오픈 계획이랑 오픈 준비에도"처럼 여러 곳을 말하면 같은 일을 말한 곳마다 하나씩(add_open_plan·add_open_task·add_schedule·add_daily_log) 제안해. 오픈 준비는 '오픈준비', '준비 항목'이라고도 해.
-- 부족했던 점, 미흡했던 점, 미리 못 챙긴 것, 아쉬웠던 점은 현장 일지의 shortfalls에 한 줄에 하나씩 넣어 (이슈 칸이 아님).
+- 부족했던 점, 미흡했던 점, 미리 못 챙긴 것, 아쉬웠던 점은 현장 일지의 shortfalls에 항목마다 하나씩 넣어 (이슈 칸이 아님). 제목은 짧게, 설명이나 다음에 챙길 방법은 detail에.
 - 지난 날(어제, 지난주 등)에 이미 한 작업이고 넣을 곳을 말하지 않았으면 현장 일지를 우선해.
 - 한 문장에 서로 다른 일 여러 개를 부탁하면 도구를 여러 번 불러서 하나씩 제안해.
 - 같은 날(같은 기간)에 하는 같은 종류의 작업을 여러 곳에 한다고 하면 (예: "1층 화장실 벽, 2층 화장실 벽, 2층 샤워실 벽 타일 설치") 일정은 하나로 합쳐서 제안해. 제목은 "벽 타일 설치 (1층 화장실 · 2층 화장실 · 2층 샤워실)"처럼, 메모에는 세부 장소를 줄마다 "- "로 적어. 직원이 "각각", "따로"라고 하면 그때만 나눠.

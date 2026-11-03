@@ -221,3 +221,47 @@
     flex-direction: column;
   }
 }
+
+/* 제목만 보이고, 누르면 상세 내용 */
+.shortfall-title {
+  min-width: 0;
+}
+
+.shortfall-title-btn {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shortfall-title-btn:hover {
+  text-decoration: underline;
+  text-decoration-color: rgba(245, 158, 11, 0.6);
+}
+
+.shortfall-more {
+  margin-left: 8px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: #d97706;
+  white-space: nowrap;
+}
+
+.shortfall-detail-view {
+  margin: 6px 0 2px;
+  padding: 8px 10px;
+  border-left: 3px solid rgba(245, 158, 11, 0.6);
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(245, 158, 11, 0.06);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--color-text-secondary);
+}

@@ -4,6 +4,7 @@ import { callNotion, ymd } from './notionSync';
 import { COST_CATEGORIES, DOCUMENT_CATEGORIES } from './constants';
 import { isScheduledCost } from './costs';
 import { resolveAttachments } from './miniDoc';
+import { shortfallItemsOf } from './lessons';
 
 /** 기록 종류 → Firestore 하위 컬렉션 이름 */
 export const NOTION_COLLECTIONS = {
@@ -96,12 +97,14 @@ function toPayload(kind, r, stages = []) {
         title: r.title || firstLine(r.summary),
         summary: r.summary, date: ymd(r.date), stageName, weatherLabel: WEATHER_LABEL[r.weather] || '',
         workersCount: r.workersCount || 0, author: r.author || '', issues: r.issues || '',
-        equipmentUsed: r.equipmentUsed || '', shortfalls: r.shortfalls || '', photos: r.photos || [],
+        equipmentUsed: r.equipmentUsed || '', shortfalls: r.shortfalls || '', shortfallItems: shortfallItemsOf(r), photos: r.photos || [],
         entries: (r.entries || []).map(e => ({ timeTag: e.timeTag, time: e.time, summary: e.summary, issues: e.issues, photos: e.photos || [] })),
       };
       return {
         // 부족했던 점이 없는 일지는 예전과 같은 값이 나오게 (노션 본문을 괜히 다시 쓰지 않도록)
-        bodyHash: textHash(JSON.stringify(['v2', record.summary, record.equipmentUsed, record.issues, record.photos, record.entries, ...(record.shortfalls ? [record.shortfalls] : [])])),
+        bodyHash: textHash(JSON.stringify(['v2', record.summary, record.equipmentUsed, record.issues, record.photos, record.entries,
+          ...(record.shortfalls ? [record.shortfalls] : []),
+          ...(record.shortfallItems.some(it => it.detail) ? [record.shortfallItems] : [])])),
         record,
       };
     }

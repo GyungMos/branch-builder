@@ -558,7 +558,8 @@ export default function BranchDetailPage({ initialTab }) {
       if (!isDate(v.date)) throw new Error(`'${v.title}' 일지의 날짜를 YYYY-MM-DD로 적어 주세요.`);
       await handleAddDailyLog({
         date: v.date, title: v.title || '', summary: v.summary || v.title || '', weather: v.weather || 'sunny',
-        workersCount: Number(v.workers_count) || 0, equipmentUsed: v.equipment_used || '', issues: v.issues || '', shortfalls: v.shortfalls || '',
+        workersCount: Number(v.workers_count) || 0, equipmentUsed: v.equipment_used || '', issues: v.issues || '',
+        ...(Array.isArray(v.shortfalls) ? { shortfallItems: v.shortfalls } : { shortfalls: v.shortfalls || '' }),
         photos: [], stageId: stageIdOf(v.stage),
       });
     }

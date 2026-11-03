@@ -15,6 +15,33 @@ export function splitShortfalls(text = '') {
     .filter(Boolean);
 }
 
+/** 제목·상세 목록 정리 (제목 없이 상세만 적었으면 상세 첫 줄을 제목으로) */
+export function cleanShortfallItems(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .map(it => (typeof it === 'string'
+      ? { title: it.trim(), detail: '' }
+      : { title: String(it?.title || '').trim(), detail: String(it?.detail || '').trim() }))
+    .map(it => (it.title ? it : { title: it.detail.split('\n')[0].slice(0, 60), detail: it.detail }))
+    .filter(it => it.title);
+}
+
+/** 일지의 부족했던 점 → [{ title, detail }] (예전 일지는 줄마다 제목만) */
+export function shortfallItemsOf(log = {}) {
+  if (Array.isArray(log?.shortfallItems)) return cleanShortfallItems(log.shortfallItems);
+  return splitShortfalls(log?.shortfalls).map(title => ({ title, detail: '' }));
+}
+
+/** 저장할 모양: 제목·상세 목록 + 제목만 줄마다 이은 글 (노션·검색·예전 화면용) */
+export function shortfallFields(items) {
+  const list = cleanShortfallItems(items);
+  return { shortfallItems: list, shortfalls: list.map(it => it.title).join('\n') };
+}
+
+/** 제목만 줄마다 적은 글로 고칠 때(AI 비서 등) 같은 제목의 상세 내용은 그대로 둠 */
+export function mergeShortfallText(text, prevItems = []) {
+  return splitShortfalls(text).map(title => ({ title, detail: prevItems.find(p => p.title === title)?.detail || '' }));
+}
+
 /** 짧은 지문 (체크 기억용: 글이 같으면 같은 항목) */
 function hash(text = '') {
   let h = 5381;
@@ -24,16 +51,18 @@ function hash(text = '') {
 
 /**
  * 한 지점의 부족했던 점 목록
- * { key, text, stageName, date, source: 'log' | 'stage', logId?, branchId, branchName }
+ * { key, text(제목), detail(상세 내용), stageName, date, source: 'log' | 'stage', logId?, branchId, branchName }
  */
 export function collectLessons({ branchId, branchName, dailyLogs = [], stages = [] }) {
   const stageName = (id) => stages.find(s => s.id === id)?.name || '';
   const out = [];
   dailyLogs.forEach(log => {
-    splitShortfalls(log.shortfalls).forEach(text => {
+    shortfallItemsOf(log).forEach(({ title: text, detail }) => {
       out.push({
+        // 제목으로 지문을 만들어서, 상세 내용을 고쳐도 체크·메모가 그대로 남음
         key: `${branchId}:log:${log.id}:${hash(text)}`,
         text,
+        detail,
         stageName: stageName(log.stageId),
         date: toDateInputValue(log.date) || '',
         source: 'log',

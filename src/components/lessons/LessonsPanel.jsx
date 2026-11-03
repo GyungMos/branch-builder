@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { groupByStage } from '../../utils/lessons';
 import { formatDateShort } from '../../utils/formatters';
+import ShortfallTitle from './ShortfallTitle';
 import './Lessons.css';
 
 const sourceText = (it, withBranch) => [withBranch && it.branchName, it.date ? formatDateShort(it.date) : it.sourceLabel].filter(Boolean).join(' · ');
@@ -18,7 +19,7 @@ function LessonItem({ item, checked, note, withBranch, onToggle, onSaveNote }) {
   return (
     <li className={`lessons-item ${checked ? 'checked' : ''}`}>
       <div className="lessons-item-main">
-        <span className="lessons-text">{item.text}</span>
+        <ShortfallTitle title={item.text} detail={item.detail} />
         <span className="lessons-src">{sourceText(item, withBranch)}</span>
       </div>
       <div className="lessons-apply">

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ModalPortal from '../common/ModalPortal';
 import { askAssistant, todayInfo } from '../../utils/aiAssistant';
 import { toDateInputValue } from '../../utils/formatters';
+import { shortfallItemsOf } from '../../utils/lessons';
 import './AiAssistant.css';
 
 // ---------- 고치기(수정) ----------
@@ -148,11 +149,14 @@ function buildFor(target, kind, v) {
     }
     const summary = [c.title, c.text].filter(Boolean).join('\n');
     return days.map(date => ({
-      date, title: c.title || '', summary, weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', shortfalls: '', stage: c.stage || '',
+      date, title: c.title || '', summary, weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', shortfalls: [], stage: c.stage || '',
     }));
   }
   return [];
 }
+
+// 부족했던 점 제목만 이어서 (AI는 [{ title, detail }] 목록으로 줌)
+const shortfallTitles = (v) => shortfallItemsOf(Array.isArray(v) ? { shortfallItems: v } : { shortfalls: v }).map(s => s.title).join(', ');
 
 // 카드마다 직접 고칠 수 있는 '내용' 칸
 const TEXT_FIELD = {
@@ -169,7 +173,7 @@ function blankInput(kind) {
     case 'add_open_plan': return { title: '', status: 'todo', assignee1: [], assignee2: [], due_date: '', body: '' };
     case 'add_open_task': return { title: '', group: '', category: '', start_date: today, end_date: '', done: false, assignee1: [], assignee2: [], memo: '' };
     case 'add_schedule': return { title: '', start_date: today, end_date: today, stage: '', assignee: '', memo: '' };
-    default: return { date: today, title: '', summary: '', weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', shortfalls: '', stage: '' };
+    default: return { date: today, title: '', summary: '', weather: 'sunny', workers_count: 0, equipment_used: '', issues: '', shortfalls: [], stage: '' };
   }
 }
 
@@ -226,7 +230,7 @@ function detailText(kind, v) {
     add_open_plan: [STATUS_LABEL[v.status], ppl(v.assignee1) && `담당 ${ppl(v.assignee1)}`, ppl(v.assignee2) && `담당2 ${ppl(v.assignee2)}`],
     add_open_task: [v.group && `그룹 ${v.group}`, v.category && `구분 ${v.category}`, v.done && '완료', ppl(v.assignee1) && `담당 ${ppl(v.assignee1)}`, ppl(v.assignee2) && `담당2 ${ppl(v.assignee2)}`, v.memo && `비고 ${v.memo}`],
     add_schedule: [v.stage && `단계 ${v.stage}`, v.assignee && `담당 ${v.assignee}`],
-    add_daily_log: [WEATHER_LABEL[v.weather], v.workers_count ? `인원 ${v.workers_count}명` : '', v.stage && `단계 ${v.stage}`, v.equipment_used && `장비 ${v.equipment_used}`, v.issues && `이슈 ${v.issues}`, v.shortfalls && `부족했던 점 ${v.shortfalls.split('\n').filter(Boolean).join(', ')}`],
+    add_daily_log: [WEATHER_LABEL[v.weather], v.workers_count ? `인원 ${v.workers_count}명` : '', v.stage && `단계 ${v.stage}`, v.equipment_used && `장비 ${v.equipment_used}`, v.issues && `이슈 ${v.issues}`, shortfallTitles(v.shortfalls) && `부족했던 점 ${shortfallTitles(v.shortfalls)}`],
   }[kind] || [];
   return parts.filter(Boolean).join(' · ');
 }

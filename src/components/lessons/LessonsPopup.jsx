@@ -1,5 +1,6 @@
 import ModalPortal from '../common/ModalPortal';
 import { formatDateShort } from '../../utils/formatters';
+import ShortfallTitle from './ShortfallTitle';
 import './Lessons.css';
 
 const SHOW_MAX = 6;
@@ -26,9 +27,11 @@ export default function LessonsPopup({ items, currentStage, onOpenAll, onSnoozeT
           <ul className="lessons-list">
             {sorted.slice(0, SHOW_MAX).map(it => (
               <li key={it.key} className="lessons-item">
-                <span className="lessons-text">
-                  {it.stageName === currentStage && <span className="lessons-now">지금 단계</span>} {it.text}
-                </span>
+                <ShortfallTitle
+                  title={it.text}
+                  detail={it.detail}
+                  prefix={it.stageName === currentStage ? <><span className="lessons-now">지금 단계</span>{' '}</> : null}
+                />
                 <span className="lessons-src">{[it.branchName, it.stageName, it.date && formatDateShort(it.date)].filter(Boolean).join(' · ')}</span>
               </li>
             ))}

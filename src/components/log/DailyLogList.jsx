@@ -5,7 +5,8 @@ import ModalPortal from '../common/ModalPortal';
 import DailyLogForm from './DailyLogForm';
 import DailyLogEntryForm from './DailyLogEntryForm';
 import { formatDate } from '../../utils/formatters';
-import { splitShortfalls } from '../../utils/lessons';
+import { shortfallItemsOf } from '../../utils/lessons';
+import ShortfallTitle from '../lessons/ShortfallTitle';
 import './DailyLogList.css';
 
 const WEATHER_CONFIG = {
@@ -206,7 +207,7 @@ export default function DailyLogList({
           className="btn btn-primary"
           onClick={() => {
             setEditingLog(null);
-            setIsFormOpen(true);
+            setShowForm(true);
           }}
           id="btn-new-daily-log"
         >
@@ -306,11 +307,11 @@ export default function DailyLogList({
                         </span>
                       </div>
 
-                      {log.shortfalls && (
+                      {shortfallItemsOf(log).length > 0 && (
                         <div className="daily-log-shortfall-box">
                           <strong>⚠ 부족했던 점 · 미리 챙겼어야 할 것</strong>
                           <ul>
-                            {splitShortfalls(log.shortfalls).map((s, i) => <li key={i}>{s}</li>)}
+                            {shortfallItemsOf(log).map((s, i) => <li key={i}><ShortfallTitle title={s.title} detail={s.detail} /></li>)}
                           </ul>
                         </div>
                       )}

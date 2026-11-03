@@ -4,7 +4,7 @@ import PhotoPickButtons from '../common/PhotoPickButtons';
 import ModalPortal from '../common/ModalPortal';
 import DateInput from '../common/DateInput';
 import { uploadDailyLogPhoto } from '../../utils/photoUpload';
-import { splitShortfalls } from '../../utils/lessons';
+import { splitShortfalls, shortfallItemsOf, cleanShortfallItems } from '../../utils/lessons';
 
 const WEATHER_OPTIONS = [
   { id: 'sunny', iconName: 'sun', color: 'amber', label: '맑음' },
@@ -29,15 +29,19 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
   );
   const [equipmentUsed, setEquipmentUsed] = useState(initialData?.equipmentUsed || '');
   const [issues, setIssues] = useState(initialData?.issues || '');
-  // 부족했던 점: 한 칸에 하나씩 (추가·삭제·편집), 저장할 때는 줄바꿈으로 이어 붙임
+  // 부족했던 점: 항목마다 제목 + 상세 내용 (추가·삭제·편집)
   const [shortfallList, setShortfallList] = useState(() => {
-    const list = splitShortfalls(initialData?.shortfalls);
-    return list.length ? list : [''];
+    const list = shortfallItemsOf(initialData || {});
+    return list.length ? list : [{ title: '', detail: '' }];
   });
-  const shortfalls = shortfallList.map(s => s.trim()).filter(Boolean).join('\n');
-  const setShortfalls = (text) => {
-    const list = splitShortfalls(text);
-    setShortfallList(list.length ? list : ['']);
+  const shortfallItems = cleanShortfallItems(shortfallList);
+  const shortfallKey = JSON.stringify(shortfallItems);
+  const setShortfallAt = (i, patch) => setShortfallList(list => list.map((it, j) => (j === i ? { ...it, ...patch } : it)));
+  const restoreShortfalls = (draft) => {
+    const list = Array.isArray(draft.shortfallItems)
+      ? cleanShortfallItems(draft.shortfallItems)
+      : splitShortfalls(draft.shortfalls).map(title => ({ title, detail: '' }));
+    if (list.length) setShortfallList(list);
   };
   const [photos, setPhotos] = useState(Array.isArray(initialData?.photos) ? [...initialData.photos] : []);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
@@ -56,7 +60,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const draft = JSON.parse(saved);
-        if (draft.title || draft.summary || draft.workersCount || draft.equipmentUsed || draft.issues || draft.shortfalls) {
+        if (draft.title || draft.summary || draft.workersCount || draft.equipmentUsed || draft.issues || draft.shortfalls || draft.shortfallItems?.length) {
           if (draft.date) setDate(draft.date);
           if (draft.weather) setWeather(draft.weather);
           if (draft.title) setTitle(draft.title);
@@ -64,7 +68,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
           if (draft.workersCount) setWorkersCount(draft.workersCount);
           if (draft.equipmentUsed) setEquipmentUsed(draft.equipmentUsed);
           if (draft.issues) setIssues(draft.issues);
-          if (draft.shortfalls) setShortfalls(draft.shortfalls);
+          restoreShortfalls(draft);
           if (Array.isArray(draft.photos)) setPhotos(draft.photos);
           setRestoredDraft(true);
         }
@@ -77,7 +81,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
   // 2. 신규 작성 시에만 작성 중인 내용 실시간 임시 보관
   useEffect(() => {
     if (isEdit) return;
-    if (!title && !summary && !workersCount && !equipmentUsed && !issues && !shortfalls) return;
+    if (!title && !summary && !workersCount && !equipmentUsed && !issues && !shortfallItems.length) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         date,
@@ -87,14 +91,14 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
         workersCount,
         equipmentUsed,
         issues,
-        shortfalls,
+        shortfallItems,
         photos,
         updatedAt: Date.now(),
       }));
     } catch {
       // quota exceeded ignore
     }
-  }, [isEdit, date, weather, title, summary, workersCount, equipmentUsed, issues, shortfalls, photos]);
+  }, [isEdit, date, weather, title, summary, workersCount, equipmentUsed, issues, shortfallKey, photos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePhotoUpload = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -136,14 +140,14 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
         workersCount !== (initialData?.workersCount ? String(initialData.workersCount) : '') ||
         equipmentUsed !== (initialData?.equipmentUsed || '') ||
         issues !== (initialData?.issues || '') ||
-        shortfalls !== (initialData?.shortfalls || '') ||
+        shortfallKey !== JSON.stringify(shortfallItemsOf(initialData || {})) ||
         photos.length !== (initialData?.photos?.length || 0);
 
       if (isChanged) {
         const confirmed = window.confirm('수정 중인 내용이 있습니다. 저장하지 않고 닫으시겠습니까?');
         if (!confirmed) return;
       }
-    } else if (title.trim() || summary.trim() || workersCount || equipmentUsed || issues || shortfalls.trim()) {
+    } else if (title.trim() || summary.trim() || workersCount || equipmentUsed || issues || shortfallItems.length) {
       const confirmed = window.confirm(
         '작성 중인 일지 내용이 있습니다. 창을 닫으시겠습니까?\n\n(작성하신 내용은 임시 보관되어 다시 열 때 복원됩니다)'
       );
@@ -183,7 +187,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
         workersCount: workersCount ? Number(workersCount) : 0,
         equipmentUsed: equipmentUsed.trim(),
         issues: issues.trim(),
-        shortfalls: shortfalls.trim(),
+        shortfallItems,
         photos,
         stageId: stageId || null,
       });
@@ -403,34 +407,44 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                 <span>부족했던 점 · 미리 챙겼어야 할 것 (선택)</span>
               </label>
               <ul className="shortfall-edit-list">
-                {shortfallList.map((text, i) => (
+                {shortfallList.map((it, i) => (
                   <li key={i}>
-                    <input
-                      type="text"
-                      value={text}
-                      onChange={(e) => setShortfallList(list => list.map((t, j) => (j === i ? e.target.value : t)))}
-                      onKeyDown={(e) => {
-                        // Enter: 아래에 새 칸
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          setShortfallList(list => [...list.slice(0, i + 1), '', ...list.slice(i + 1)]);
-                        }
-                      }}
-                      placeholder={i === 0 ? '예: 정화조 위치를 설계 때 미리 확인했어야 함' : '부족했던 점'}
-                      aria-label={`부족했던 점 ${i + 1}`}
-                      autoFocus={i > 0 && !text}
+                    <div className="shortfall-edit-row">
+                      <input
+                        type="text"
+                        value={it.title}
+                        onChange={(e) => setShortfallAt(i, { title: e.target.value })}
+                        onKeyDown={(e) => {
+                          // Enter: 바로 아래 상세 내용 칸으로
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            e.currentTarget.closest('li')?.querySelector('textarea')?.focus();
+                          }
+                        }}
+                        placeholder={i === 0 ? '제목 · 예: 정화조 위치 미리 확인 못 함' : '제목'}
+                        aria-label={`부족했던 점 ${i + 1} 제목`}
+                        autoFocus={i > 0 && !it.title && !it.detail}
+                      />
+                      <button type="button" className="shortfall-del" aria-label={`부족했던 점 ${i + 1} 지우기`}
+                        onClick={() => setShortfallList(list => (list.length > 1 ? list.filter((_, j) => j !== i) : [{ title: '', detail: '' }]))}>
+                        ✕
+                      </button>
+                    </div>
+                    <textarea
+                      className="shortfall-detail"
+                      rows={2}
+                      value={it.detail}
+                      onChange={(e) => setShortfallAt(i, { detail: e.target.value })}
+                      placeholder="상세 내용 (선택) · 무엇이 문제였는지, 다음엔 언제·어떻게 챙길지"
+                      aria-label={`부족했던 점 ${i + 1} 상세 내용`}
                     />
-                    <button type="button" className="shortfall-del" aria-label={`부족했던 점 ${i + 1} 지우기`}
-                      onClick={() => setShortfallList(list => (list.length > 1 ? list.filter((_, j) => j !== i) : ['']))}>
-                      ✕
-                    </button>
                   </li>
                 ))}
               </ul>
-              <button type="button" className="btn btn-ghost btn-sm shortfall-add" onClick={() => setShortfallList(list => [...list, ''])}>
+              <button type="button" className="btn btn-ghost btn-sm shortfall-add" onClick={() => setShortfallList(list => [...list, { title: '', detail: '' }])}>
                 + 부족했던 점 추가
               </button>
-              <p className="form-hint">여기 적은 내용은 '부족했던 점' 메뉴에 자동으로 모이고, 다음 지점을 열 때 알려 줘요.</p>
+              <p className="form-hint">목록에는 제목만 보이고, 누르면 상세 내용이 펼쳐져요. '부족했던 점' 메뉴에 자동으로 모이고, 다음 지점을 열 때 알려 줘요.</p>
             </div>
 
             {/* 현장 사진 첨부 */}

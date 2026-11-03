@@ -107,7 +107,7 @@ function date(start, end) {
 const block = (type, content) => ({ object: 'block', type, [type]: content });
 const para = (t) => block('paragraph', { rich_text: richText(t) });
 const heading = (t) => block('heading_3', { rich_text: richText(t) });
-const bullet = (t) => block('bulleted_list_item', { rich_text: richText(t) });
+const bullet = (t, children = []) => block('bulleted_list_item', { rich_text: richText(t), ...(children.length ? { children } : {}) });
 const image = (url) => block('image', { type: 'external', external: { url } });
 
 function miniDocBlocks(blocks) {
@@ -259,8 +259,14 @@ const KINDS = {
       const out = [heading('작업 내용'), ...str(r.summary).split('\n').filter(l => l.trim()).map(l => para(l))];
       if (r.equipmentUsed) out.push(para(`투입 장비: ${r.equipmentUsed}`));
       if (r.issues) out.push(para(`특이사항·이슈: ${r.issues}`));
-      const shortfalls = str(r.shortfalls).split('\n').map(l => l.trim()).filter(Boolean);
-      if (shortfalls.length) out.push(heading('부족했던 점 · 미리 챙겼어야 할 것'), ...shortfalls.map(l => bullet(l)));
+      // 항목마다 제목, 상세 내용은 그 아래 들여쓴 글로
+      const shortfalls = Array.isArray(r.shortfallItems)
+        ? r.shortfallItems.filter(it => str(it?.title).trim())
+        : str(r.shortfalls).split('\n').map(l => l.trim()).filter(Boolean).map(title => ({ title, detail: '' }));
+      if (shortfalls.length) {
+        out.push(heading('부족했던 점 · 미리 챙겼어야 할 것'), ...shortfalls.map(it => bullet(it.title,
+          str(it.detail).split('\n').map(l => l.trim()).filter(Boolean).map(l => para(l)))));
+      }
       (r.photos || []).filter(isHttp).forEach(u => out.push(image(u)));
       (r.entries || []).forEach(e => {
         out.push(heading(`${e.timeTag || '추가 작업'}${e.time ? ` (${e.time})` : ''}`));

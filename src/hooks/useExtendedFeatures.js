@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/formatters';
 import { COMPLIANCE_TEMPLATES } from '../utils/complianceTemplates';
 import { sanitizeEntriesForFirestore, dietDailyLogPhotos } from '../utils/photoUpload';
+import { shortfallFields, shortfallItemsOf, mergeShortfallText } from '../utils/lessons';
 
 function getLocalData(key, defaultVal = []) {
   try {
@@ -345,7 +346,7 @@ export function useDailyLogs(branchId) {
       workersCount: Number(slimData.workersCount) || 0,
       equipmentUsed: (slimData.equipmentUsed || '').trim(),
       issues: (slimData.issues || '').trim(),
-      shortfalls: (slimData.shortfalls || '').trim(),
+      ...shortfallFields(slimData.shortfallItems ?? shortfallItemsOf({ shortfalls: slimData.shortfalls })),
       photos: Array.isArray(slimData.photos) ? slimData.photos : [],
       entries: sanitizeEntriesForFirestore(Array.isArray(slimData.entries) ? slimData.entries : []),
       stageId: slimData.stageId || null,
@@ -399,7 +400,11 @@ export function useDailyLogs(branchId) {
       workersCount: slimData.workersCount !== undefined ? Number(slimData.workersCount) : (existingLog?.workersCount || 0),
       equipmentUsed: (slimData.equipmentUsed !== undefined ? slimData.equipmentUsed : (existingLog?.equipmentUsed || '')).trim(),
       issues: (slimData.issues !== undefined ? slimData.issues : (existingLog?.issues || '')).trim(),
-      shortfalls: (slimData.shortfalls !== undefined ? slimData.shortfalls : (existingLog?.shortfalls || '')).trim(),
+      ...shortfallFields(
+        slimData.shortfallItems !== undefined ? slimData.shortfallItems
+          : slimData.shortfalls !== undefined ? mergeShortfallText(slimData.shortfalls, shortfallItemsOf(existingLog))
+            : shortfallItemsOf(existingLog),
+      ),
       photos: Array.isArray(slimData.photos) ? slimData.photos : (existingLog?.photos || []),
       entries: sanitizeEntriesForFirestore(Array.isArray(slimData.entries) ? slimData.entries : (existingLog?.entries || [])),
       stageId: slimData.stageId !== undefined ? (slimData.stageId || null) : (existingLog?.stageId || null),
