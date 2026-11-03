@@ -1,6 +1,7 @@
 import {
   addDoc as fbAddDoc, updateDoc as fbUpdateDoc, deleteDoc as fbDeleteDoc, setDoc as fbSetDoc, doc,
 } from 'firebase/firestore';
+import { trashBeforeDelete } from './trash';
 
 /**
  * 현장처럼 인터넷이 약하거나 끊긴 곳에서도 저장 버튼이 멈추지 않게 하는 저장 함수들
@@ -26,5 +27,9 @@ export async function addDoc(collectionRef, data) {
 }
 
 export const updateDoc = (ref, ...args) => settle(fbUpdateDoc(ref, ...args));
-export const deleteDoc = (ref) => settle(fbDeleteDoc(ref));
+/** 지우기: 지점 아래 기록은 먼저 휴지통에 옮겨 두고 지움 (30일 동안 되살릴 수 있음) */
+export const deleteDoc = async (ref) => {
+  await trashBeforeDelete(ref);
+  return settle(fbDeleteDoc(ref));
+};
 export const setDoc = (ref, ...args) => settle(fbSetDoc(ref, ...args));

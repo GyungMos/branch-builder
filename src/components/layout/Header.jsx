@@ -4,6 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useBranches } from '../../hooks/useFirestore';
 import { exportAllDataAsJSON, importDataFromJSON } from '../../utils/backupRestore';
+import { downloadCloudBackup, autoBackupIfDue } from '../../utils/cloudBackup';
+import { useMembers } from '../../hooks/useSettings';
 import NeonIcon from '../common/NeonIcon';
 import AlertBell from './AlertBell';
 import './Header.css';
@@ -16,6 +18,14 @@ export default function Header() {
   const location = useLocation();
   const fileInputRef = useRef(null);
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+  const { isAdmin } = useMembers();
+  const [backingUp, setBackingUp] = useState(false);
+
+  // 관리자가 열면 일주일에 한 번 전체 기록을 저장소에 자동 백업 (조용히, 실패해도 화면에는 영향 없음)
+  useEffect(() => {
+    if (demoMode || !user || !isAdmin) return;
+    autoBackupIfDue().catch(err => console.warn('자동 백업 실패:', err));
+  }, [demoMode, user, isAdmin]);
 
   // 인터넷 연결이 끊기면 위에 안내 (현장에서 저장한 내용은 연결되면 자동으로 올라감)
   useEffect(() => {
@@ -59,7 +69,19 @@ export default function Header() {
   };
 
   // 백업 다운로드
-  const handleExportBackup = () => {
+  const handleExportBackup = async () => {
+    // 실제 사이트: 서버에 있는 전체 기록을 내려받기
+    if (!demoMode) {
+      setBackingUp(true);
+      try {
+        await downloadCloudBackup();
+      } catch (err) {
+        alert('백업 파일을 만들지 못했어요: ' + err.message);
+      } finally {
+        setBackingUp(false);
+      }
+      return;
+    }
     const result = exportAllDataAsJSON();
     if (result.success) {
       alert(`총 ${result.keyCount}개 데이터 항목이 성공적으로 백업 파일(JSON)로 저장되었습니다.`);
@@ -162,8 +184,9 @@ export default function Header() {
               title="전체 지점 데이터 JSON 백업 다운로드"
             >
               <NeonIcon name="download" color="emerald" size="sm" badge={false} />
-              <span>백업</span>
+              <span>{backingUp ? '모으는 중…' : '백업'}</span>
             </button>
+            {demoMode && (
             <button
               className="btn btn-secondary btn-sm header-backup-btn"
               onClick={() => fileInputRef.current?.click()}
@@ -172,6 +195,7 @@ export default function Header() {
               <NeonIcon name="upload" color="cyan" size="sm" badge={false} />
               <span>복원</span>
             </button>
+            )}
             <input
               type="file"
               ref={fileInputRef}

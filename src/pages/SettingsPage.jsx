@@ -13,6 +13,8 @@ import { syncBranchAll } from '../utils/notionBranchSync';
 import { readNotionBundle, importNotionBundle } from '../utils/notionImport';
 import { Link } from 'react-router-dom';
 import './SettingsPage.css';
+import TrashSection from '../components/settings/TrashSection';
+import BackupSection from '../components/settings/BackupSection';
 
 function Message({ msg }) {
   if (!msg) return null;
@@ -505,6 +507,8 @@ const TABS = [
   { id: 'people', label: '담당자·색' },
   { id: 'staff', label: '직원 계정', admin: true },
   { id: 'notion', label: '노션 연결', admin: true },
+  { id: 'trash', label: '휴지통' },
+  { id: 'backup', label: '백업', admin: true },
   { id: 'me', label: '내 계정' },
 ];
 
@@ -523,7 +527,7 @@ export default function SettingsPage() {
     <div className="page settings-page">
       <div className="settings-head">
         <h1 className="page-title">설정</h1>
-        <p className="settings-help">담당자 명단과 직원 계정, 노션 연결을 관리해요.</p>
+        <p className="settings-help">담당자 명단과 직원 계정, 노션 연결, 휴지통·백업을 관리해요.</p>
       </div>
 
       {members.needsBootstrap && (
@@ -553,6 +557,8 @@ export default function SettingsPage() {
       {active === 'staff' && <StaffSection />}
       {active === 'notion' && <NotionSection />}
       {active === 'notion' && <NotionImportSection />}
+      {active === 'trash' && <TrashSection />}
+      {active === 'backup' && <BackupSection />}
       {active === 'me' && <MyAccountSection />}
     </div>
   );

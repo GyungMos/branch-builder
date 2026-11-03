@@ -104,7 +104,7 @@ function toPayload(kind, r, stages = []) {
         // 부족했던 점이 없는 일지는 예전과 같은 값이 나오게 (노션 본문을 괜히 다시 쓰지 않도록)
         bodyHash: textHash(JSON.stringify(['v2', record.summary, record.equipmentUsed, record.issues, record.photos, record.entries,
           ...(record.shortfalls ? [record.shortfalls] : []),
-          ...(record.shortfallItems.some(it => it.detail) ? [record.shortfallItems] : [])])),
+          ...(record.shortfallItems.some(it => it.detail || it.category) ? [record.shortfallItems] : [])])),
         record,
       };
     }

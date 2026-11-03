@@ -15,12 +15,19 @@ export function splitShortfalls(text = '') {
     .filter(Boolean);
 }
 
-/** 제목·상세 목록 정리 (제목 없이 상세만 적었으면 상세 첫 줄을 제목으로) */
+/** 부족했던 점 분야 (다음 지점에서 분야별로 골라 보기) */
+export const SHORTFALL_CATEGORIES = ['설계', '인허가', '전기', '설비·배관', '자재', '업체', '공정·일정', '비용', '기타'];
+
+/** 제목·상세·분야 목록 정리 (제목 없이 상세만 적었으면 상세 첫 줄을 제목으로) */
 export function cleanShortfallItems(items = []) {
   return (Array.isArray(items) ? items : [])
     .map(it => (typeof it === 'string'
       ? { title: it.trim(), detail: '' }
-      : { title: String(it?.title || '').trim(), detail: String(it?.detail || '').trim() }))
+      : {
+        title: String(it?.title || '').trim(),
+        detail: String(it?.detail || '').trim(),
+        ...(SHORTFALL_CATEGORIES.includes(it?.category) ? { category: it.category } : {}),
+      }))
     .map(it => (it.title ? it : { title: it.detail.split('\n')[0].slice(0, 60), detail: it.detail }))
     .filter(it => it.title);
 }
@@ -39,7 +46,10 @@ export function shortfallFields(items) {
 
 /** 제목만 줄마다 적은 글로 고칠 때(AI 비서 등) 같은 제목의 상세 내용은 그대로 둠 */
 export function mergeShortfallText(text, prevItems = []) {
-  return splitShortfalls(text).map(title => ({ title, detail: prevItems.find(p => p.title === title)?.detail || '' }));
+  return splitShortfalls(text).map(title => {
+    const prev = prevItems.find(p => p.title === title);
+    return { title, detail: prev?.detail || '', ...(prev?.category ? { category: prev.category } : {}) };
+  });
 }
 
 /** 짧은 지문 (체크 기억용: 글이 같으면 같은 항목) */
@@ -57,12 +67,13 @@ export function collectLessons({ branchId, branchName, dailyLogs = [], stages = 
   const stageName = (id) => stages.find(s => s.id === id)?.name || '';
   const out = [];
   dailyLogs.forEach(log => {
-    shortfallItemsOf(log).forEach(({ title: text, detail }) => {
+    shortfallItemsOf(log).forEach(({ title: text, detail, category = '' }) => {
       out.push({
         // 제목으로 지문을 만들어서, 상세 내용을 고쳐도 체크·메모가 그대로 남음
         key: `${branchId}:log:${log.id}:${hash(text)}`,
         text,
         detail,
+        category,
         stageName: stageName(log.stageId),
         date: toDateInputValue(log.date) || '',
         source: 'log',

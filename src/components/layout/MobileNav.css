@@ -146,3 +146,27 @@
   white-space: nowrap;
   letter-spacing: -0.02em;
 }
+
+/* 전체 메뉴: 묶음별, 길면 안에서 스크롤 */
+.mobile-more-sheet {
+  max-height: calc(100vh - var(--mobile-nav-height) - 80px);
+  overflow-y: auto;
+}
+
+.mobile-more-group + .mobile-more-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.mobile-more-group-title {
+  margin: 6px 12px 2px;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: var(--color-text-tertiary);
+}
+
+.mobile-more-sheet .mobile-more-group button {
+  width: 100%;
+  padding: 10px 12px;
+}

@@ -8,6 +8,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
   const [name, setName] = useState(branch?.name || '');
   const [address, setAddress] = useState(branch?.address || '');
   const [description, setDescription] = useState(branch?.description || '');
+  const [targetOpenDate, setTargetOpenDate] = useState(branch?.targetOpenDate || '');
 
   // 부동산 & 임대차 제원
   const prop = branch?.property || {};
@@ -35,6 +36,7 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
         name: name.trim(),
         address: address.trim(),
         description: description.trim(),
+        targetOpenDate: targetOpenDate || '',
         property: {
           landArea: landArea ? Number(landArea) : null,
           floorHeight: floorHeight ? Number(floorHeight) : null,
@@ -92,12 +94,17 @@ export default function BranchForm({ branch, onSubmit, onClose }) {
               />
             </div>
             <div className="form-group">
+              <label>목표 오픈일</label>
+              <DateInput value={targetOpenDate} onChange={setTargetOpenDate} />
+              <p className="form-hint">넣으면 지점 화면·지점 목록·대시보드에 'D-몇 일'로 보여 주고, 일정이 이 날보다 늦게 끝나면 알려 줘요.</p>
+            </div>
+            <div className="form-group">
               <label htmlFor="branch-desc">지점 메모</label>
               <textarea
                 id="branch-desc"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="부지 특성, 인근 상권, 오픈 목표일 등 메모"
+                placeholder="부지 특성, 인근 상권 등 메모"
                 rows={2}
               />
             </div>

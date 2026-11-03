@@ -9,6 +9,7 @@ import ModalPortal from '../common/ModalPortal';
 import { planStageStandardization } from '../../utils/stageStandard';
 import { requiredDocStatus } from '../../utils/requiredDocs';
 import { isScheduledCost, sumPaid, sumScheduled, dueLabel } from '../../utils/costs';
+import { shortfallItemsOf } from '../../utils/lessons';
 import './StageBook.css';
 
 const UNLINKED = '__unlinked__';
@@ -54,6 +55,7 @@ export default function StageBook({
   onAddDocument,
   onEditBranch,
   onStandardizeStages,
+  onOpenLessons,
 }) {
   const sortedStages = useMemo(
     () => [...stages].sort((a, b) => (a.order || 0) - (b.order || 0)),
@@ -142,6 +144,7 @@ export default function StageBook({
   const stage = sortedStages[stageIndex];
   const group = groups[activeId] || { schedules: [], costs: [], documents: [], costTotal: 0 };
   const isUnlinked = activeId === UNLINKED;
+  const stageShortfallCount = (dailyLogs || []).filter(l => l.stageId === activeId).reduce((n, l) => n + shortfallItemsOf(l).length, 0);
 
   // 임대차·부지 조건은 계약 단계에서 보여줌 (이름으로 못 찾으면 첫 단계)
   const leaseStage = sortedStages.find(s => /임대|계약|토지|부지/.test(s.name)) || sortedStages[0];
@@ -523,9 +526,13 @@ export default function StageBook({
             )}
           </StageSection>
         )}
-        {/* 다음 지점을 위한 메모 (교훈) */}
+        {/* 부족했던 점은 현장 일지에 적으면 '부족했던 점' 메뉴로 모임 (단계 메모 칸은 없앰) */}
         {!isUnlinked && (
-          <StageLessons key={stage.id} stage={stage} onSave={(lessons) => onUpdateStage(stage.id, { lessons })} />
+          <div className="stage-lessons-link">
+            <span>⚠ 이 단계에서 부족했던 점 <strong>{stageShortfallCount}개</strong></span>
+            <span className="stage-lessons-link-help">현장 일지의 '부족했던 점' 칸에 적으면 자동으로 모여요.</span>
+            {onOpenLessons && <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenLessons}>부족했던 점 보기 →</button>}
+          </div>
         )}
       </section>
 
@@ -541,63 +548,6 @@ export default function StageBook({
           <p>{branch.description}</p>
         </div>
       )}
-    </div>
-  );
-}
-
-const LESSON_FIELDS = [
-  { key: 'good', label: '잘된 점', placeholder: '예: 설계사무소를 지역 업체로 정해서 허가 협의가 빨랐음' },
-  { key: 'bad', label: '아쉬운 점', placeholder: '예: 도로점용허가를 늦게 신청해서 착공이 2주 밀림' },
-  { key: 'next', label: '다음 지점에서는', placeholder: '예: 계약 직후 바로 도로점용 협의부터 시작할 것' },
-];
-
-function StageLessons({ stage, onSave }) {
-  const saved = stage.lessons || {};
-  const [draft, setDraft] = useState({ good: saved.good || '', bad: saved.bad || '', next: saved.next || '' });
-  const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState(null);
-  const dirty = LESSON_FIELDS.some(f => (draft[f.key] || '') !== (saved[f.key] || ''));
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await onSave({
-        good: draft.good.trim(),
-        bad: draft.bad.trim(),
-        next: draft.next.trim(),
-        updatedAt: new Date().toISOString(),
-      });
-      setSavedAt(new Date());
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="stage-section stage-lessons">
-      <h3 className="stage-section-title">
-        <span>다음 지점을 위한 메모</span>
-      </h3>
-      <p className="stage-lessons-help">이 단계를 겪으며 알게 된 점을 남겨두면, 다음 지점을 열 때 그대로 참고할 수 있어요.</p>
-      <div className="stage-lessons-grid">
-        {LESSON_FIELDS.map(f => (
-          <label key={f.key} className={`stage-lesson-field ${f.key}`}>
-            <span>{f.label}</span>
-            <textarea
-              rows={3}
-              value={draft[f.key]}
-              placeholder={f.placeholder}
-              onChange={(e) => setDraft(d => ({ ...d, [f.key]: e.target.value }))}
-            />
-          </label>
-        ))}
-      </div>
-      <div className="stage-lessons-actions">
-        {savedAt && !dirty && <span className="stage-lessons-saved">저장됨</span>}
-        <button type="button" className="btn btn-primary btn-sm" onClick={handleSave} disabled={!dirty || saving}>
-          {saving ? '저장 중…' : '메모 저장'}
-        </button>
-      </div>
     </div>
   );
 }

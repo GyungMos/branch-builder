@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import AttachmentPicker from '../common/AttachmentPicker';
 import { COST_CATEGORIES } from '../../utils/constants';
 import { formatNumberWithCommas, parseNumberFromCommas, toDateInputValue } from '../../utils/formatters';
 import ModalPortal from '../common/ModalPortal';
 import NeonIcon from '../common/NeonIcon';
 import DateInput from '../common/DateInput';
 
-export default function QuickCostForm({ cost, stages, defaultStageId = '', onSubmit, onClose }) {
+export default function QuickCostForm({ cost, stages, branchId, defaultStageId = '', onSubmit, onClose }) {
   const isEdit = Boolean(cost);
   const [title, setTitle] = useState(cost?.title || '');
   const [amount, setAmount] = useState(cost?.amount ? formatNumberWithCommas(cost.amount) : '');
@@ -14,6 +15,7 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
   const [paymentStatus, setPaymentStatus] = useState(cost?.paymentStatus === 'scheduled' ? 'scheduled' : 'paid');
   const [stageId, setStageId] = useState(cost?.stageId || defaultStageId);
   const [memo, setMemo] = useState(cost?.memo || '');
+  const [files, setFiles] = useState(Array.isArray(cost?.files) ? cost.files : []); // 영수증·견적서·계약서
   const [assignee, setAssignee] = useState(cost?.assignee || '');
   const [vendor, setVendor] = useState(cost?.vendor || '');
   // 상대방 계좌 정보
@@ -42,6 +44,7 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
         bankName: bankName.trim(),
         accountNumber: accountNumber.trim(),
         accountHolder: accountHolder.trim(),
+        files,
       });
     } catch (err) {
       console.error(err);
@@ -234,6 +237,10 @@ export default function QuickCostForm({ cost, stages, defaultStageId = '', onSub
                 placeholder="메모를 입력하세요"
                 rows={2}
               />
+            </div>
+
+            <div className="form-group">
+              <AttachmentPicker files={files} onChange={setFiles} branchId={branchId} folder="costs" label="영수증·견적서·계약서 (사진·파일)" />
             </div>
           </div>
           <div className="modal-footer">

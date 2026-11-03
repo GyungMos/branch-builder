@@ -369,3 +369,98 @@ body:has(.modal-backdrop) .fab-daily-log {
   color: var(--color-text-primary) !important;
   box-shadow: none !important;
 }
+
+/* 지점 메뉴: PC는 왼쪽 목록 + 오른쪽 내용 */
+.branch-body {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.branch-side-nav {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-md));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: 12px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-secondary);
+  max-height: calc(100vh - var(--header-height) - var(--space-xl));
+  overflow-y: auto;
+}
+
+[data-theme="light"] .branch-side-nav {
+  background: #ffffff;
+}
+
+.branch-side-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.branch-side-group-title {
+  margin: 0 10px 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+.branch-side-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.branch-side-item:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.branch-side-item.active {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  font-weight: 800;
+  box-shadow: inset 3px 0 0 var(--color-primary, #10b981);
+}
+
+.branch-side-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.branch-side-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .branch-body {
+    display: block;
+  }
+
+  .branch-side-nav {
+    display: none;
+  }
+}

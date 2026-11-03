@@ -10,6 +10,7 @@ import { generateId } from '../utils/formatters';
 import { COMPLIANCE_TEMPLATES } from '../utils/complianceTemplates';
 import { sanitizeEntriesForFirestore, dietDailyLogPhotos } from '../utils/photoUpload';
 import { shortfallFields, shortfallItemsOf, mergeShortfallText } from '../utils/lessons';
+import { trashLocal } from '../utils/trash';
 
 function getLocalData(key, defaultVal = []) {
   try {
@@ -94,6 +95,7 @@ export function usePartners(branchId) {
 
   const deletePartner = async (partnerId) => {
     if (demoMode) {
+      trashLocal(branchId, 'partners', partners.find(x => x.id === partnerId));
       const updated = partners.filter(p => p.id !== partnerId);
       setLocalData(`partners_${branchId}`, updated);
       setPartners(updated);
@@ -207,6 +209,7 @@ export function useCompliance(branchId) {
 
   const deleteItem = async (itemId) => {
     if (demoMode) {
+      trashLocal(branchId, 'compliance', complianceItems.find(x => x.id === itemId));
       const updated = complianceItems.filter(i => i.id !== itemId);
       setLocalData(`compliance_${branchId}`, updated);
       setComplianceItems(updated);
@@ -297,6 +300,7 @@ export function useEquipments(branchId) {
 
   const deleteEquipment = async (equipId) => {
     if (demoMode) {
+      trashLocal(branchId, 'equipments', equipments.find(x => x.id === equipId));
       const updated = equipments.filter(eq => eq.id !== equipId);
       setLocalData(`equipments_${branchId}`, updated);
       setEquipments(updated);
@@ -513,6 +517,7 @@ export function useDailyLogs(branchId) {
 
   const deleteDailyLog = async (logId) => {
     if (demoMode || !db) {
+      trashLocal(branchId, 'dailyLogs', dailyLogs.find(x => x.id === logId));
       const updated = dailyLogs.filter(l => l.id !== logId);
       setLocalData(`dailyLogs_${branchId}`, updated);
       setDailyLogs(updated);

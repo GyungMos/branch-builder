@@ -33,6 +33,7 @@ export default function DailyLogList({
   onDeleteEntry,
   stages = [],
   defaultStageId = '',
+  onWriteNew,
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
@@ -207,7 +208,8 @@ export default function DailyLogList({
           className="btn btn-primary"
           onClick={() => {
             setEditingLog(null);
-            setShowForm(true);
+            if (onWriteNew) onWriteNew();
+            else setShowForm(true);
           }}
           id="btn-new-daily-log"
         >

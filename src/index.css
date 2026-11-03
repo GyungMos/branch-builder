@@ -1151,3 +1151,30 @@ body.modal-open .fab {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
+
+/* 목표 오픈일 D-day */
+.open-dday {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.open-dday.soon {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.open-dday.late {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}

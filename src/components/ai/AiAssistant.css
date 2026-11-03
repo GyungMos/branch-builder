@@ -427,7 +427,7 @@
 .fab-ai {
   position: fixed;
   right: 32px;
-  bottom: 92px;
+  bottom: 32px;
   z-index: var(--z-floating, 500);
   display: inline-flex;
   align-items: center;
@@ -453,7 +453,7 @@ body:has(.modal-backdrop) .fab-ai {
 @media (max-width: 768px) {
   .fab-ai {
     right: 18px;
-    bottom: 140px;
+    bottom: 84px;
     padding: 9px 14px;
   }
 

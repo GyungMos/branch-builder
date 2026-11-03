@@ -6,6 +6,7 @@ import { formatCurrency, formatRelativeTime } from '../utils/formatters';
 import { BRANCH_STATUS, COST_CATEGORIES } from '../utils/constants';
 import { daysUntilDue } from '../utils/costs';
 import { buildAlerts } from '../utils/alerts';
+import { openDday } from '../utils/openDate';
 import BranchForm from '../components/branch/BranchForm';
 import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
 import './DashboardPage.css';
@@ -141,6 +142,11 @@ export default function DashboardPage() {
                     >
                       <div className="branch-card-top">
                         <span className="branch-name">{branch.name}</span>
+                        {openDday(branch) && (
+              <span className={`open-dday ${openDday(branch).days < 0 ? 'late' : openDday(branch).days <= 14 ? 'soon' : ''}`} title={`목표 오픈일 ${branch.targetOpenDate}`}>
+                오픈 {openDday(branch).label}
+              </span>
+            )}
                         <span className={`badge badge-${BRANCH_STATUS[branch.status]?.color || 'neutral'}`}>
                           {BRANCH_STATUS[branch.status]?.label || '계획중'}
                         </span>

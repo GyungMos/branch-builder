@@ -1,0 +1,152 @@
+.defects {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.defects-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.defects-count {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.defects-empty {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  color: var(--color-text-tertiary);
+}
+
+.defect-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.defect-list li {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.defect-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid #ef4444;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+[data-theme="light"] .defect-card {
+  background: #ffffff;
+}
+
+.defect-card.doing {
+  border-left-color: #f59e0b;
+}
+
+.defect-card.done {
+  border-left-color: var(--color-success);
+  opacity: 0.75;
+}
+
+.defect-card:hover {
+  border-color: var(--color-text-tertiary);
+}
+
+.defect-status {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.defect-status.doing {
+  background: rgba(245, 158, 11, 0.14);
+  color: #d97706;
+}
+
+.defect-status.done {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-success);
+}
+
+.defect-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.defect-title {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.defect-sub {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.defect-memo {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.defect-age {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: #ef4444;
+}
+
+.defect-quick {
+  flex-shrink: 0;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.defect-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+
+@media (max-width: 600px) {
+  .defect-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .defect-list li {
+    flex-direction: column;
+  }
+
+  .defect-quick {
+    align-self: flex-end;
+  }
+}

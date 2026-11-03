@@ -150,8 +150,9 @@ const TOOLS = [
             properties: {
               title: { type: 'string', description: '짧은 제목 (예: 정화조 위치 미리 확인 못 함)' },
               detail: { type: 'string', description: '상세 내용: 무엇이 문제였고 다음엔 어떻게 챙길지. 말이 없으면 빈 문자열' },
+              category: { type: 'string', enum: ['설계', '인허가', '전기', '설비·배관', '자재', '업체', '공정·일정', '비용', '기타', ''], description: '분야. 애매하면 빈 문자열' },
             },
-            required: ['title', 'detail'],
+            required: ['title', 'detail', 'category'],
             additionalProperties: false,
           },
         },

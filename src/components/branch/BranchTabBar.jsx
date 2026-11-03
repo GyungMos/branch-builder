@@ -1,81 +1,32 @@
-import { useEffect, useRef, useState } from 'react';
 import NeonIcon from '../common/NeonIcon';
-import { PRIMARY_TABS, MORE_TABS } from '../../constants/branchTabs';
+import { TAB_GROUPS } from '../../constants/branchTabs';
 
 /**
- * 지점 상세 탭 바 (PC): 자주 쓰는 탭 4개 + '더보기' 메뉴
+ * 지점 상세 왼쪽 메뉴 목록 (PC). 휴대폰은 MobileNav가 대신함
+ * counts: { tabId: 숫자 } 메뉴 옆에 작게 보여 줄 개수 (예: 처리 안 된 하자)
  */
-export default function BranchTabBar({ activeTab, onChange }) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef(null);
-  const activeMore = MORE_TABS.find(t => t.id === activeTab);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
-    };
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  const select = (id) => {
-    onChange(id);
-    setOpen(false);
-  };
-
+export default function BranchTabBar({ activeTab, onChange, counts = {} }) {
   return (
-    <div className="segmented-tab-track branch-tabs" id="branch-tabs" role="tablist">
-      {PRIMARY_TABS.map(tab => (
-        <button
-          key={tab.id}
-          role="tab"
-          aria-selected={activeTab === tab.id}
-          className={`segmented-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-          onClick={() => select(tab.id)}
-          id={`tab-${tab.id}`}
-        >
-          <NeonIcon name={tab.iconName} color={tab.color} size="sm" badge={false} />
-          <span>{tab.label}</span>
-        </button>
+    <nav className="branch-side-nav" id="branch-tabs" aria-label="지점 메뉴">
+      {TAB_GROUPS.map(({ group, tabs }) => (
+        <div key={group} className="branch-side-group">
+          <p className="branch-side-group-title">{group}</p>
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              aria-current={activeTab === tab.id ? 'page' : undefined}
+              className={`branch-side-item ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => onChange(tab.id)}
+              id={`tab-${tab.id}`}
+            >
+              <NeonIcon name={tab.iconName} color={tab.color} size="sm" badge={false} />
+              <span className="branch-side-label">{tab.label}</span>
+              {counts[tab.id] > 0 && <span className="branch-side-count">{counts[tab.id]}</span>}
+            </button>
+          ))}
+        </div>
       ))}
-
-      <div className="branch-tabs-more" ref={wrapRef}>
-        <button
-          type="button"
-          className={`segmented-tab-btn ${activeMore ? 'active' : ''}`}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onClick={() => setOpen(o => !o)}
-          id="tab-more"
-        >
-          {activeMore && <NeonIcon name={activeMore.iconName} color={activeMore.color} size="sm" badge={false} />}
-          <span>{activeMore ? activeMore.label : '더보기'}</span>
-          <span aria-hidden="true" className="branch-tabs-caret">▾</span>
-        </button>
-        {open && (
-          <div className="branch-tabs-menu" role="menu">
-            {MORE_TABS.map(tab => (
-              <button
-                key={tab.id}
-                type="button"
-                role="menuitem"
-                className={activeTab === tab.id ? 'active' : ''}
-                onClick={() => select(tab.id)}
-                id={`tab-${tab.id}`}
-              >
-                <NeonIcon name={tab.iconName} color={tab.color} size="sm" badge={false} />
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    </nav>
   );
 }

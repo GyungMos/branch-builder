@@ -97,3 +97,10 @@ export function useMembers() {
     save: (next) => save({ emails, admins, staff, ...next }),
   };
 }
+
+/** 지우기는 관리자만 (데모 화면은 늘 가능) */
+export function useCanDelete() {
+  const { demoMode } = useAuth();
+  const { isAdmin } = useMembers();
+  return demoMode || isAdmin;
+}

@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { useBranches } from '../hooks/useFirestore';
 import { useAuth } from '../contexts/AuthContext';
 import { loadBranchData } from '../utils/branchData';
+import { collectLessons, groupByStage } from '../utils/lessons';
+import ShortfallTitle from '../components/lessons/ShortfallTitle';
 import { computeBranchStageStats, average } from '../utils/branchCompare';
 import { DEFAULT_STAGES, STAGE_STATUS } from '../utils/constants';
 import { formatCurrency, formatDateShort } from '../utils/formatters';
 import './ComparePage.css';
 
-const LESSON_LABELS = { good: '잘된 점', bad: '아쉬운 점', next: '다음 지점에서는' };
 
 function Cell({ row }) {
   if (!row || (!row.days && !row.cost && !row.status)) return <span className="cmp-empty">—</span>;
@@ -39,8 +40,11 @@ export default function ComparePage() {
       setLoading(true);
       const result = {};
       await Promise.all(branches.map(async b => {
-        const data = await loadBranchData(b.id, demoMode, ['stages', 'schedules', 'costs']);
-        result[b.id] = computeBranchStageStats(data);
+        const data = await loadBranchData(b.id, demoMode, ['stages', 'schedules', 'costs', 'dailyLogs']);
+        result[b.id] = {
+          ...computeBranchStageStats(data),
+          shortfalls: collectLessons({ branchId: b.id, branchName: b.name, dailyLogs: data.dailyLogs, stages: data.stages }),
+        };
       }));
       if (!cancelled) {
         setStats(result);
@@ -65,10 +69,8 @@ export default function ComparePage() {
     return <div className="loading-overlay"><div className="spinner spinner-lg" /></div>;
   }
 
-  const lessonsByStage = DEFAULT_STAGES.map((std, i) => ({
-    name: std.name,
-    items: shown.flatMap(b => (stats[b.id].rows[i].lessons || []).map(l => ({ branch: b, lessons: l }))),
-  })).filter(g => g.items.length > 0);
+  // 지점마다 현장 일지에 적은 '부족했던 점'을 단계별로 모음
+  const lessonsByStage = groupByStage(shown.flatMap(b => stats[b.id].shortfalls || []), DEFAULT_STAGES.map(s => s.name));
 
   return (
     <div className="page compare-page">
@@ -180,25 +182,20 @@ export default function ComparePage() {
           </p>
 
           <section className="compare-lessons">
-            <h2>단계별 "다음 지점을 위한 메모" 모음</h2>
+            <h2>단계별 "부족했던 점" 모음</h2>
             {lessonsByStage.length === 0 ? (
               <p className="text-secondary">
-                아직 남긴 메모가 없어요. 지점 → 단계별 기록 → 각 단계 맨 아래에서 남길 수 있어요.
+                아직 모인 내용이 없어요. 현장 일지를 쓸 때 '부족했던 점' 칸에 적으면 여기에 모여요.
               </p>
             ) : (
               lessonsByStage.map(g => (
                 <div key={g.name} className="compare-lesson-group">
                   <h3>{g.name}</h3>
-                  {g.items.map(({ branch, lessons }, idx) => (
-                    <div key={`${branch.id}-${idx}`} className="compare-lesson-card">
-                      <div className="compare-lesson-branch">{branch.name}</div>
-                      {Object.entries(LESSON_LABELS).map(([key, label]) => (
-                        lessons[key] ? (
-                          <p key={key} className={`compare-lesson-line ${key}`}>
-                            <strong>{label}</strong> {lessons[key]}
-                          </p>
-                        ) : null
-                      ))}
+                  {g.items.map(it => (
+                    <div key={it.key} className="compare-lesson-card">
+                      <div className="compare-lesson-branch">{it.branchName}{it.date ? ` · ${it.date}` : ''}</div>
+                      <ShortfallTitle title={it.text} detail={it.detail}
+                        prefix={it.category ? <><span className="lessons-cat">{it.category}</span>{' '}</> : null} />
                     </div>
                   ))}
                 </div>

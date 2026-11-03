@@ -23,9 +23,18 @@ service cloud.firestore {
       return signedIn() && exists(membersDoc()) && myEmail() in get(membersDoc()).data.admins;
     }
 
-    // 지점과 그 아래 모든 기록 (단계·일정·비용·서류·일지·오픈 계획·오픈 준비 등)
-    match /branches/{rest=**} {
-      allow read, write: if isMember();
+    // 지점: 허용 계정은 읽고·만들고·고칠 수 있음. 지우기(휴지통으로 보내기 포함)는 관리자만
+    match /branches/{branchId} {
+      allow read, create: if isMember();
+      allow update: if isMember()
+        && (isAdmin() || request.resource.data.get('deletedAt', null) == resource.data.get('deletedAt', null));
+      allow delete: if isAdmin();
+    }
+
+    // 지점 아래 모든 기록 (단계·일정·비용·서류·일지·오픈 계획·오픈 준비·하자·휴지통 등): 지우기는 관리자만
+    match /branches/{branchId}/{sub}/{rest=**} {
+      allow read, create, update: if isMember();
+      allow delete: if isAdmin();
     }
 
     // 사이트 설정

@@ -6,6 +6,7 @@ import { addDoc, updateDoc, deleteDoc } from '../utils/offlineWrite';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/formatters';
+import { trashLocal } from '../utils/trash';
 
 function readLocal(key) {
   try {
@@ -83,6 +84,7 @@ export function useSubcollection(branchId, name) {
 
   const remove = useCallback(async (id) => {
     if (demoMode) {
+      trashLocal(branchId, name, readLocal(localKey).find(it => it.id === id));
       const next = readLocal(localKey).filter(it => it.id !== id);
       writeLocal(localKey, next);
       setItems(next);

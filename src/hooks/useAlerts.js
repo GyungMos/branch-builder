@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranches } from './useFirestore';
 import { loadBranchData } from '../utils/branchData';
-import { buildAlerts } from '../utils/alerts';
+import { buildAlerts, buildLessonAlerts } from '../utils/alerts';
+import { collectLessons } from '../utils/lessons';
 
 const REFRESH_MS = 10 * 60 * 1000;
 const ALERT_DAYS = 3;
@@ -21,20 +22,28 @@ export function useAlerts() {
     try { return JSON.parse(localStorage.getItem(seenKey) || '[]'); } catch { return []; }
   });
 
-  const branchKey = branches.map(b => `${b.id}:${b.name}`).join('|');
+  // 지점 이름·상태·체크가 바뀌면 다시 계산
+  const branchKey = branches.map(b => `${b.id}:${b.name}:${b.status}:${Object.keys(b.lessonChecks || {}).length}`).join('|');
 
   const refresh = useCallback(async () => {
     if (!branches.length) { setAlerts([]); return; }
     setLoading(true);
     try {
-      const lists = { schedules: [], costs: [], openTasks: [], openPlans: [] };
+      const lists = { schedules: [], costs: [], openTasks: [], openPlans: [], defects: [] };
+      const withLessons = [];
       for (const b of branches) {
-        const data = await loadBranchData(b.id, demoMode, Object.keys(lists));
+        const data = await loadBranchData(b.id, demoMode, [...Object.keys(lists), 'stages', 'dailyLogs']);
         Object.keys(lists).forEach(n => {
           (data[n] || []).forEach(r => lists[n].push({ ...r, branchId: b.id, branchName: b.name }));
         });
+        withLessons.push({
+          ...b,
+          stages: data.stages || [],
+          lessons: collectLessons({ branchId: b.id, branchName: b.name, dailyLogs: data.dailyLogs, stages: data.stages }),
+        });
       }
-      setAlerts(buildAlerts(lists, { days: ALERT_DAYS }));
+      const items = buildAlerts(lists, { days: ALERT_DAYS });
+      setAlerts([...items, ...buildLessonAlerts(withLessons)]);
     } catch (err) {
       console.warn('알림 불러오기 실패:', err);
     } finally {

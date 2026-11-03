@@ -4,7 +4,7 @@ import PhotoPickButtons from '../common/PhotoPickButtons';
 import ModalPortal from '../common/ModalPortal';
 import DateInput from '../common/DateInput';
 import { uploadDailyLogPhoto } from '../../utils/photoUpload';
-import { splitShortfalls, shortfallItemsOf, cleanShortfallItems } from '../../utils/lessons';
+import { splitShortfalls, shortfallItemsOf, cleanShortfallItems, SHORTFALL_CATEGORIES } from '../../utils/lessons';
 
 const WEATHER_OPTIONS = [
   { id: 'sunny', iconName: 'sun', color: 'amber', label: '맑음' },
@@ -15,7 +15,7 @@ const WEATHER_OPTIONS = [
 
 const DRAFT_KEY = 'bb_dailylog_draft';
 
-export default function DailyLogForm({ onSubmit, onClose, initialData = null, branchId = 'default', stages = [], defaultStageId = '' }) {
+export default function DailyLogForm({ onSubmit, onClose, initialData = null, branchId = 'default', stages = [], defaultStageId = '', openShortfalls = false }) {
   const isEdit = !!initialData;
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [weather, setWeather] = useState(initialData?.weather || 'sunny');
@@ -43,6 +43,11 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
       : splitShortfalls(draft.shortfalls).map(title => ({ title, detail: '' }));
     if (list.length) setShortfallList(list);
   };
+  // 더 적을 것: 인원·장비 / 이슈 / 부족했던 점 (눌러서 펼침, 내용이 있으면 늘 보임)
+  const [openMore, setOpenMore] = useState({ shortfalls: Boolean(openShortfalls) });
+  const showCrew = openMore.crew || Boolean(workersCount) || Boolean(equipmentUsed);
+  const showIssues = openMore.issues || Boolean(issues);
+  const showShortfalls = openMore.shortfalls || shortfallItems.length > 0;
   const [photos, setPhotos] = useState(Array.isArray(initialData?.photos) ? [...initialData.photos] : []);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [uploadProgressText, setUploadProgressText] = useState('');
@@ -362,6 +367,17 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
               />
             </div>
 
+            {/* 자주 안 쓰는 칸은 눌러서 펼침 (적힌 내용이 있으면 처음부터 펼침) */}
+            {(!showCrew || !showIssues || !showShortfalls) && (
+              <div className="log-more-chips">
+                <span className="log-more-label">더 적을 것</span>
+                {!showCrew && <button type="button" className="log-more-chip" onClick={() => setOpenMore(o => ({ ...o, crew: true }))}>+ 인원·장비</button>}
+                {!showIssues && <button type="button" className="log-more-chip" onClick={() => setOpenMore(o => ({ ...o, issues: true }))}>+ 특이사항·이슈</button>}
+                {!showShortfalls && <button type="button" className="log-more-chip amber" onClick={() => setOpenMore(o => ({ ...o, shortfalls: true }))}>+ 부족했던 점</button>}
+              </div>
+            )}
+
+            {showCrew && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="form-group">
                 <label htmlFor="log-workers">투입 인원 (명)</label>
@@ -386,7 +402,9 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                 />
               </div>
             </div>
+            )}
 
+            {showIssues && (
             <div className="form-group">
               <label htmlFor="log-issues" style={{ color: '#f87171', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <NeonIcon name="alert" size="xs" color="rose" badge={false} />
@@ -398,9 +416,12 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                 value={issues}
                 onChange={(e) => setIssues(e.target.value)}
                 placeholder="예: 오후 갑작스런 우천으로 외부 도색 작업 내일로 연기"
+                autoFocus={openMore.issues && !issues}
               />
             </div>
+            )}
 
+            {showShortfalls && (
             <div className="form-group">
               <label style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span aria-hidden="true">⚠</span>
@@ -423,8 +444,17 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
                         }}
                         placeholder={i === 0 ? '제목 · 예: 정화조 위치 미리 확인 못 함' : '제목'}
                         aria-label={`부족했던 점 ${i + 1} 제목`}
-                        autoFocus={i > 0 && !it.title && !it.detail}
+                        autoFocus={(i > 0 || openMore.shortfalls) && !it.title && !it.detail}
                       />
+                      <select
+                        className="shortfall-cat"
+                        value={it.category || ''}
+                        onChange={(e) => setShortfallAt(i, { category: e.target.value })}
+                        aria-label={`부족했던 점 ${i + 1} 분야`}
+                      >
+                        <option value="">분야</option>
+                        {SHORTFALL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
                       <button type="button" className="shortfall-del" aria-label={`부족했던 점 ${i + 1} 지우기`}
                         onClick={() => setShortfallList(list => (list.length > 1 ? list.filter((_, j) => j !== i) : [{ title: '', detail: '' }]))}>
                         ✕
@@ -446,6 +476,7 @@ export default function DailyLogForm({ onSubmit, onClose, initialData = null, br
               </button>
               <p className="form-hint">목록에는 제목만 보이고, 누르면 상세 내용이 펼쳐져요. '부족했던 점' 메뉴에 자동으로 모이고, 다음 지점을 열 때 알려 줘요.</p>
             </div>
+            )}
 
             {/* 현장 사진 첨부 */}
             <div className="form-group">

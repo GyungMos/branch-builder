@@ -19,6 +19,8 @@ import BranchForm from '../components/branch/BranchForm';
 import StageBook from '../components/branch/StageBook';
 import CopyBranchModal from '../components/branch/CopyBranchModal';
 import BranchTabBar from '../components/branch/BranchTabBar';
+import { BRANCH_TABS } from '../constants/branchTabs';
+import { openDday, schedulesAfterOpen } from '../utils/openDate';
 import Timeline from '../components/schedule/Timeline';
 import ArchitectPresetModal from '../components/schedule/ArchitectPresetModal';
 import QuickScheduleForm from '../components/schedule/QuickScheduleForm';
@@ -40,7 +42,7 @@ import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
 import { formatCurrency, toDateInputValue } from '../utils/formatters';
 import { isScheduledCost, daysUntilDue } from '../utils/costs';
 import { useSubcollection } from '../hooks/useSubcollection';
-import { usePeople } from '../hooks/useSettings';
+import { usePeople, useCanDelete } from '../hooks/useSettings';
 import OpenPlanBoard from '../components/openplan/OpenPlanBoard';
 import OpenPlanEditor from '../components/openplan/OpenPlanEditor';
 import OpenTaskTable from '../components/opentask/OpenTaskTable';
@@ -53,6 +55,7 @@ import { collectLessons } from '../utils/lessons';
 import ImportTasksModal from '../components/opentask/ImportTasksModal';
 import { syncToNotion, archiveNotionPage } from '../utils/notionBranchSync';
 import { OPEN_TASK_GROUPS, OPEN_TASK_CATEGORIES } from '../utils/constants';
+import DefectList from '../components/defect/DefectList';
 import './BranchDetailPage.css';
 
 const todayYmd = () => {
@@ -72,6 +75,7 @@ export default function BranchDetailPage({ initialTab }) {
     if (location.pathname.endsWith('/timeline')) return 'timeline';
     const queryTab = searchParams.get('tab');
     if (queryTab === 'overview') return 'stages'; // 예전 주소 호환
+    if (queryTab && !BRANCH_TABS.some(t => t.id === queryTab)) return 'stages';
     if (queryTab) return queryTab;
     return 'stages';
   };
@@ -132,7 +136,9 @@ export default function BranchDetailPage({ initialTab }) {
   // 오픈 계획 · 오픈 준비 스케줄 (노션에서 쓰던 양식)
   const { items: plans, add: addPlan, update: updatePlan, remove: removePlan } = useSubcollection(branchId, 'openPlans');
   const { items: tasks, add: addTask, update: updateTask, remove: removeTask } = useSubcollection(branchId, 'openTasks');
+  const { items: defects, add: addDefect, update: updateDefect, remove: removeDefect } = useSubcollection(branchId, 'defects');
   const { names: people } = usePeople();
+  const canDelete = useCanDelete();
   const [planEditor, setPlanEditor] = useState(null); // { plan } 수정 또는 { status } 새 항목
   const [taskEditor, setTaskEditor] = useState(null); // { task } 수정 또는 { defaults } 새 항목
   const [showImportTasks, setShowImportTasks] = useState(false);
@@ -227,6 +233,8 @@ export default function BranchDetailPage({ initialTab }) {
 
   // 지급 예정일이 지났는데 아직 지급 완료 처리가 안 된 비용
   const overduePayments = costs.filter(c => isScheduledCost(c) && (daysUntilDue(c) ?? 1) < 0);
+  const dday = openDday(branch);
+  const lateForOpen = schedulesAfterOpen(branch, schedules);
 
   // --- 핸들러들 ---
   const handleStatusChange = async (newStatus) => {
@@ -259,7 +267,14 @@ export default function BranchDetailPage({ initialTab }) {
       addLog('stage_update', `다음 지점 메모 저장: ${st?.name || ''}`);
     }
   };
+  // 지우기는 관리자만 (직원이 누르면 안내만). 지운 기록은 휴지통에 30일 보관
+  const denyDelete = () => {
+    if (canDelete) return false;
+    alert('지우기는 관리자만 할 수 있어요. 지워야 하면 관리자에게 부탁해 주세요.');
+    return true;
+  };
   const handleDeleteStage = async (stageId) => {
+    if (denyDelete()) return false;
     const st = stages.find(s => s.id === stageId);
     await deleteStage(stageId);
     addLog('stage_delete', `단계 삭제: ${st?.name || ''}`);
@@ -303,6 +318,7 @@ export default function BranchDetailPage({ initialTab }) {
     addLog('schedule_update', `일정 ${done ? '완료 취소' : '완료'}: ${schedule.title}`);
   };
   const handleDeleteSchedule = async (scheduleId) => {
+    if (denyDelete()) return false;
     const sc = schedules.find(s => s.id === scheduleId);
     await deleteSchedule(scheduleId);
     archiveNotionPage(sc?.notionPageId);
@@ -346,6 +362,7 @@ export default function BranchDetailPage({ initialTab }) {
     addLog('cost_update', `지급 완료 처리: ${cost.title} (${cost.amount}원)`);
   };
   const handleDeleteCost = async (costId) => {
+    if (denyDelete()) return false;
     const c = costs.find(x => x.id === costId);
     await deleteCost(costId);
     archiveNotionPage(c?.notionPageId);
@@ -363,6 +380,7 @@ export default function BranchDetailPage({ initialTab }) {
     setFormRequiredDoc('');
   };
   const handleDeleteDocument = async (docId, storagePath) => {
+    if (denyDelete()) return false;
     const d = documents.find(x => x.id === docId);
     await deleteDocument(docId, storagePath);
     archiveNotionPage(d?.notionPageId);
@@ -379,6 +397,7 @@ export default function BranchDetailPage({ initialTab }) {
     addLog('partner_update', `협력업체 수정: ${data.companyName}`);
   };
   const handleDeletePartner = async (partnerId) => {
+    if (denyDelete()) return false;
     const p = partners.find(x => x.id === partnerId);
     await deletePartner(partnerId);
     addLog('partner_delete', `협력업체 삭제: ${p?.companyName || ''}`);
@@ -394,6 +413,7 @@ export default function BranchDetailPage({ initialTab }) {
     addLog('equipment_update', `장비 상태 변경: ${data.name || ''}`);
   };
   const handleDeleteEquipment = async (equipId) => {
+    if (denyDelete()) return false;
     const eq = equipments.find(x => x.id === equipId);
     await deleteEquipment(equipId);
     addLog('equipment_delete', `장비 삭제: ${eq?.name || ''}`);
@@ -411,6 +431,7 @@ export default function BranchDetailPage({ initialTab }) {
     addLog('dailylog_update', `현장 일지 수정: ${data.date} (${data.summary})`);
   };
   const handleDeleteDailyLog = async (logId) => {
+    if (denyDelete()) return false;
     const target = dailyLogs.find(l => l.id === logId);
     await deleteDailyLog(logId);
     archiveNotionPage(target?.notionPageId);
@@ -427,6 +448,7 @@ export default function BranchDetailPage({ initialTab }) {
     addLog('dailylog_entry_update', `현장 일지 추가 작업/조치 수정`);
   };
   const handleDeleteDailyLogEntry = async (logId, entryId) => {
+    if (denyDelete()) return false;
     await deleteDailyLogEntry(logId, entryId);
     queueNotion('dailyLog', logId);
     addLog('dailylog_entry_delete', `현장 일지 추가 작업/조치 삭제`);
@@ -452,6 +474,7 @@ export default function BranchDetailPage({ initialTab }) {
     addLog('plan_update', `오픈 계획 상태 변경: ${plan.title}`);
   };
   const handleDeletePlan = async (plan) => {
+    if (denyDelete()) return false;
     await removePlan(plan.id);
     archiveNotionPage(plan.notionPageId);
     addLog('plan_delete', `오픈 계획 삭제: ${plan.title}`);
@@ -575,7 +598,9 @@ export default function BranchDetailPage({ initialTab }) {
       queueNotion('task', editing.id);
       addLog('task_update', `오픈 준비 수정: ${data.title}`);
     } else {
-      const created = await addTask({ ...data, order: Date.now() });
+      // '부족했던 점'에서 넘어온 항목은 어느 항목인지 기억 (메뉴에 '오픈 준비에 넣음' 표시)
+      const lessonKey = taskEditor?.defaults?.lessonKey;
+      const created = await addTask({ ...data, ...(lessonKey ? { lessonKey } : {}), order: Date.now() });
       queueNotion('task', created?.id);
       addLog('task_add', `오픈 준비 추가: ${data.title}`);
     }
@@ -587,11 +612,29 @@ export default function BranchDetailPage({ initialTab }) {
     queueNotion('task', task.id);
   };
   const handleDeleteTask = async (task) => {
+    if (denyDelete()) return false;
     if (!task) return;
     await removeTask(task.id);
     archiveNotionPage(task.notionPageId);
     addLog('task_delete', `오픈 준비 삭제: ${task.title}`);
     setTaskEditor(null);
+  };
+  // 하자·A/S
+  const handleAddDefect = async (data) => {
+    await addDefect(data);
+    addLog('defect_add', `하자 접수: ${data.title}`);
+  };
+  const handleUpdateDefect = async (id, data) => {
+    await updateDefect(id, data);
+    const d = defects.find(x => x.id === id);
+    addLog('defect_update', `하자 ${data.status === 'done' ? '완료' : '수정'}: ${data.title || d?.title || ''}`);
+  };
+  const handleDeleteDefect = async (d) => {
+    if (denyDelete()) return false;
+    if (!window.confirm(`'${d.title}' 하자 기록을 지울까요?`)) return false;
+    await removeDefect(d.id);
+    addLog('defect_delete', `하자 삭제: ${d.title}`);
+    return true;
   };
   const handleImportTasks = async (items) => {
     const base = Date.now();
@@ -607,6 +650,12 @@ export default function BranchDetailPage({ initialTab }) {
   const handleUpdateBudget = async (newBudget) => {
     await updateBudget(newBudget);
     addLog('budget_update', `목표 예산 변경: ${newBudget.totalBudget}원`);
+  };
+
+  // 왼쪽 메뉴 옆 숫자: 아직 적용 안 한 이전 지점 부족했던 점
+  const tabCounts = {
+    lessons: previousLessons.filter(it => !lessonChecks[it.key]).length,
+    defects: defects.filter(d => d.status !== 'done').length,
   };
 
   // 원형 프로그레스 계산 (반경 22, 둘레 138.2)
@@ -641,6 +690,19 @@ export default function BranchDetailPage({ initialTab }) {
         </div>
       )}
 
+      {lateForOpen.length > 0 && (
+        <div className="branch-delay-alert animate-fade-in">
+          <div>
+            <span style={{ fontWeight: 700, color: '#f87171' }}>오픈일보다 늦음: </span>
+            목표 오픈일({branch.targetOpenDate})보다 늦게 끝나는 일정이 <strong>{lateForOpen.length}건</strong> 있어요.
+            <span className="text-secondary text-xs" style={{ marginLeft: 6 }}>
+              ({lateForOpen.map(s => s.title).slice(0, 2).join(', ')}{lateForOpen.length > 2 ? ' 외' : ''})
+            </span>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={() => setActiveTab('schedule')}>일정 확인</button>
+        </div>
+      )}
+
       {overduePayments.length > 0 && (
         <div className="branch-delay-alert animate-fade-in">
           <div>
@@ -661,7 +723,13 @@ export default function BranchDetailPage({ initialTab }) {
             <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <NeonIcon name="building" color="emerald" size="md" />
               <span>{branch.name}</span>
+              {dday && (
+                <span className={`open-dday ${dday.days < 0 ? 'late' : dday.days <= 14 ? 'soon' : ''}`} title={`목표 오픈일 ${dday.date}`}>
+                  오픈 {dday.label}
+                </span>
+              )}
             </h1>
+            {branch.targetOpenDate && <p className="text-secondary text-sm" style={{ marginTop: 2 }}>목표 오픈일 {branch.targetOpenDate}</p>}
             {branch.address && (
               <p className="text-secondary text-sm" style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                 <NeonIcon name="pin" size="xs" color="rose" badge={false} />
@@ -747,8 +815,9 @@ export default function BranchDetailPage({ initialTab }) {
         </div>
       </div>
 
-      {/* PC 세그먼트 필(Pill) 탭 바 */}
-      <BranchTabBar activeTab={activeTab} onChange={setActiveTab} />
+      {/* PC: 왼쪽 메뉴 목록 + 오른쪽 내용 (휴대폰은 아래 메뉴 막대) */}
+      <div className="branch-body">
+      <BranchTabBar activeTab={activeTab} onChange={setActiveTab} counts={tabCounts} />
 
       {/* 탭 내용 영역 */}
       <div className="branch-tab-content animate-fade-in" key={activeTab}>
@@ -793,6 +862,7 @@ export default function BranchDetailPage({ initialTab }) {
             onAddDocument={(stageId, requiredDoc = '') => { setFormStageId(stageId); setFormRequiredDoc(requiredDoc); setShowDocUpload(true); }}
             onEditBranch={() => setShowBranchEdit(true)}
             onStandardizeStages={handleStandardizeStages}
+            onOpenLessons={() => setActiveTab('lessons')}
           />
         )}
 
@@ -833,9 +903,9 @@ export default function BranchDetailPage({ initialTab }) {
           </div>
         )}
 
-        {/* 2. 일정 타임라인 & 현장 일일 작업일지 */}
+        {/* 2. 일정 타임라인 */}
         {activeTab === 'schedule' && (
-          <div className="tab-schedule" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2xl)' }}>
+          <div className="tab-schedule">
             <div>
               <div className="tab-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -859,8 +929,12 @@ export default function BranchDetailPage({ initialTab }) {
                 onToggleComplete={handleToggleScheduleComplete}
               />
             </div>
+          </div>
+        )}
 
-            {/* 현장 일일 작업일지 통합 */}
+        {/* 현장 일일 작업일지 */}
+        {activeTab === 'dailylog' && (
+          <div className="tab-dailylog">
             <DailyLogList
               branchId={branchId}
               dailyLogs={dailyLogs}
@@ -872,6 +946,7 @@ export default function BranchDetailPage({ initialTab }) {
               onDeleteEntry={handleDeleteDailyLogEntry}
               stages={stages}
               defaultStageId={currentStageId}
+              onWriteNew={() => setShowDailyLogForm(true)}
             />
           </div>
         )}
@@ -917,7 +992,7 @@ export default function BranchDetailPage({ initialTab }) {
               onUpdateStatus={updateItemStatus}
               onLoadTemplate={loadTemplate}
               onAddItem={addComplianceItem}
-              onDeleteItem={deleteComplianceItem}
+              onDeleteItem={(id) => { if (!denyDelete()) deleteComplianceItem(id); }}
               fitCount={fitCount}
               progressPercent={compliancePercent}
             />
@@ -934,6 +1009,18 @@ export default function BranchDetailPage({ initialTab }) {
               onDelete={handleDeletePartner}
             />
           </div>
+        )}
+
+        {activeTab === 'defects' && (
+          <DefectList
+            defects={defects}
+            branchId={branchId}
+            partners={partners}
+            equipments={equipments}
+            onAdd={handleAddDefect}
+            onUpdate={handleUpdateDefect}
+            onDelete={handleDeleteDefect}
+          />
         )}
 
         {/* 6. 서류 & 사진 갤러리 */}
@@ -976,7 +1063,15 @@ export default function BranchDetailPage({ initialTab }) {
             onToggleCheck={toggleLessonCheck}
             notes={lessonNotes}
             onSaveNote={saveLessonNote}
-            onWriteLog={() => setShowDailyLogForm(true)}
+            onWriteLog={() => setShowDailyLogForm('shortfalls')}
+            addedToTasks={new Set(tasks.map(t => t.lessonKey).filter(Boolean))}
+            onAddTask={(it) => setTaskEditor({
+              defaults: {
+                title: it.text,
+                memo: [it.detail, `(${it.branchName}에서 부족했던 점)`].filter(Boolean).join('\n'),
+                lessonKey: it.key,
+              },
+            })}
           />
         )}
 
@@ -991,6 +1086,7 @@ export default function BranchDetailPage({ initialTab }) {
             <ActivityLog logs={logs} />
           </div>
         )}
+      </div>
       </div>
 
       {showLessonsPopup && (
@@ -1023,18 +1119,6 @@ export default function BranchDetailPage({ initialTab }) {
         />
       )}
 
-      {/* 우측 하단 플로팅 퀵 버튼 (현장 일일 일지 즉시 작성) */}
-      <button
-        type="button"
-        className="fab-daily-log"
-        onClick={() => setShowDailyLogForm(true)}
-        title="현장 일일 일지 즉시 작성 (어디서나 1초 오픈)"
-        id="fab-quick-daily-log"
-      >
-        <NeonIcon name="log" size="sm" color="cyan" badge={false} />
-        <span className="fab-text">+ 일지 작성</span>
-      </button>
-
       {/* 모바일 하단 네비게이션 */}
       <MobileNav activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -1061,6 +1145,7 @@ export default function BranchDetailPage({ initialTab }) {
         <QuickCostForm
           cost={editingCost}
           stages={stages}
+          branchId={branchId}
           defaultStageId={formStageId}
           onSubmit={handleCostSubmit}
           onClose={() => { setShowCostForm(false); setEditingCost(null); setFormStageId(''); }}
@@ -1131,6 +1216,7 @@ export default function BranchDetailPage({ initialTab }) {
           branchId={branchId}
           stages={stages}
           defaultStageId={currentStageId}
+          openShortfalls={showDailyLogForm === 'shortfalls'}
           onSubmit={async (data) => {
             await handleAddDailyLog(data);
             setShowDailyLogForm(false);

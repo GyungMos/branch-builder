@@ -622,3 +622,24 @@ button.stage-record-main:hover .stage-record-title {
   font-size: var(--font-size-xs);
   color: var(--color-info);
 }
+
+/* 이 단계에서 부족했던 점 → '부족했던 점' 메뉴로 */
+.stage-lessons-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: var(--space-lg);
+  padding: 12px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-left: 4px solid #f59e0b;
+  border-radius: var(--radius-md);
+  background: rgba(245, 158, 11, 0.06);
+  font-size: var(--font-size-sm);
+}
+
+.stage-lessons-link-help {
+  flex: 1;
+  min-width: 200px;
+  color: var(--color-text-tertiary);
+}

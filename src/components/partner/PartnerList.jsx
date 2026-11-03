@@ -5,6 +5,8 @@ import { formatCurrency } from '../../utils/formatters';
 import { PARTNER_CATEGORIES, getPartnerCategory } from '../../constants/partnerCategories';
 import './PartnerList.css';
 
+const REUSE_LABEL = { yes: '👍 다음에도 씀', maybe: '조건부', no: '👎 다음엔 안 씀' };
+
 export default function PartnerList({ partners, onAdd, onUpdate, onDelete }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -200,6 +202,15 @@ export default function PartnerList({ partners, onAdd, onUpdate, onDelete }) {
                         '계좌 복사'
                       )}
                     </button>
+                  </div>
+                )}
+
+                {/* 업체 평가 */}
+                {(partner.rating > 0 || partner.reuse || partner.review) && (
+                  <div className="partner-review">
+                    {partner.rating > 0 && <span className="partner-review-stars" aria-label={`${partner.rating}점`}>{'★'.repeat(partner.rating)}<span className="off">{'★'.repeat(5 - partner.rating)}</span></span>}
+                    {partner.reuse && <span className={`partner-reuse ${partner.reuse}`}>{REUSE_LABEL[partner.reuse]}</span>}
+                    {partner.review && <p className="partner-review-text">{partner.review}</p>}
                   </div>
                 )}
 

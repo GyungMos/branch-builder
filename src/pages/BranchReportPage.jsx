@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useBranches } from '../hooks/useFirestore';
 import { useAuth } from '../contexts/AuthContext';
 import { loadBranchData } from '../utils/branchData';
+import { shortfallItemsOf } from '../utils/lessons';
 import { BRANCH_STATUS, STAGE_STATUS } from '../utils/constants';
 import { formatCurrency, formatDate, formatDateShort } from '../utils/formatters';
 import { requiredDocStatus } from '../utils/requiredDocs';
@@ -131,6 +132,8 @@ export default function BranchReportPage() {
         const checklist = st?.checklist || [];
         const lessons = st?.lessons || {};
         const hasLessons = Object.keys(LESSON_LABELS).some(k => lessons[k]);
+        // 이 단계 현장 일지의 '부족했던 점' (보고서에는 상세 내용까지)
+        const shortfalls = g.logs.flatMap(l => shortfallItemsOf(l).map(it => ({ ...it, when: l.when })));
         const reqDocs = st ? requiredDocStatus(st, g.documents) : [];
         return (
           <section key={st?.id || 'unlinked'} className="report-section">
@@ -224,6 +227,20 @@ export default function BranchReportPage() {
               </div>
             )}
 
+            {shortfalls.length > 0 && (
+              <div className="report-block report-lessons">
+                <h3>부족했던 점 · 미리 챙겼어야 할 것</h3>
+                <ul className="report-logs">
+                  {shortfalls.map((it, i) => (
+                    <li key={i}>
+                      <strong>{it.when ? formatDateShort(it.when) : ''}</strong> {it.category && `[${it.category}] `}{it.title}
+                      {it.detail && <div className="report-sub">{it.detail}</div>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {hasLessons && (
               <div className="report-block report-lessons">
                 <h3>다음 지점을 위한 메모</h3>
@@ -233,7 +250,7 @@ export default function BranchReportPage() {
               </div>
             )}
 
-            {st && !g.schedules.length && !g.costs.length && !g.logs.length && !g.documents.length && !checklist.length && !hasLessons && (
+            {st && !g.schedules.length && !g.costs.length && !g.logs.length && !g.documents.length && !checklist.length && !hasLessons && !shortfalls.length && (
               <p className="report-sub">기록 없음</p>
             )}
           </section>

@@ -18,6 +18,10 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
   const [accountNumber, setAccountNumber] = useState(partner?.accountNumber || '');
   const [accountHolder, setAccountHolder] = useState(partner?.accountHolder || '');
   const [memo, setMemo] = useState(partner?.memo || '');
+  // 업체 평가: 별점 1~5, 다음에도 쓸지, 평가 메모
+  const [rating, setRating] = useState(Number(partner?.rating) || 0);
+  const [reuse, setReuse] = useState(partner?.reuse || '');
+  const [review, setReview] = useState(partner?.review || '');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -38,6 +42,9 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
         accountNumber: accountNumber.trim(),
         accountHolder: accountHolder.trim(),
         memo: memo.trim(),
+        rating,
+        reuse,
+        review: review.trim(),
       });
     } catch (err) {
       console.error(err);
@@ -202,6 +209,30 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
                 onChange={(e) => setMemo(e.target.value)}
                 placeholder="예: 바닥 콘크리트 양생 후 리프트 앙카 작업 예정, 부가세 포함 견적 등"
                 rows={2}
+              />
+            </div>
+
+            <div className="partner-review-box">
+              <label>업체 평가 (다음 지점 업체 고를 때 참고)</label>
+              <div className="partner-stars" role="radiogroup" aria-label="별점">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button key={n} type="button" role="radio" aria-checked={rating === n} aria-label={`${n}점`}
+                    className={`partner-star ${n <= rating ? 'on' : ''}`} onClick={() => setRating(rating === n ? 0 : n)}>★</button>
+                ))}
+                <span className="partner-star-text">{rating ? `${rating}점` : '아직 평가 안 함'}</span>
+              </div>
+              <div className="seg-toggle" role="radiogroup" aria-label="다음에도 쓸지">
+                {[['yes', '👍 다음에도 쓸래요'], ['maybe', '조건부'], ['no', '👎 다음엔 안 써요']].map(([v, label]) => (
+                  <button key={v} type="button" role="radio" aria-checked={reuse === v} className={reuse === v ? 'on' : ''}
+                    onClick={() => setReuse(reuse === v ? '' : v)}>{label}</button>
+                ))}
+              </div>
+              <textarea
+                value={review}
+                onChange={(e) => setReview(e.target.value)}
+                placeholder="예: 공사는 꼼꼼한데 일정이 자주 밀림, 견적은 시세보다 10% 높음"
+                rows={2}
+                aria-label="평가 메모"
               />
             </div>
           </div>

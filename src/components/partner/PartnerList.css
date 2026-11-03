@@ -189,3 +189,86 @@
   font-size: var(--font-size-sm);
   margin-left: 4px;
 }
+
+/* 업체 평가 */
+.partner-review-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.partner-review-box label {
+  font-weight: 700;
+}
+
+.partner-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.partner-star {
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  color: var(--color-border);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.partner-star.on {
+  color: #f59e0b;
+}
+
+.partner-star-text {
+  margin-left: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.partner-review {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+}
+
+.partner-review-stars {
+  color: #f59e0b;
+  letter-spacing: 1px;
+}
+
+.partner-review-stars .off {
+  color: var(--color-border);
+}
+
+.partner-reuse {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  background: var(--color-bg-hover);
+}
+
+.partner-reuse.yes {
+  color: var(--color-success);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.partner-reuse.no {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.partner-review-text {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}

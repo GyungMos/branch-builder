@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { BRANCH_STATUS } from '../../utils/constants';
 import { formatRelativeTime, formatCurrency } from '../../utils/formatters';
 import NeonIcon from '../common/NeonIcon';
+import { openDday } from '../../utils/openDate';
 import './BranchCard.css';
 
 export default function BranchCard({ branch, onClick, onDelete }) {
@@ -27,6 +28,11 @@ export default function BranchCard({ branch, onClick, onDelete }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <NeonIcon name="building" color="emerald" size="sm" badge={false} />
             <h3 className="branch-card-name">{branch.name}</h3>
+            {openDday(branch) && (
+              <span className={`open-dday ${openDday(branch).days < 0 ? 'late' : openDday(branch).days <= 14 ? 'soon' : ''}`} title={`목표 오픈일 ${branch.targetOpenDate}`}>
+                오픈 {openDday(branch).label}
+              </span>
+            )}
           </div>
           {branch.address && (
             <p className="branch-card-address" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

@@ -5,20 +5,23 @@ import { useAuth } from '../contexts/AuthContext';
 import { loadBranchData } from '../utils/branchData';
 import { formatCurrency, formatDateShort } from '../utils/formatters';
 import { plainMiniDoc } from '../utils/miniDoc';
+import { collectLessons } from '../utils/lessons';
 import './SearchPage.css';
 
 const TYPES = {
   branch: { label: '지점', tab: null },
   stage: { label: '단계·체크리스트', tab: 'stages' },
-  lesson: { label: '다음 지점 메모', tab: 'stages' },
+  shortfall: { label: '부족했던 점', tab: 'lessons' },
+  lesson: { label: '잘된 점', tab: 'stages' },
   plan: { label: '오픈 계획', tab: 'plans' },
   task: { label: '오픈 준비', tab: 'tasks' },
   schedule: { label: '일정', tab: 'schedule' },
   cost: { label: '비용', tab: 'cost' },
   document: { label: '서류·사진', tab: 'documents' },
-  dailyLog: { label: '현장 일지', tab: 'schedule' },
+  dailyLog: { label: '현장 일지', tab: 'dailylog' },
   partner: { label: '협력업체', tab: 'partner' },
   equipment: { label: '장비', tab: 'equipment' },
+  defect: { label: '하자·A/S', tab: 'defects' },
 };
 
 const fmtDate = (v) => {
@@ -35,11 +38,11 @@ function buildEntries(branch, data) {
   push('branch', branch.name, [branch.address, branch.description].filter(Boolean).join(' · '));
   (data.stages || []).forEach(s => {
     push('stage', s.name, (s.checklist || []).map(c => c.text).join(' · '));
-    const l = s.lessons;
-    if (l && (l.good || l.bad || l.next)) {
-      push('lesson', s.name, [l.good && `잘된 점: ${l.good}`, l.bad && `아쉬운 점: ${l.bad}`, l.next && `다음 지점: ${l.next}`].filter(Boolean).join(' / '));
-    }
+    // 예전 단계 메모의 '잘된 점' (아쉬운 점·다음 지점 메모는 '부족했던 점'으로 함께 찾음)
+    if (s.lessons?.good) push('lesson', s.name, s.lessons.good);
   });
+  collectLessons({ branchId: branch.id, branchName: branch.name, dailyLogs: data.dailyLogs, stages: data.stages })
+    .forEach(it => push('shortfall', it.text, [it.category, it.stageName, it.detail].filter(Boolean).join(' · '), it.date ? fmtDate(it.date) : it.sourceLabel));
   (data.openPlans || []).forEach(p => push('plan', p.title,
     [plainMiniDoc(p.body), ...(p.assignee1 || []), ...(p.assignee2 || [])].filter(Boolean).join(' · ').slice(0, 400), fmtDate(p.dueDate)));
   (data.openTasks || []).forEach(t => push('task', t.title,
@@ -51,6 +54,7 @@ function buildEntries(branch, data) {
     [l.title ? l.summary : '', l.issues, l.equipmentUsed, l.author, ...(l.entries || []).map(e => [e.summary, e.issues].filter(Boolean).join(' '))].filter(Boolean).join(' · '),
     fmtDate(l.date)));
   (data.partners || []).forEach(p => push('partner', p.companyName, [p.contactName, p.phone, p.category, p.memo].filter(Boolean).join(' · ')));
+  (data.defects || []).forEach(d => push('defect', d.title, [d.location, d.partner, d.memo].filter(Boolean).join(' · '), fmtDate(d.reportedDate)));
   (data.equipments || []).forEach(e => push('equipment', e.name, [e.modelNumber, e.modelName, e.manufacturer, e.vendor, e.memo].filter(Boolean).join(' · ')));
   return out;
 }

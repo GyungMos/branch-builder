@@ -264,7 +264,7 @@ const KINDS = {
         ? r.shortfallItems.filter(it => str(it?.title).trim())
         : str(r.shortfalls).split('\n').map(l => l.trim()).filter(Boolean).map(title => ({ title, detail: '' }));
       if (shortfalls.length) {
-        out.push(heading('부족했던 점 · 미리 챙겼어야 할 것'), ...shortfalls.map(it => bullet(it.title,
+        out.push(heading('부족했던 점 · 미리 챙겼어야 할 것'), ...shortfalls.map(it => bullet(`${it.category ? `[${it.category}] ` : ''}${it.title}`,
           str(it.detail).split('\n').map(l => l.trim()).filter(Boolean).map(l => para(l)))));
       }
       (r.photos || []).filter(isHttp).forEach(u => out.push(image(u)));

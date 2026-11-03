@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   collection, doc,
-  onSnapshot, query, orderBy, serverTimestamp, Timestamp
+  onSnapshot, query, orderBy, serverTimestamp, Timestamp, deleteDoc as fbDeleteDoc,
 } from 'firebase/firestore';
 import { addDoc, updateDoc, deleteDoc } from '../utils/offlineWrite';
 import { db, loadStorage, isFirebaseConfigured } from '../config/firebase';
 import { sumPaid, sumScheduled } from '../utils/costs';
 import { useAuth } from '../contexts/AuthContext';
 import { generateId } from '../utils/formatters';
+import { trashLocal } from '../utils/trash';
 
 // ========== 로컬 스토리지 헬퍼 (데모 모드용) ==========
 function getLocalData(key) {
@@ -89,22 +90,32 @@ export function useBranches() {
     });
   };
 
-  const deleteBranch = async (branchId) => {
+  // 지점 지우기: 바로 지우지 않고 '지운 지점'으로 표시만 (휴지통에서 30일 동안 되살릴 수 있음)
+  const deleteBranch = async (branchId) => updateBranch(branchId, {
+    deletedAt: demoMode ? new Date().toISOString() : serverTimestamp(),
+    deletedBy: user?.displayName || user?.email || '관리자',
+  });
+
+  const restoreBranch = async (branchId) => updateBranch(branchId, { deletedAt: null, deletedBy: null });
+
+  // 휴지통에서 지점 완전히 지우기
+  const purgeBranch = async (branchId) => {
     if (demoMode) {
-      const updated = branches.filter(b => b.id !== branchId);
+      const updated = getLocalData('branches').filter(b => b.id !== branchId);
       setLocalData('branches', updated);
       setBranches(updated);
-      // 관련 서브데이터 삭제
-      localStorage.removeItem(`bb_stages_${branchId}`);
-      localStorage.removeItem(`bb_schedules_${branchId}`);
-      localStorage.removeItem(`bb_costs_${branchId}`);
-      localStorage.removeItem(`bb_documents_${branchId}`);
+      ['stages', 'schedules', 'costs', 'documents', 'dailyLogs', 'partners', 'equipments', 'compliance', 'openPlans', 'openTasks', 'defects', 'trash']
+        .forEach(n => localStorage.removeItem(`bb_${n}_${branchId}`));
       return;
     }
-    return deleteDoc(doc(db, 'branches', branchId));
+    return fbDeleteDoc(doc(db, 'branches', branchId));
   };
 
-  return { branches, loading, accessDenied, addBranch, updateBranch, deleteBranch };
+  // 지운 지점은 목록에서 빼고 따로 (휴지통용)
+  // (매번 새 목록을 만들면 이 목록을 지켜보는 화면이 끝없이 다시 그려지므로 목록이 바뀔 때만 새로 만듦)
+  const live = useMemo(() => branches.filter(b => !b.deletedAt), [branches]);
+  const deletedBranches = useMemo(() => branches.filter(b => b.deletedAt), [branches]);
+  return { branches: live, deletedBranches, loading, accessDenied, addBranch, updateBranch, deleteBranch, restoreBranch, purgeBranch };
 }
 
 // ========== Stages (Sub-collection) ==========
@@ -166,6 +177,7 @@ export function useStages(branchId) {
 
   const deleteStage = async (stageId) => {
     if (demoMode) {
+      trashLocal(branchId, 'stages', stages.find(x => x.id === stageId));
       const updated = stages.filter(s => s.id !== stageId);
       setLocalData(`stages_${branchId}`, updated);
       setStages(updated);
@@ -263,6 +275,7 @@ export function useSchedules(branchId) {
 
   const deleteSchedule = async (scheduleId) => {
     if (demoMode) {
+      trashLocal(branchId, 'schedules', schedules.find(x => x.id === scheduleId));
       const updated = schedules.filter(s => s.id !== scheduleId);
       setLocalData(`schedules_${branchId}`, updated);
       setSchedules(updated);
@@ -356,6 +369,7 @@ export function useCosts(branchId) {
 
   const deleteCost = async (costId) => {
     if (demoMode) {
+      trashLocal(branchId, 'costs', costs.find(x => x.id === costId));
       const updated = costs.filter(c => c.id !== costId);
       setLocalData(`costs_${branchId}`, updated);
       setCosts(updated);
@@ -464,20 +478,14 @@ export function useDocuments(branchId) {
     });
   }, [branchId, user, demoMode, documents]);
 
-  const deleteDocument = async (docId, storagePath) => {
+  // 파일은 휴지통에서 '완전히 지우기' 할 때 저장소에서 지움 (그 전에는 되살릴 수 있게 둠)
+  const deleteDocument = async (docId) => {
     if (demoMode) {
+      trashLocal(branchId, 'documents', documents.find(x => x.id === docId));
       const updated = documents.filter(d => d.id !== docId);
       setLocalData(`documents_${branchId}`, updated);
       setDocuments(updated);
       return;
-    }
-    if (storagePath) {
-      try {
-        const st = await loadStorage();
-        if (st) await st.deleteObject(st.ref(st.storage, storagePath));
-      } catch (e) {
-        console.warn('Storage delete failed:', e);
-      }
     }
     return deleteDoc(doc(db, 'branches', branchId, 'documents', docId));
   };

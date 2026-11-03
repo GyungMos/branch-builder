@@ -868,3 +868,49 @@
   line-height: 1.6;
   resize: vertical;
 }
+
+/* 일지 작성 창: 자주 안 쓰는 칸은 눌러서 펼침 */
+.log-more-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 var(--space-md);
+}
+
+.log-more-label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  margin-right: 2px;
+}
+
+.log-more-chip {
+  padding: 6px 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.log-more-chip:hover {
+  border-style: solid;
+  color: var(--color-text-primary);
+}
+
+.log-more-chip.amber {
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #d97706;
+}
+
+.shortfall-cat {
+  flex-shrink: 0;
+  width: auto;
+  max-width: 110px;
+  padding-right: 24px;
+  font-size: var(--font-size-sm);
+}

@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useAlerts } from '../../hooks/useAlerts';
 import './AlertBell.css';
 
-const TYPE_LABEL = { schedule: '일정', payment: '지급', task: '오픈 준비', plan: '오픈 계획' };
+const TYPE_LABEL = { schedule: '일정', payment: '지급', task: '오픈 준비', plan: '오픈 계획', lesson: '부족했던 점', defect: '하자·A/S' };
 
 /**
  * 머리말 종 모양 알림: 기한 지난 일과 3일 안에 챙길 일

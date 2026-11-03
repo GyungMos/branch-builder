@@ -14,11 +14,43 @@ export function toDay(v) {
 const isScheduleDone = (s) => s.status === 'completed' || s.status === 'complete';
 
 /**
+ * 지점마다 '지금 단계'에서 아직 적용 안 한 이전 지점 부족했던 점 (지점당 알림 하나)
+ * branches: [{ id, name, status, lessonChecks, stages, lessons }] — lessons는 그 지점에서 나온 부족했던 점
+ */
+export function buildLessonAlerts(branches = []) {
+  const out = [];
+  branches.forEach(b => {
+    if (b.status === 'complete' || b.status === 'paused') return;
+    const sorted = [...(b.stages || [])].sort((x, y) => (x.order || 0) - (y.order || 0));
+    const now = (sorted.find(s => s.status === 'progress') || sorted.find(s => s.status === 'waiting'))?.name;
+    if (!now) return;
+    const checks = b.lessonChecks || {};
+    const open = branches
+      .filter(o => o.id !== b.id)
+      .flatMap(o => o.lessons || [])
+      .filter(it => it.stageName === now && !checks[it.key]);
+    if (!open.length) return;
+    out.push({
+      key: `l-${b.id}-${now}-${open.length}`,
+      type: 'lesson',
+      kind: 'lesson',
+      title: `[부족했던 점] 지금 단계(${now})에서 챙길 것 ${open.length}개`,
+      branchId: b.id,
+      branchName: b.name,
+      tab: 'lessons',
+      people: [],
+      badge: '미리 챙기기',
+    });
+  });
+  return out;
+}
+
+/**
  * 챙길 일 모으기: 기한이 지났거나 days일 안에 시작·마감·지급인 것
  * 모든 기록에는 branchId·branchName이 붙어 있어야 함
  * kind: overdue(지남) | start | end | payment  —  type: schedule | payment | task | plan
  */
-export function buildAlerts({ schedules = [], costs = [], openTasks = [], openPlans = [] }, { days = 7 } = {}) {
+export function buildAlerts({ schedules = [], costs = [], openTasks = [], openPlans = [], defects = [] }, { days = 7 } = {}) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const until = new Date(today.getTime() + days * DAY);
@@ -74,6 +106,18 @@ export function buildAlerts({ schedules = [], costs = [], openTasks = [], openPl
     else if (inWindow(due)) out.push({ ...base, kind: 'end', when: due, badge: due.getTime() === today.getTime() ? '오늘 마감' : `${formatDateShort(due)} 마감` });
   });
 
-  const rank = { overdue: 0, start: 1, end: 1, payment: 1 };
+  // 하자·A/S: 접수하고 7일이 지나도록 완료가 아니면
+  defects.forEach(d => {
+    if (d.status === 'done') return;
+    const at = toDay(d.reportedDate);
+    if (!at || today - at < 7 * DAY) return;
+    out.push({
+      key: `d-${d.branchId}-${d.id}`, type: 'defect', kind: 'overdue', when: at,
+      title: `[하자] ${d.title}`, branchId: d.branchId, branchName: d.branchName, tab: 'defects',
+      people: [], badge: `${Math.round((today - at) / DAY)}일째 처리 안 됨`,
+    });
+  });
+
+  const rank = { overdue: 0, start: 1, end: 1, payment: 1, lesson: 2 };
   return out.sort((a, b) => (rank[a.kind] - rank[b.kind]) || ((a.when || 0) - (b.when || 0)));
 }

@@ -5,6 +5,7 @@ import NeonIcon from '../common/NeonIcon';
 import DateInput from '../common/DateInput';
 import { isScheduledCost, sumScheduled, dueLabel, daysUntilDue } from '../../utils/costs';
 import './CostList.css';
+import { AttachmentChips } from '../common/AttachmentPicker';
 
 function exportToCSV(costs, totalCost) {
   const headers = ['항목명', '금액', '카테고리', '날짜', '지급 상태', '거래처', '담당자', '은행명', '예금주', '계좌번호', '메모'];
@@ -226,7 +227,7 @@ export default function CostList({ costs, totalCost, onEdit, onDelete, onMarkPai
                 <NeonIcon name={category.iconName || 'budget'} color={category.color || 'emerald'} size="sm" badge={true} />
               </div>
               <div className="cost-item-info">
-                <div className="cost-item-title">{cost.title}</div>
+                <div className="cost-item-title">{cost.title} <AttachmentChips files={cost.files} /></div>
                 <div className="cost-item-meta">
                   <span className="badge badge-neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                     <NeonIcon name={category.iconName || 'budget'} color={category.color || 'emerald'} size="xs" badge={false} />

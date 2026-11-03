@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import NeonIcon from '../common/NeonIcon';
-import { PRIMARY_TABS, MORE_TABS } from '../../constants/branchTabs';
+import { BRANCH_TABS, MOBILE_TABS, TAB_GROUPS } from '../../constants/branchTabs';
 import './MobileNav.css';
 
 export default function MobileNav({ activeTab, onTabChange }) {
@@ -10,9 +10,10 @@ export default function MobileNav({ activeTab, onTabChange }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const isDetailPage = location.pathname.startsWith('/branch/');
 
-  // 지점 상세 페이지: 자주 쓰는 탭 4개 + '더보기' (나머지 탭은 위로 펼쳐지는 목록)
+  // 지점 상세 페이지: 자주 쓰는 메뉴 5개 + '전체 메뉴' (모든 메뉴를 묶음별로 위로 펼침)
   if (isDetailPage && onTabChange) {
-    const activeMore = MORE_TABS.find(t => t.id === activeTab);
+    const inBar = MOBILE_TABS.some(t => t.id === activeTab);
+    const current = BRANCH_TABS.find(t => t.id === activeTab);
     const select = (id) => { onTabChange(id); setMoreOpen(false); };
 
     return (
@@ -21,24 +22,29 @@ export default function MobileNav({ activeTab, onTabChange }) {
           <>
             <div className="mobile-more-backdrop" onClick={() => setMoreOpen(false)} />
             <div className="mobile-more-sheet" role="menu">
-              {MORE_TABS.map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="menuitem"
-                  className={activeTab === tab.id ? 'active' : ''}
-                  onClick={() => select(tab.id)}
-                  id={`mobile-tab-${tab.id}`}
-                >
-                  <NeonIcon name={tab.iconName} color={tab.color} size="sm" badge={false} />
-                  <span>{tab.label}</span>
-                </button>
+              {TAB_GROUPS.map(({ group, tabs }) => (
+                <div key={group} className="mobile-more-group">
+                  <p className="mobile-more-group-title">{group}</p>
+                  {tabs.map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="menuitem"
+                      className={activeTab === tab.id ? 'active' : ''}
+                      onClick={() => select(tab.id)}
+                      id={`mobile-menu-${tab.id}`}
+                    >
+                      <NeonIcon name={tab.iconName} color={tab.color} size="sm" badge={false} />
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
           </>
         )}
         <nav className="mobile-nav" id="mobile-nav">
-          {PRIMARY_TABS.map(tab => (
+          {MOBILE_TABS.map(tab => (
             <button
               key={tab.id}
               className={`mobile-nav-item ${activeTab === tab.id ? 'active' : ''}`}
@@ -52,13 +58,13 @@ export default function MobileNav({ activeTab, onTabChange }) {
             </button>
           ))}
           <button
-            className={`mobile-nav-item ${activeMore || moreOpen ? 'active' : ''}`}
+            className={`mobile-nav-item ${!inBar || moreOpen ? 'active' : ''}`}
             onClick={() => setMoreOpen(o => !o)}
             aria-expanded={moreOpen}
             id="mobile-tab-more"
           >
-            <span className="mobile-nav-icon mobile-nav-more-icon" aria-hidden="true">⋯</span>
-            <span className="mobile-nav-label">{activeMore ? activeMore.shortLabel : '더보기'}</span>
+            <span className="mobile-nav-icon mobile-nav-more-icon" aria-hidden="true">☰</span>
+            <span className="mobile-nav-label">{!inBar && current ? current.shortLabel : '전체 메뉴'}</span>
           </button>
         </nav>
       </>

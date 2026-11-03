@@ -6,9 +6,11 @@ import BranchForm from '../components/branch/BranchForm';
 import NeonIcon from '../components/common/NeonIcon';
 import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
 import './BranchListPage.css';
+import { useCanDelete } from '../hooks/useSettings';
 
 export default function BranchListPage() {
   const { branches, loading, accessDenied, addBranch, deleteBranch } = useBranches();
+  const canDelete = useCanDelete();
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
@@ -28,7 +30,11 @@ export default function BranchListPage() {
   };
 
   const handleDelete = async (branchId) => {
-    if (window.confirm('정말 이 지점을 삭제하시겠습니까?')) {
+    if (!canDelete) {
+      alert('지우기는 관리자만 할 수 있어요. 지워야 하면 관리자에게 부탁해 주세요.');
+      return;
+    }
+    if (window.confirm('이 지점을 지울까요? 휴지통(설정 → 휴지통)에 30일 동안 보관돼서 그 안에는 되살릴 수 있어요.')) {
       try {
         await deleteBranch(branchId);
       } catch (err) {
