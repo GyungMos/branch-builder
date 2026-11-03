@@ -647,3 +647,8 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
+
+/* 부족했던 점: 주황색 표시 */
+.week-task.lesson .week-task-badge {
+  color: #ea580c;
+}

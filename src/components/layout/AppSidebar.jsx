@@ -52,6 +52,7 @@ export default function AppSidebar() {
     } catch { return false; }
   });
   const [backingUp, setBackingUp] = useState(false);
+  const [folded, setFolded] = useState(null); // 지금 지점 세부 메뉴를 접어 둔 경우 그 지점 번호
 
   useEffect(() => {
     document.body.classList.toggle('sidebar-collapsed', collapsed);
@@ -141,18 +142,26 @@ export default function AppSidebar() {
 
         <p className="sb-section">{collapsed ? '·' : `지점 (${branches.length})`}</p>
         {branches.map(b => {
-          const open = b.id === currentBranchId;
+          const here = b.id === currentBranchId;
+          const open = here && folded !== b.id;
           const dday = openDday(b);
           return (
             <div key={b.id} className={`sb-branch ${open ? 'open' : ''}`}>
               <Item
                 collapsed={collapsed}
                 icon="home"
-                color={open ? 'cyan' : 'emerald'}
+                color={here ? 'cyan' : 'emerald'}
                 label={b.name}
-                active={open && !collapsed ? false : open}
-                onClick={() => navigate(`/branch/${b.id}`)}
-                extra={dday ? <span className={`sb-dday ${dday.days < 0 ? 'late' : dday.days <= 14 ? 'soon' : ''}`}>{dday.label}</span> : <span className="sb-caret">{open ? '▾' : '▸'}</span>}
+                active={here && (collapsed || !open)}
+                // 지금 지점을 다시 누르면 세부 메뉴 접기/펼치기, 다른 지점은 그 지점으로 이동
+                onClick={() => {
+                  if (here) setFolded(f => (f === b.id ? null : b.id));
+                  else { setFolded(null); navigate(`/branch/${b.id}`); }
+                }}
+                extra={<>
+                  {dday && <span className={`sb-dday ${dday.days < 0 ? 'late' : dday.days <= 14 ? 'soon' : ''}`}>{dday.label}</span>}
+                  <span className="sb-caret">{open ? '▾' : '▸'}</span>
+                </>}
               />
               {open && !collapsed && (
                 <div className="sb-sub">

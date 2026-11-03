@@ -14,6 +14,8 @@ export const NOTION_COLLECTIONS = {
   cost: 'costs',
   dailyLog: 'dailyLogs',
   document: 'documents',
+  shortfall: 'shortfalls',
+  defect: 'defects',
 };
 
 const WEATHER_LABEL = { sunny: '맑음', cloudy: '흐림', rain: '우천', snow: '강설' };
@@ -89,6 +91,7 @@ function toPayload(kind, r, stages = []) {
           title: r.title, stageName, amount: Number(r.amount) || 0, date: ymd(r.date),
           scheduled: isScheduledCost(r), categoryLabel: COST_CATEGORIES.find(c => c.id === r.category)?.label || '',
           vendor: r.vendor || '', assignee: r.assignee || '', memo: r.memo || '',
+          files: (r.files || []).map(f => ({ name: f.name, url: f.url })),
         },
       };
     case 'dailyLog': {
@@ -118,6 +121,24 @@ function toPayload(kind, r, stages = []) {
           categoryLabel: DOCUMENT_CATEGORIES.find(c => c.id === r.category)?.label || '',
           requiredDoc: r.requiredDoc || '', memo: r.memo || '', date: ymd(r.createdAt),
           isImage: String(r.fileType || '').startsWith('image/') || r.category === 'photo',
+        },
+      };
+    }
+    case 'shortfall':
+      return {
+        bodyHash: textHash(r.detail || ''),
+        record: { title: r.title, detail: r.detail || '', category: r.category || '', stageName, date: ymd(r.date) },
+      };
+    case 'defect': {
+      const files = (r.files || []).map(f => ({ name: f.name, url: f.url }));
+      return {
+        bodyHash: textHash(JSON.stringify([r.memo || '', files.map(f => f.url)])),
+        record: {
+          title: r.title, location: r.location || '', partner: r.partner || '',
+          statusLabel: { open: '접수', doing: '처리 중', done: '완료' }[r.status] || '접수',
+          reportedDate: ymd(r.reportedDate), doneDate: ymd(r.doneDate),
+          warrantyLabel: { yes: '보증(무상)', no: '유상' }[r.warranty] || '',
+          repairCost: Number(r.repairCost) || 0, memo: r.memo || '', files,
         },
       };
     }

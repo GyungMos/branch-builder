@@ -220,6 +220,7 @@ const KINDS = {
       거래처: { rich_text: {} },
       담당자: { rich_text: {} },
       메모: { rich_text: {} },
+      첨부: { files: {} },
     },
     // 계좌번호는 보내지 않음
     properties: (r) => ({
@@ -232,6 +233,7 @@ const KINDS = {
       거래처: text(r.vendor),
       담당자: text(r.assignee),
       메모: text(r.memo),
+      첨부: filesProp(r.files),
     }),
   },
   dailyLog: {
@@ -311,7 +313,66 @@ const KINDS = {
       })];
     },
   },
+  shortfall: {
+    idKey: 'shortfallsDbId',
+    dbTitle: '부족했던 점',
+    schema: {
+      제목: { title: {} },
+      분야: { select: {} },
+      단계: { select: {} },
+      날짜: { date: {} },
+    },
+    properties: (r) => ({
+      제목: title(r.title),
+      분야: select(r.category),
+      단계: select(r.stageName),
+      날짜: date(r.date),
+    }),
+    blocks: (r) => str(r.detail).split('\n').filter(l => l.trim()).map(l => para(l)),
+  },
+  defect: {
+    idKey: 'defectsDbId',
+    dbTitle: '하자·A/S',
+    schema: {
+      내용: { title: {} },
+      상태: { select: { options: [{ name: '접수', color: 'red' }, { name: '처리 중', color: 'orange' }, { name: '완료', color: 'green' }] } },
+      '장소·장비': { rich_text: {} },
+      업체: { rich_text: {} },
+      접수일: { date: {} },
+      완료일: { date: {} },
+      보증: { select: {} },
+      '수리 비용': { number: { format: 'won' } },
+      첨부: { files: {} },
+    },
+    properties: (r) => ({
+      내용: title(r.title),
+      상태: select(r.statusLabel),
+      '장소·장비': text(r.location),
+      업체: text(r.partner),
+      접수일: date(r.reportedDate),
+      완료일: date(r.doneDate),
+      보증: select(r.warrantyLabel),
+      '수리 비용': number(r.repairCost || null),
+      첨부: filesProp(r.files),
+    }),
+    // 처리 내용과 사진
+    blocks: (r) => [
+      ...(r.memo ? [heading('처리 내용·메모'), ...str(r.memo).split('\n').filter(l => l.trim()).map(l => para(l))] : []),
+      ...fileBlocks(r.files),
+    ],
+  },
 };
+
+// 첨부 파일: 주소가 있는 것만 (노션은 주소로만 파일을 받음)
+const okFiles = (files) => (Array.isArray(files) ? files : []).filter(f => isHttp(f?.url) && f.url.length <= 2000).slice(0, 25);
+function filesProp(files) {
+  return { files: okFiles(files).map(f => ({ name: str(f.name || '파일').slice(0, 100), type: 'external', external: { url: f.url } })) };
+}
+function fileBlocks(files) {
+  return okFiles(files).map(f => (/\.(jpe?g|png|gif|webp|heic)$/i.test(f.name || '')
+    ? image(f.url)
+    : block('paragraph', { rich_text: [{ type: 'text', text: { content: `📎 ${str(f.name || '파일').slice(0, 1900)}`, link: { url: f.url } } }] })));
+}
 
 // 지점 페이지 네모 칸에 쓰는 그림과 짧은 설명
 const BOX_INFO = {
@@ -321,6 +382,8 @@ const BOX_INFO = {
   cost: ['💰', '지급 완료 · 지급 예정'],
   dailyLog: ['📝', '날짜별 현장 작업 기록'],
   document: ['📁', '계약서 · 도면 · 사진'],
+  shortfall: ['⚠️', '미리 챙겼어야 할 것'],
+  defect: ['🛠️', '오픈 뒤 고장 · 하자'],
 };
 Object.entries(BOX_INFO).forEach(([k, [icon, boxDesc]]) => Object.assign(KINDS[k], { icon, boxDesc }));
 
@@ -408,7 +471,7 @@ async function moveDatabase(dbId, storePageId, kind) {
   }, MOVE_VERSION);
 }
 
-/** 지점 페이지 맨 위(안내 바로 아래)에 표마다 네모 칸을 만듦: 3칸 × 2줄 */
+/** 지점 페이지 맨 위(안내 바로 아래)에 표마다 네모 칸을 만듦: 3칸 × 여러 줄 */
 async function buildBoxGrid(branchPageId, out, oldGridId) {
   if (oldGridId) await notion(`/blocks/${oldGridId}`, 'DELETE').catch(() => {});
   const kinds = Object.values(KINDS);
@@ -428,7 +491,7 @@ async function buildBoxGrid(branchPageId, out, oldGridId) {
   });
   const grid = (linkAsMention) => block('column_list', {
     children: [0, 1, 2].map(c => block('column', {
-      children: [kinds[c], kinds[c + 3]].map((k, row) => k && box(k, c + row * 3, linkAsMention)).filter(Boolean),
+      children: kinds.map((k, i) => (i % 3 === c ? box(k, i, linkAsMention) : null)).filter(Boolean),
     })),
   });
 

@@ -165,14 +165,14 @@ export default function BranchDetailPage({ initialTab }) {
   };
   useEffect(() => {
     if (!notionQueue.length || !branch) return;
-    const lists = { plan: plans, task: tasks, schedule: schedules, cost: costs, dailyLog: dailyLogs, document: documents };
+    const lists = { plan: plans, task: tasks, schedule: schedules, cost: costs, dailyLog: dailyLogs, document: documents, shortfall: shortfallRecords, defect: defects };
     const ready = notionQueue.filter(q => lists[q.kind].some(rec => rec.id === q.id));
     if (!ready.length) return;
     setNotionQueue(q => q.filter(x => !ready.includes(x)));
     ready.forEach(q => {
       syncToNotion(q.kind, branch, lists[q.kind].find(rec => rec.id === q.id), { updateBranch, stages });
     });
-  }, [notionQueue, plans, tasks, schedules, costs, dailyLogs, documents, branch, stages, updateBranch]);
+  }, [notionQueue, plans, tasks, schedules, costs, dailyLogs, documents, shortfallRecords, defects, branch, stages, updateBranch]);
 
   useEffect(() => {
     if (!branchId) return;
@@ -638,11 +638,13 @@ export default function BranchDetailPage({ initialTab }) {
   };
   // 하자·A/S
   const handleAddDefect = async (data) => {
-    await addDefect(data);
+    const created = await addDefect(data);
+    queueNotion('defect', created?.id);
     addLog('defect_add', `하자 접수: ${data.title}`);
   };
   const handleUpdateDefect = async (id, data) => {
     await updateDefect(id, data);
+    queueNotion('defect', id);
     const d = defects.find(x => x.id === id);
     addLog('defect_update', `하자 ${data.status === 'done' ? '완료' : '수정'}: ${data.title || d?.title || ''}`);
   };
@@ -650,6 +652,7 @@ export default function BranchDetailPage({ initialTab }) {
     if (denyDelete()) return false;
     if (!window.confirm(`'${d.title}' 하자 기록을 지울까요?`)) return false;
     await removeDefect(d.id);
+    archiveNotionPage(d.notionPageId);
     addLog('defect_delete', `하자 삭제: ${d.title}`);
     return true;
   };
@@ -657,9 +660,11 @@ export default function BranchDetailPage({ initialTab }) {
   const handleSaveShortfall = async (id, data) => {
     if (id) {
       await updateShortfall(id, data);
+      queueNotion('shortfall', id);
       addLog('shortfall_update', `부족했던 점 수정: ${data.title}`);
     } else {
-      await addShortfall(data);
+      const created = await addShortfall(data);
+      queueNotion('shortfall', created?.id);
       addLog('shortfall_add', `부족했던 점 추가: ${data.title}`);
     }
   };
@@ -668,6 +673,7 @@ export default function BranchDetailPage({ initialTab }) {
     const rec = shortfallRecords.find(r => r.id === id);
     if (!window.confirm(`'${rec?.title || ''}'을(를) 지울까요? 휴지통에 30일 동안 보관돼요.`)) return false;
     await removeShortfall(id);
+    archiveNotionPage(rec?.notionPageId);
     addLog('shortfall_delete', `부족했던 점 삭제: ${rec?.title || ''}`);
     return true;
   };

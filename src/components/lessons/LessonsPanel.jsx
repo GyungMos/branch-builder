@@ -110,7 +110,7 @@ export default function LessonsPanel({
           <p className="lessons-help">여기서 바로 적거나, 현장 일지의 '부족했던 점' 칸에 적으면 자동으로 모여요. 항목마다 실제로 적용했는지 체크하고, 어떻게 적용했는지 적어 둘 수 있어요. 이전 지점 것은 '오픈 준비'에 할 일로 바로 넣을 수 있어요.</p>
         </div>
         <div className="lessons-head-actions">
-          {onSaveRecord && <button type="button" className="btn btn-primary btn-sm" onClick={() => setForm({})}>+ 부족했던 점 추가</button>}
+          {onSaveRecord && <button type="button" className="btn btn-sm lessons-add-btn" onClick={() => setForm({})}>+ 부족했던 점 추가</button>}
           {onWriteLog && <button type="button" className="btn btn-secondary btn-sm" onClick={onWriteLog}>+ 일지에 적기</button>}
         </div>
       </div>

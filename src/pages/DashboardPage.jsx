@@ -7,6 +7,7 @@ import { BRANCH_STATUS, COST_CATEGORIES } from '../utils/constants';
 import { daysUntilDue } from '../utils/costs';
 import { buildAlerts } from '../utils/alerts';
 import { openDday } from '../utils/openDate';
+import { useDashboardExtras } from '../hooks/useDashboardExtras';
 import BranchForm from '../components/branch/BranchForm';
 import LocalDataSyncBanner from '../components/common/LocalDataSyncBanner';
 import './DashboardPage.css';
@@ -29,7 +30,8 @@ export default function DashboardPage() {
     refetch,
   } = useDashboardData();
 
-  const { addBranch } = useBranches();
+  const { branches, addBranch } = useBranches();
+  const { openDefects, lessonAlerts, shortfallTotal } = useDashboardExtras(branches);
   const [showAddModal, setShowAddModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -217,6 +219,55 @@ export default function DashboardPage() {
           </div>
 
           <div className="dashboard-side-col">
+            {/* 처리 안 된 하자·A/S */}
+            <section className="dashboard-section">
+              <div className="section-header">
+                <h2 className="section-title">하자·A/S</h2>
+                <span className={`section-badge ${openDefects.length ? 'warn' : ''}`}>처리 안 됨 {openDefects.length}건</span>
+              </div>
+              {openDefects.length > 0 ? (
+                <ul className="week-task-list">
+                  {openDefects.slice(0, 8).map(d => {
+                    const days = d.reportedDate ? Math.round((Date.now() - new Date(`${d.reportedDate}T00:00:00`).getTime()) / 86400000) : null;
+                    return (
+                      <li key={`${d.branchId}-${d.id}`}>
+                        <button type="button" className={`week-task ${days !== null && days >= 7 ? 'overdue' : ''}`} onClick={() => navigate(`/branch/${d.branchId}?tab=defects`)}>
+                          <span className="branch-tag">{d.branchName}</span>
+                          <span className="week-task-title">{d.status === 'doing' ? '[처리 중] ' : '[접수] '}{d.title}</span>
+                          <span className="week-task-badge">{days === null ? '' : days === 0 ? '오늘 접수' : `${days}일째`}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className="dashboard-empty">처리 안 된 하자가 없어요 👍</div>
+              )}
+            </section>
+
+            {/* 지금 단계에서 챙길 부족했던 점 */}
+            <section className="dashboard-section">
+              <div className="section-header">
+                <h2 className="section-title">부족했던 점</h2>
+                <span className="section-badge">모인 것 {shortfallTotal}개</span>
+              </div>
+              {lessonAlerts.length > 0 ? (
+                <ul className="week-task-list">
+                  {lessonAlerts.map(a => (
+                    <li key={a.key}>
+                      <button type="button" className="week-task lesson" onClick={() => navigate(`/branch/${a.branchId}?tab=lessons`)}>
+                        <span className="branch-tag">{a.branchName}</span>
+                        <span className="week-task-title">{a.title.replace('[부족했던 점] ', '')}</span>
+                        <span className="week-task-badge">미리 챙기기</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="dashboard-empty">지금 단계에서 따로 챙길 이전 지점의 부족했던 점이 없어요.</div>
+              )}
+            </section>
+
             {/* 지급 예정 전체 */}
             <section className="dashboard-section">
               <div className="section-header">
