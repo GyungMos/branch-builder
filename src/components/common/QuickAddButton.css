@@ -1,0 +1,118 @@
+.quick-add {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: var(--z-floating, 500);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+/* 작성 창이 떠 있는 동안에는 숨김 */
+body:has(.modal-backdrop) .quick-add {
+  visibility: hidden;
+}
+
+.quick-add-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgba(15, 23, 42, 0.25);
+}
+
+.quick-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 12px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-accent, #10b981);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.quick-add-btn:hover {
+  transform: translateY(-2px);
+}
+
+.quick-add-plus {
+  display: inline-block;
+  font-size: 24px;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.quick-add.open .quick-add-plus {
+  transform: rotate(45deg);
+}
+
+.quick-add-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.quick-add-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-elevated, #fff);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+}
+
+[data-theme="light"] .quick-add-item {
+  background: #ffffff;
+}
+
+.quick-add-item:hover {
+  border-color: var(--color-accent, #10b981);
+}
+
+.quick-add-item.main {
+  border-color: var(--color-accent, #10b981);
+  font-weight: 900;
+}
+
+.quick-add-item.amber .quick-add-icon {
+  color: #ea580c;
+}
+
+.quick-add-icon {
+  width: 20px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .quick-add {
+    right: 16px;
+    bottom: calc(var(--mobile-nav-height, 64px) + 16px);
+  }
+
+  .quick-add-btn {
+    padding: 12px 16px;
+  }
+
+  .quick-add-text {
+    display: none;
+  }
+}

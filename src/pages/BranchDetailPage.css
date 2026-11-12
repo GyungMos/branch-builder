@@ -194,16 +194,33 @@
   min-height: 300px;
 }
 
+/* 메뉴 화면 머리: 왼쪽 제목(+설명 한 줄), 오른쪽 버튼 — 모든 메뉴 같은 모양 */
 .tab-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-xl);
+  align-items: flex-start;
+  gap: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-lg);
 }
 
-.tab-header h3 {
-  font-size: var(--font-size-lg);
-  font-weight: 700;
+.tab-header h3,
+.section-h {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.tab-help {
+  flex: 1;
+  margin: 4px 0 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.tab-header > .tab-help:first-child {
+  margin-top: 0;
 }
 
 .overview-section {
@@ -257,61 +274,6 @@
 
   .branch-status-select {
     align-self: flex-start;
-  }
-}
-
-/* ===================================================
-   플로팅 퀵 액션 버튼 (FAB - 현장 일지 1초 즉시 작성)
-   =================================================== */
-.fab-daily-log {
-  position: fixed;
-  right: 32px;
-  bottom: 32px;
-  z-index: var(--z-floating, 500);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.92) 0%, rgba(16, 185, 129, 0.92) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 9999px;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  box-shadow: 0 8px 24px rgba(6, 182, 212, 0.45), 0 0 16px rgba(16, 185, 129, 0.3);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.fab-daily-log:hover {
-  transform: translateY(-4px) scale(1.04);
-  box-shadow: 0 12px 32px rgba(6, 182, 212, 0.65), 0 0 24px rgba(16, 185, 129, 0.45);
-  border-color: rgba(255, 255, 255, 0.6);
-  background: linear-gradient(135deg, rgba(6, 182, 212, 1) 0%, rgba(16, 185, 129, 1) 100%);
-}
-
-.fab-daily-log:active {
-  transform: translateY(-1px) scale(0.98);
-}
-
-.fab-daily-log .fab-text {
-  white-space: nowrap;
-}
-
-/* 작성 창이 떠 있는 동안에는 숨김 (어둡게 덮인 화면 위로 버튼만 밝게 남지 않도록) */
-body:has(.modal-backdrop) .fab-daily-log {
-  visibility: hidden;
-}
-
-@media (max-width: 768px) {
-  .fab-daily-log {
-    right: 18px;
-    bottom: 84px; /* 모바일 하단 네비게이션바 간섭 방지 */
-    padding: 10px 16px;
-    font-size: 13px;
   }
 }
 
@@ -370,3 +332,210 @@ body:has(.modal-backdrop) .fab-daily-log {
   box-shadow: none !important;
 }
 
+
+/* ===== 지점 머리말 (한 줄) ===== */
+.bd-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: var(--space-md);
+}
+
+.bd-head-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  min-width: 0;
+}
+
+.bd-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.bd-stage {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.bd-stage strong {
+  color: var(--color-text-primary);
+}
+
+.bd-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.bd-progress-bar {
+  width: 96px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-bg-hover);
+  overflow: hidden;
+}
+
+.bd-progress-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent, #10b981);
+}
+
+.bd-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.bd-sub {
+  flex-basis: 100%;
+  margin: -4px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* ===== 챙길 것 (경고 한 줄) ===== */
+.bd-warn {
+  margin-bottom: var(--space-md);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.bd-warn summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--font-size-sm);
+}
+
+.bd-warn summary::-webkit-details-marker {
+  display: none;
+}
+
+.bd-warn-title {
+  font-weight: 800;
+  color: #ef4444;
+}
+
+.bd-warn-kinds {
+  flex: 1;
+  color: var(--color-text-secondary);
+}
+
+.bd-warn-more {
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+}
+
+.bd-warn-more::after {
+  content: ' ▾';
+}
+
+.bd-warn[open] .bd-warn-more::after {
+  content: ' ▴';
+}
+
+.bd-warn ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 14px 10px;
+}
+
+.bd-warn li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(239, 68, 68, 0.15);
+  font-size: var(--font-size-sm);
+}
+
+.bd-warn-items {
+  flex: 1;
+  min-width: 160px;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .bd-title {
+    font-size: 22px;
+  }
+
+  .bd-head-actions .btn-ghost {
+    display: none;
+  }
+}
+
+/* 메뉴 안 화면 바꾸기 */
+.bd-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-lg);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.bd-subtabs-title {
+  margin-right: 8px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.bd-subtabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bd-subtabs button.on {
+  border-color: var(--color-accent, #10b981);
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-text-primary);
+}
+
+.bd-subtabs-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  text-align: center;
+}
+
+.branch-summary-cards {
+  margin-bottom: var(--space-lg);
+}
+
+.bd-head-actions .branch-status-select {
+  width: auto;
+  min-width: 96px;
+}

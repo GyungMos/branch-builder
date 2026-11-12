@@ -51,18 +51,10 @@ export default function PartnerList({ partners, onAdd, onUpdate, onDelete }) {
     <div className="partner-section animate-fade-in">
       {/* 헤더 및 추가 버튼 */}
       <div className="partner-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <NeonIcon name="partner" color="coral" size="md" />
-          <div>
-            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 800 }}>협력업체 & 공사 거래처 명부</h2>
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
-              시공 소장, 리프트/장비 업체, 관공서 주무관 등 전담 연락처를 한 곳에서 관리하고 즉시 통화합니다.
-            </p>
-          </div>
-        </div>
+        <p className="tab-help">시공 소장, 장비 업체, 관공서 담당자 연락처를 한 곳에서 관리하고 바로 전화해요.</p>
 
-        <button className="btn btn-primary" onClick={() => { setEditingPartner(null); setShowForm(true); }}>
-          <span>+</span> 새 협력업체 등록
+        <button className="btn btn-primary btn-sm" onClick={() => { setEditingPartner(null); setShowForm(true); }}>
+          + 협력업체 등록
         </button>
       </div>
 

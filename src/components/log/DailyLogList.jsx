@@ -193,15 +193,10 @@ export default function DailyLogList({
   return (
     <div className="daily-log-section animate-fade-in" id="daily-log-section">
       {/* 일지 섹션 헤더 */}
-      <div className="daily-log-header">
-        <div className="daily-log-title-wrap">
-          <NeonIcon name="log" color="rose" size="md" />
-          <div>
-            <h3 className="daily-log-title">현장 일일 작업일지 & 이슈 노트</h3>
-            <p className="daily-log-desc">
-              오전에 작성한 작업 내용과 발생 이슈를 보존하면서, 오후에 진행한 조치 사항 및 추가 작업을 이어서 기록합니다.
-            </p>
-          </div>
+      <div className="tab-header">
+        <div>
+          <h3>현장 일지</h3>
+          <p className="tab-help">그날 한 작업과 이슈를 적어요. 오후에 한 일은 카드 아래 '이어서 추가'로 붙이고, 새 일지는 오른쪽 아래 '+ 일지 작성'으로 써요.</p>
         </div>
       </div>
 

@@ -68,12 +68,9 @@ export default function ComplianceManager({
       {/* 상단 현황 카드 */}
       <div className="compliance-hero-card">
         <div className="compliance-hero-main">
-          <NeonIcon name="compliance" color="emerald" size="lg" />
           <div>
-            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 800 }}>정비업 법정 시설기준 & 인허가 점검</h2>
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
-              자동차관리법 및 지자체 조례에 따른 정비업 등록 필수 면적, 장비, 환경, 소방 시설을 사전 점검합니다.
-            </p>
+            <h3 className="section-h">시설기준·인허가 점검</h3>
+            <p className="tab-help">정비업 등록에 필요한 면적·장비·환경·소방 시설을 미리 점검해요.</p>
           </div>
         </div>
 

@@ -21,7 +21,7 @@ const daysSince = (ymd) => {
 };
 
 /** 하자·A/S 한 건 작성·수정 */
-function DefectForm({ defect, branchId, partners = [], equipments = [], onSave, onDelete, onClose }) {
+export function DefectForm({ defect, branchId, partners = [], equipments = [], onSave, onDelete, onClose }) {
   const [title, setTitle] = useState(defect?.title || '');
   const [location, setLocation] = useState(defect?.location || '');
   const [partner, setPartner] = useState(defect?.partner || '');
@@ -162,12 +162,7 @@ export default function DefectList({ defects = [], branchId, partners, equipment
   return (
     <div className="defects">
       <div className="tab-header">
-        <div>
-          <h3>하자·A/S</h3>
-          <p className="text-secondary text-sm" style={{ marginTop: 4 }}>
-            오픈 뒤 생긴 고장·하자를 접수하고, 처리될 때까지 챙겨요. 장비 보증기간 안이면 '보증(무상)'으로 표시해 두세요.
-          </p>
-        </div>
+        <p className="tab-help">오픈 뒤 생긴 고장·하자를 접수하고, 처리될 때까지 챙겨요. 장비 보증기간 안이면 '보증(무상)'으로 표시해 두세요.</p>
         <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditor({})}>+ 하자 접수</button>
       </div>
 

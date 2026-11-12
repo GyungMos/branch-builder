@@ -1014,7 +1014,7 @@ body.modal-open .fab {
 
   .header,
   .mobile-nav,
-  .fab-daily-log,
+  .quick-add,
   .no-print {
     display: none !important;
   }
@@ -1085,17 +1085,6 @@ body.modal-open .fab {
 [data-theme="light"] .header-nav-btn.active {
   background: var(--color-accent) !important;
   box-shadow: none !important;
-}
-
-.fab-daily-log {
-  background: var(--color-accent) !important;
-  border-color: transparent !important;
-  box-shadow: var(--shadow-lg) !important;
-}
-
-.fab-daily-log:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: var(--shadow-xl) !important;
 }
 
 /* 화면 전환 애니메이션은 짧게 (내용이 늦게 뜨는 느낌 줄이기) */
@@ -1178,3 +1167,18 @@ body.modal-open .fab {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
 }
+
+/* ===== 밝은 화면: 어두운 화면용 밝은 글자색이 흰 바탕에서 흐리게 보이던 곳을 진하게 ===== */
+[data-theme="light"] .badge-neutral { color: #475569; }
+[data-theme="light"] .schedule-state-badge.ongoing,
+[data-theme="light"] .timeline-card-type-tag.schedule { color: #047857; }
+[data-theme="light"] .schedule-state-badge.soon,
+[data-theme="light"] .timeline-card-type-tag.cost,
+[data-theme="light"] .timeline-cost-amount { color: #b45309; }
+[data-theme="light"] .schedule-state-badge.upcoming,
+[data-theme="light"] .compact-timeline-badge { color: #0369a1; }
+[data-theme="light"] .timeline-card-type-tag.dailyLog { color: #1d4ed8; }
+[data-theme="light"] .partner-category-badge { filter: brightness(0.7) saturate(1.3); }
+[data-theme="light"] .open-dday { color: #047857; }
+[data-theme="light"] .open-dday.soon { color: #b45309; }
+[data-theme="light"] .open-dday.late { color: #dc2626; }

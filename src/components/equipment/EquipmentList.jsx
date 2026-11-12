@@ -42,14 +42,9 @@ export default function EquipmentList({
     <div className="equipment-section animate-fade-in">
       {/* 상단 통계 카드 */}
       <div className="equipment-hero-card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <NeonIcon name="equipment" color="violet" size="lg" />
-          <div>
-            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 800 }}>정비 장비 & 리프트 설비 대장</h2>
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
-              리프트, 얼라인먼트, 콤프레셔 등 고가 장비의 발주·입고일 및 시운전 완료 상태를 관리합니다.
-            </p>
-          </div>
+        <div>
+          <h3 className="section-h">장비 대장</h3>
+          <p className="tab-help">리프트·얼라인먼트·콤프레셔 등 장비의 발주·입고·시운전 상태를 관리해요.</p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

@@ -5,7 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useBranchNav } from '../../contexts/BranchNavContext';
 import { useBranches } from '../../hooks/useFirestore';
 import { useMembers } from '../../hooks/useSettings';
-import { TAB_GROUPS } from '../../constants/branchTabs';
+import { BRANCH_MENUS, menuCount } from '../../constants/branchTabs';
 import { openDday } from '../../utils/openDate';
 import { exportAllDataAsJSON } from '../../utils/backupRestore';
 import { downloadCloudBackup } from '../../utils/cloudBackup';
@@ -135,10 +135,10 @@ export default function AppSidebar() {
 
       <nav className="sb-scroll">
         <p className="sb-section">{collapsed ? '·' : '메인'}</p>
-        <Item collapsed={collapsed} icon="dashboard" color="cyan" label="대시보드" active={path === '/dashboard'} onClick={() => navigate('/dashboard')} />
+        <Item collapsed={collapsed} icon="dashboard" label="대시보드" active={path === '/dashboard'} onClick={() => navigate('/dashboard')} />
         <Item collapsed={collapsed} icon="building" label="지점 목록" active={path === '/'} onClick={() => navigate('/')} />
-        <Item collapsed={collapsed} icon="chart" color="violet" label="지점 비교" active={path === '/compare'} onClick={() => navigate('/compare')} />
-        <Item collapsed={collapsed} icon="search" color="cyan" label="통합 검색" active={path === '/search'} onClick={() => navigate('/search')} />
+        <Item collapsed={collapsed} icon="chart" label="지점 비교" active={path === '/compare'} onClick={() => navigate('/compare')} />
+        <Item collapsed={collapsed} icon="search" label="통합 검색" active={path === '/search'} onClick={() => navigate('/search')} />
 
         <p className="sb-section">{collapsed ? '·' : `지점 (${branches.length})`}</p>
         {branches.map(b => {
@@ -165,23 +165,21 @@ export default function AppSidebar() {
               />
               {open && !collapsed && (
                 <div className="sb-sub">
-                  {TAB_GROUPS.map(({ group, tabs }) => (
-                    <div key={group} className="sb-sub-group">
-                      <p className="sb-sub-title">{group}</p>
-                      {tabs.map(t => (
-                        <Item
-                          key={t.id}
-                          small
-                          icon={t.iconName}
-                          color={t.color}
-                          label={t.label}
-                          active={currentTab === t.id}
-                          onClick={() => navigate(`/branch/${b.id}?tab=${t.id}`)}
-                          extra={counts[t.id] > 0 ? <span className="sb-count">{counts[t.id]}</span> : null}
-                        />
-                      ))}
-                    </div>
-                  ))}
+                  {BRANCH_MENUS.map(m => {
+                    const n = menuCount(m, counts);
+                    return (
+                      <Item
+                        key={m.id}
+                        small
+                        icon={m.iconName}
+                        color={m.color}
+                        label={m.label}
+                        active={m.views.some(v => v.id === currentTab)}
+                        onClick={() => navigate(`/branch/${b.id}?tab=${m.views[0].id}`)}
+                        extra={n > 0 ? <span className={`sb-count ${m.id === 'lessons' ? 'amber' : ''}`}>{n}</span> : null}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -189,7 +187,7 @@ export default function AppSidebar() {
         })}
 
         <p className="sb-section">{collapsed ? '·' : '관리'}</p>
-        <Item collapsed={collapsed} icon="settings" color="cyan" label="설정" active={path === '/settings' && !['trash', 'backup'].includes(params.get('tab'))} onClick={() => navigate('/settings')} />
+        <Item collapsed={collapsed} icon="settings" label="설정" active={path === '/settings' && !['trash', 'backup'].includes(params.get('tab'))} onClick={() => navigate('/settings')} />
         <Item collapsed={collapsed} icon="trash" color="rose" label="휴지통" active={path === '/settings' && params.get('tab') === 'trash'} onClick={() => navigate('/settings?tab=trash')} />
         {(isAdmin && !demoMode) && (
           <Item collapsed={collapsed} icon="sync" label="자동 백업" active={path === '/settings' && params.get('tab') === 'backup'} onClick={() => navigate('/settings?tab=backup')} />

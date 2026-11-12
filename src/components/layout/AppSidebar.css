@@ -443,3 +443,7 @@
   font-weight: 700;
   text-align: center;
 }
+
+.sb-count.amber {
+  background: #f97316;
+}

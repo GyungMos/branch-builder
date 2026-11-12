@@ -19,7 +19,7 @@ import BranchForm from '../components/branch/BranchForm';
 import StageBook from '../components/branch/StageBook';
 import CopyBranchModal from '../components/branch/CopyBranchModal';
 import { useBranchNav } from '../contexts/BranchNavContext';
-import { BRANCH_TABS } from '../constants/branchTabs';
+import { BRANCH_VIEWS, menuOfView } from '../constants/branchTabs';
 import { openDday, schedulesAfterOpen } from '../utils/openDate';
 import Timeline from '../components/schedule/Timeline';
 import ArchitectPresetModal from '../components/schedule/ArchitectPresetModal';
@@ -55,7 +55,9 @@ import { collectLessons } from '../utils/lessons';
 import ImportTasksModal from '../components/opentask/ImportTasksModal';
 import { syncToNotion, archiveNotionPage } from '../utils/notionBranchSync';
 import { OPEN_TASK_GROUPS, OPEN_TASK_CATEGORIES } from '../utils/constants';
-import DefectList from '../components/defect/DefectList';
+import DefectList, { DefectForm } from '../components/defect/DefectList';
+import ShortfallForm from '../components/lessons/ShortfallForm';
+import QuickAddButton from '../components/common/QuickAddButton';
 import './BranchDetailPage.css';
 
 const todayYmd = () => {
@@ -74,7 +76,7 @@ export default function BranchDetailPage({ initialTab }) {
     const queryTab = searchParams.get('tab');
     if (queryTab === 'overview') return 'stages'; // 예전 주소 호환
     if (queryTab === 'schedule-log') return 'dailylog';
-    if (queryTab && BRANCH_TABS.some(t => t.id === queryTab)) return queryTab;
+    if (queryTab && BRANCH_VIEWS.some(v => v.id === queryTab)) return queryTab;
     if (initialTab) return initialTab;
     if (location.pathname.endsWith('/timeline')) return 'timeline';
     return 'stages';
@@ -154,6 +156,7 @@ export default function BranchDetailPage({ initialTab }) {
   const [taskEditor, setTaskEditor] = useState(null); // { task } 수정 또는 { defaults } 새 항목
   const [showImportTasks, setShowImportTasks] = useState(false);
   const [showAi, setShowAi] = useState(false);
+  const [quickForm, setQuickForm] = useState(null); // '+' 버튼에서 연 작성 창: 'shortfall' | 'defect'
   const [showLessonsPopup, setShowLessonsPopup] = useState(false);
   const lessonsPopupChecked = useRef(false);
 
@@ -252,6 +255,11 @@ export default function BranchDetailPage({ initialTab }) {
   const overduePayments = costs.filter(c => isScheduledCost(c) && (daysUntilDue(c) ?? 1) < 0);
   const dday = openDday(branch);
   const lateForOpen = schedulesAfterOpen(branch, schedules);
+  const warnings = [
+    { label: '일정 지연', items: delayedSchedules.map(x => x.title), tab: 'schedule', action: '일정 확인' },
+    { label: '오픈일보다 늦음', items: lateForOpen.map(x => x.title), tab: 'schedule', action: '일정 확인' },
+    { label: '지급일 지남', items: overduePayments.map(x => x.title), tab: 'cost', action: '비용 확인' },
+  ].filter(w => w.items.length);
 
   // --- 핸들러들 ---
   const handleStatusChange = async (newStatus) => {
@@ -701,104 +709,57 @@ export default function BranchDetailPage({ initialTab }) {
     <div className="page branch-detail" id="branch-detail-page">
       <LocalDataSyncBanner />
 
-      {/* 지연 일정 스마트 알림 배너 */}
-      {delayedSchedules.length > 0 && (
-        <div className="branch-delay-alert animate-fade-in">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <NeonIcon name="alert" color="rose" size="sm" />
-            <div>
-              <span style={{ fontWeight: 700, color: '#f87171' }}>공정 지연 주의: </span>
-              기한이 경과한 미완료 일정이 <strong>{delayedSchedules.length}건</strong> 있습니다.
-              <span className="text-secondary text-xs" style={{ marginLeft: 6 }}>
-                ({delayedSchedules.map(s => s.title).slice(0, 2).join(', ')}{delayedSchedules.length > 2 ? ' 외' : ''})
-              </span>
-            </div>
-          </div>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => setActiveTab('schedule')}
-            style={{ color: '#f87171', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-          >
-            <span>일정 확인</span>
-            <NeonIcon name="arrow-right" color="rose" size="sm" badge={false} />
-          </button>
-        </div>
-      )}
-
-      {lateForOpen.length > 0 && (
-        <div className="branch-delay-alert animate-fade-in">
-          <div>
-            <span style={{ fontWeight: 700, color: '#f87171' }}>오픈일보다 늦음: </span>
-            목표 오픈일({branch.targetOpenDate})보다 늦게 끝나는 일정이 <strong>{lateForOpen.length}건</strong> 있어요.
-            <span className="text-secondary text-xs" style={{ marginLeft: 6 }}>
-              ({lateForOpen.map(s => s.title).slice(0, 2).join(', ')}{lateForOpen.length > 2 ? ' 외' : ''})
+      {/* 지점 머리말: 이름 · D-day · 지금 단계 · 진행률을 한 줄로 */}
+      <header className="bd-head">
+        <div className="bd-head-main">
+          <h1 className="bd-title">{branch.name}</h1>
+          {dday && (
+            <span className={`open-dday ${dday.days < 0 ? 'late' : dday.days <= 14 ? 'soon' : ''}`} title={`목표 오픈일 ${dday.date}`}>
+              오픈 {dday.label}
             </span>
-          </div>
-          <button className="btn btn-ghost btn-sm" onClick={() => setActiveTab('schedule')}>일정 확인</button>
+          )}
+          <span className="bd-stage">지금 단계 <strong>{currentStageName || '단계 미정'}</strong></span>
+          <span className="bd-progress" title={`공정 진행 ${progress}%`}>
+            <span className="bd-progress-bar"><span style={{ width: `${progress}%` }} /></span>
+            {completedStages}/{stages.length} 단계
+          </span>
         </div>
+        <div className="bd-head-actions">
+          <select className="branch-status-select" value={branch.status} onChange={(e) => handleStatusChange(e.target.value)} id="branch-status-select" aria-label="지점 상태">
+            {Object.entries(BRANCH_STATUS).map(([key, val]) => (
+              <option key={key} value={key}>{val.label}</option>
+            ))}
+          </select>
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowBranchEdit(true)} id="edit-branch-btn">지점 정보 수정</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setShowCopyModal(true)} id="copy-branch-btn" title="단계·체크리스트·협력업체·장비 등을 복사해 새 지점 만들기">이 지점처럼 새로 만들기</button>
+        </div>
+        {(branch.address || branch.targetOpenDate) && (
+          <p className="bd-sub">{[branch.address, branch.targetOpenDate && `목표 오픈일 ${branch.targetOpenDate}`].filter(Boolean).join(' · ')}</p>
+        )}
+      </header>
+
+      {/* 챙길 것: 경고를 한 줄로 모으고, 누르면 펼쳐서 바로 가기 */}
+      {warnings.length > 0 && (
+        <details className="bd-warn">
+          <summary>
+            <span className="bd-warn-title">⚠ 챙길 것 {warnings.reduce((n, w) => n + w.items.length, 0)}건</span>
+            <span className="bd-warn-kinds">{warnings.map(w => `${w.label} ${w.items.length}`).join(' · ')}</span>
+            <span className="bd-warn-more">자세히</span>
+          </summary>
+          <ul>
+            {warnings.map(w => (
+              <li key={w.label}>
+                <strong>{w.label}</strong>
+                <span className="bd-warn-items">{w.items.slice(0, 3).join(', ')}{w.items.length > 3 ? ` 외 ${w.items.length - 3}건` : ''}</span>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setActiveTab(w.tab)}>{w.action} →</button>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
 
-      {overduePayments.length > 0 && (
-        <div className="branch-delay-alert animate-fade-in">
-          <div>
-            <span style={{ fontWeight: 700, color: 'var(--color-warning)' }}>지급일 지남: </span>
-            지급 예정일이 지난 비용이 <strong>{overduePayments.length}건</strong> 있어요.
-            <span className="text-secondary text-xs" style={{ marginLeft: 6 }}>
-              ({overduePayments.map(c => c.title).slice(0, 2).join(', ')}{overduePayments.length > 2 ? ' 외' : ''})
-            </span>
-          </div>
-          <button className="btn btn-ghost btn-sm" onClick={() => setActiveTab('cost')}>비용 확인</button>
-        </div>
-      )}
-
-      {/* 지점 헤더 */}
-      <div className="branch-detail-header animate-fade-in-up">
-        <div className="branch-detail-header-top">
-          <div>
-            <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <NeonIcon name="building" color="emerald" size="md" />
-              <span>{branch.name}</span>
-              {dday && (
-                <span className={`open-dday ${dday.days < 0 ? 'late' : dday.days <= 14 ? 'soon' : ''}`} title={`목표 오픈일 ${dday.date}`}>
-                  오픈 {dday.label}
-                </span>
-              )}
-            </h1>
-            {branch.targetOpenDate && <p className="text-secondary text-sm" style={{ marginTop: 2 }}>목표 오픈일 {branch.targetOpenDate}</p>}
-            {branch.address && (
-              <p className="text-secondary text-sm" style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <NeonIcon name="pin" size="xs" color="rose" badge={false} />
-                <span>{branch.address}</span>
-              </p>
-            )}
-          </div>
-          <div className="branch-header-actions">
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => setShowBranchEdit(true)}
-              id="edit-branch-btn"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-            >
-              <NeonIcon name="edit" color="emerald" size="sm" badge={false} />
-              <span>지점/제원 수정</span>
-            </button>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => setShowCopyModal(true)}
-              id="copy-branch-btn"
-              title="단계·체크리스트·협력업체·장비 등을 복사해 새 지점 만들기"
-            >
-              이 지점처럼 새 지점 만들기
-            </button>
-            <select className="branch-status-select" value={branch.status} onChange={(e) => handleStatusChange(e.target.value)} id="branch-status-select">
-              {Object.entries(BRANCH_STATUS).map(([key, val]) => (
-                <option key={key} value={key}>{val.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* 관제 센터 스타일 3D 네온 KPI 요약 카드 */}
+      {/* 숫자 카드는 '단계별 기록'(지점 개요)에서만 */}
+      {activeTab === 'stages' && (
         <div className="branch-summary-cards">
           {/* 공정 진행률 - 원형 네온 도넛 게이지 */}
           <div className="summary-card radial-kpi-card">
@@ -848,7 +809,21 @@ export default function BranchDetailPage({ initialTab }) {
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* 메뉴 안 화면이 여러 개면 위에서 바꿔 봄 (예: 할 일 → 오픈 준비 · 오픈 계획) */}
+      {menuOfView(activeTab).views.length > 1 && (
+        <div className="bd-subtabs" role="tablist" aria-label={menuOfView(activeTab).label}>
+          <span className="bd-subtabs-title">{menuOfView(activeTab).label}</span>
+          {menuOfView(activeTab).views.map(v => (
+            <button key={v.id} type="button" role="tab" aria-selected={activeTab === v.id}
+              className={activeTab === v.id ? 'on' : ''} onClick={() => setActiveTab(v.id)}>
+              {v.label}
+              {v.id === 'defects' && defects.some(d => d.status !== 'done') && <span className="bd-subtabs-count">{defects.filter(d => d.status !== 'done').length}</span>}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 탭 내용 영역 (메뉴는 PC 왼쪽 전체 메뉴 · 휴대폰 아래 막대) */}
       <div className="branch-tab-content animate-fade-in" key={activeTab}>
@@ -901,12 +876,9 @@ export default function BranchDetailPage({ initialTab }) {
         {activeTab === 'plans' && (
           <div className="tab-plans">
             <div className="tab-header">
-              <h3>오픈 계획</h3>
+              <p className="tab-help">큰 할 일·회의록을 카드로 관리해요. 카드를 눌러 세부 내용을 쓰고, PC에서는 카드를 다른 칸으로 끌어 상태를 바꿔요.</p>
               <button className="btn btn-primary btn-sm" onClick={() => setPlanEditor({ status: 'todo' })}>+ 새 항목</button>
             </div>
-            <p className="text-secondary text-sm" style={{ marginBottom: 'var(--space-md)' }}>
-              큰 할 일·회의록을 카드로 관리해요. 카드를 눌러 세부 내용을 쓰고, PC에서는 카드를 다른 칸으로 끌어 상태를 바꿀 수 있어요.
-            </p>
             <OpenPlanBoard
               plans={plans}
               onOpen={(plan) => setPlanEditor({ plan })}
@@ -919,9 +891,6 @@ export default function BranchDetailPage({ initialTab }) {
         {/* 오픈 준비 스케줄 (노션 '구리OPEN 스케쥴' 표 양식) */}
         {activeTab === 'tasks' && (
           <div className="tab-tasks">
-            <div className="tab-header">
-              <h3>오픈 준비 스케줄</h3>
-            </div>
             <OpenTaskTable
               tasks={tasks}
               onAdd={(defaults) => setTaskEditor({ defaults })}
@@ -939,10 +908,7 @@ export default function BranchDetailPage({ initialTab }) {
           <div className="tab-schedule">
             <div>
               <div className="tab-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <NeonIcon name="calendar" color="blue" size="sm" />
-                  <h3>일정 타임라인 (간트차트)</h3>
-                </div>
+                <p className="tab-help">공사 일정을 주차별로 봐요. 막대를 누르면 고칠 수 있어요.</p>
                 <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
                   <button className="btn btn-secondary btn-sm" onClick={() => setShowPresetModal(true)}>
                     표준 일정 불러오기
@@ -994,10 +960,7 @@ export default function BranchDetailPage({ initialTab }) {
             />
 
             <div className="tab-header" style={{ marginTop: 'var(--space-xl)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <NeonIcon name="money" color="amber" size="sm" />
-                <h3>상세 지출 내역 (계좌 정보 포함)</h3>
-              </div>
+              <h3>지출 내역</h3>
               <button className="btn btn-primary btn-sm" onClick={() => { setEditingCost(null); setShowCostForm(true); }}>
                 + 지출 추가
               </button>
@@ -1059,10 +1022,7 @@ export default function BranchDetailPage({ initialTab }) {
           <div className="tab-documents" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2xl)' }}>
             <div>
               <div className="tab-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <NeonIcon name="document" color="emerald" size="sm" />
-                  <h3>인허가 및 계약 서류</h3>
-                </div>
+                <h3>서류</h3>
                 <button className="btn btn-primary btn-sm" onClick={() => setShowDocUpload(true)}>
                   + 서류 업로드
                 </button>
@@ -1072,10 +1032,7 @@ export default function BranchDetailPage({ initialTab }) {
 
             <div>
               <div className="tab-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <NeonIcon name="photo" color="rose" size="sm" />
-                  <h3>현장 사진 갤러리</h3>
-                </div>
+                <h3>사진</h3>
               </div>
               <PhotoGallery documents={documents} />
             </div>
@@ -1114,12 +1071,7 @@ export default function BranchDetailPage({ initialTab }) {
 
         {activeTab === 'log' && (
           <div className="tab-log">
-            <div className="tab-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <NeonIcon name="history" color="rose" size="sm" />
-                <h3>지점 활동 변경 이력</h3>
-              </div>
-            </div>
+            <p className="tab-help" style={{ marginBottom: 'var(--space-md)' }}>누가 언제 무엇을 추가·수정·삭제했는지 기록이 남아요.</p>
             <ActivityLog logs={logs} />
           </div>
         )}
@@ -1139,9 +1091,6 @@ export default function BranchDetailPage({ initialTab }) {
       )}
 
       {/* AI 비서: 말로 부탁하면 오픈 계획·오픈 준비·일정·현장 일지에 넣을 내용을 만들어 줌 */}
-      <button type="button" className="fab-ai" onClick={() => setShowAi(true)} title="AI 비서에게 말로 부탁해서 기록 추가">
-        ✨ AI 비서
-      </button>
       {showAi && (
         <AiAssistant
           branchName={branch?.name || ''}
@@ -1155,17 +1104,32 @@ export default function BranchDetailPage({ initialTab }) {
         />
       )}
 
-      {/* 오른쪽 아래 일지 작성 버튼: 어느 메뉴에서든 바로 현장 일지 작성 (PC·휴대폰) */}
-      <button
-        type="button"
-        className="fab-daily-log"
-        onClick={() => setShowDailyLogForm(true)}
-        title="현장 일지 바로 작성"
-        id="fab-quick-daily-log"
-      >
-        <NeonIcon name="log" size="sm" color="cyan" badge={false} />
-        <span className="fab-text">+ 일지 작성</span>
-      </button>
+      {/* 오른쪽 아래 '+' 하나: 어느 메뉴에서든 바로 적기 (PC·휴대폰) */}
+      <QuickAddButton
+        actions={[
+          { id: 'log', icon: '📝', label: '현장 일지 작성', tone: 'main', onClick: () => setShowDailyLogForm(true) },
+          { id: 'shortfall', icon: '⚠', label: '부족했던 점 적기', tone: 'amber', onClick: () => setQuickForm('shortfall') },
+          { id: 'defect', icon: '🛠', label: '하자 접수', onClick: () => setQuickForm('defect') },
+          { id: 'ai', icon: '✨', label: 'AI 비서에게 말로 부탁', onClick: () => setShowAi(true) },
+        ]}
+      />
+      {quickForm === 'shortfall' && (
+        <ShortfallForm
+          stages={[...stages].sort((a, b) => (a.order || 0) - (b.order || 0))}
+          defaultStageId={currentStageId}
+          onSave={(data) => handleSaveShortfall(null, data)}
+          onClose={() => setQuickForm(null)}
+        />
+      )}
+      {quickForm === 'defect' && (
+        <DefectForm
+          branchId={branchId}
+          partners={partners}
+          equipments={equipments}
+          onSave={async (data) => { await handleAddDefect(data); setQuickForm(null); }}
+          onClose={() => setQuickForm(null)}
+        />
+      )}
 
       {/* 모바일 하단 네비게이션 */}
       <MobileNav activeTab={activeTab} onTabChange={setActiveTab} />
