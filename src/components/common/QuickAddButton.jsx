@@ -40,11 +40,11 @@ export default function QuickAddButton({ actions = [] }) {
         className="quick-add-btn"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        aria-label={open ? '닫기' : '빠르게 적기'}
+        aria-label={open ? '닫기' : '새 기록'}
         id="fab-quick-add"
       >
         <span className="quick-add-plus" aria-hidden="true">+</span>
-        <span className="quick-add-text">빠르게 적기</span>
+        <span className="quick-add-text">새 기록</span>
       </button>
     </div>
   );

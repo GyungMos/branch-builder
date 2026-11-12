@@ -78,14 +78,7 @@ export default function PartnerForm({ partner, onSubmit, onClose }) {
                       type="button"
                       className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
                       onClick={() => setCategory(c.id)}
-                      style={{
-                        fontSize: 12,
-                        padding: '6px 12px',
-                        background: isSelected ? c.color : undefined,
-                        borderColor: isSelected ? c.color : undefined,
-                        boxShadow: isSelected ? `0 0 12px ${c.glow}` : undefined,
-                        color: isSelected ? '#ffffff' : undefined,
-                      }}
+                      style={{ fontSize: 12, padding: '6px 12px' }}
                     >
                       <span style={{ marginRight: 4 }}>{c.icon}</span>
                       {c.label}

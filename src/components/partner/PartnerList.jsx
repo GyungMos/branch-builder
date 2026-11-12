@@ -75,16 +75,6 @@ export default function PartnerList({ partners, onAdd, onUpdate, onDelete }) {
                 key={cat.id}
                 className={`partner-filter-btn ${isActive ? 'active' : ''}`}
                 onClick={() => setActiveCategory(cat.id)}
-                style={
-                  isActive
-                    ? {
-                        background: cat.color,
-                        borderColor: cat.color,
-                        boxShadow: `0 0 12px ${cat.glow}`,
-                        color: '#ffffff',
-                      }
-                    : undefined
-                }
               >
                 <span style={{ marginRight: 4 }}>{cat.icon}</span>
                 {cat.shortLabel} ({count})
@@ -125,12 +115,7 @@ export default function PartnerList({ partners, onAdd, onUpdate, onDelete }) {
                   <div>
                     <span
                       className="partner-category-badge"
-                      style={{
-                        background: catCfg.bg,
-                        borderColor: catCfg.border,
-                        color: catCfg.text,
-                        boxShadow: `0 0 8px ${catCfg.glow}`,
-                      }}
+                      style={{ '--cat': catCfg.color }}
                     >
                       <span style={{ marginRight: 4 }}>{catCfg.icon}</span>
                       {catCfg.shortLabel}
