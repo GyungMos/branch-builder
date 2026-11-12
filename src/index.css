@@ -1182,3 +1182,128 @@ body.modal-open .fab {
 [data-theme="light"] .open-dday { color: #047857; }
 [data-theme="light"] .open-dday.soon { color: #b45309; }
 [data-theme="light"] .open-dday.late { color: #dc2626; }
+
+/* ===================================================
+   골라 보기 버튼(필터·보기 바꾸기) 모양 통일: '오픈 D-38'처럼 연한 바탕 + 얇은 테두리
+   - 가로 스크롤 줄 안에서 위아래가 잘리고 스크롤 막대가 보이던 것 → 줄바꿈으로
+   - 각 화면 CSS보다 먼저 적용되도록 body를 붙여 우선순위를 높임
+   =================================================== */
+body .partner-filter-bar,
+body .status-filter-group,
+body .timeline-month-chips,
+body .settings-tabs,
+body .seg-toggle {
+  flex-wrap: wrap;
+  overflow: visible;
+  gap: 6px;
+  padding: 2px 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+body .partner-filter-btn,
+body .status-filter-btn,
+body .status-toggle-btn,
+body .timeline-filter-chip,
+body .timeline-month-chip,
+body .search-chip,
+body .cmp-toggle,
+body .filter-pill,
+body .settings-tabs button,
+body .seg-toggle button,
+body .bd-subtabs button,
+body .lessons-cat-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
+}
+
+body .partner-filter-btn:hover,
+body .status-filter-btn:hover,
+body .status-toggle-btn:hover,
+body .timeline-filter-chip:hover,
+body .timeline-month-chip:hover,
+body .search-chip:hover,
+body .cmp-toggle:hover,
+body .filter-pill:hover,
+body .settings-tabs button:hover,
+body .seg-toggle button:hover,
+body .bd-subtabs button:hover,
+body .lessons-cat-chip:hover {
+  border-color: rgba(16, 185, 129, 0.45);
+  color: var(--color-text-primary);
+}
+
+/* 고른 것: 초록 연한 바탕 + 초록 테두리 + 진한 초록 글씨 */
+body .partner-filter-btn.active,
+body .status-filter-btn.active,
+body .status-toggle-btn.active-fit,
+body .timeline-filter-chip.active,
+body .timeline-month-chip.active,
+body .search-chip.on,
+body .cmp-toggle.on,
+body .filter-pill.on,
+body .settings-tabs button.on,
+body .seg-toggle button.on,
+body .bd-subtabs button.on {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
+  font-weight: 800;
+  box-shadow: none;
+}
+
+[data-theme="light"] .partner-filter-btn.active,
+[data-theme="light"] .status-filter-btn.active,
+[data-theme="light"] .status-toggle-btn.active-fit,
+[data-theme="light"] .timeline-filter-chip.active,
+[data-theme="light"] .timeline-month-chip.active,
+[data-theme="light"] .search-chip.on,
+[data-theme="light"] .cmp-toggle.on,
+[data-theme="light"] .filter-pill.on,
+[data-theme="light"] .settings-tabs button.on,
+[data-theme="light"] .seg-toggle button.on,
+[data-theme="light"] .bd-subtabs button.on {
+  color: #047857;
+}
+
+/* 상태별 색은 그대로 두되 같은 모양으로 */
+body .status-toggle-btn.active-in_progress {
+  border-color: rgba(14, 165, 233, 0.45);
+  background: rgba(14, 165, 233, 0.1);
+  color: #0284c7;
+}
+
+body .status-toggle-btn.active-waiting {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+body .status-toggle-btn.active-na {
+  border-color: rgba(100, 116, 139, 0.45);
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+}
+
+/* 부족했던 점 분야는 주황 */
+body .lessons-cat-chip.on {
+  border-color: rgba(234, 88, 12, 0.45);
+  background: rgba(234, 88, 12, 0.1);
+  color: #c2410c;
+  font-weight: 800;
+}
