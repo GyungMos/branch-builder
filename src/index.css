@@ -42,7 +42,7 @@
   --radius-md: 0.625rem;
   --radius-lg: 0.875rem;
   --radius-xl: 1.25rem;
-  --radius-full: 50%;
+  --radius-full: 9999px; /* 50%로 하면 가로로 긴 버튼이 타원이 됨 */
 
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
@@ -1343,4 +1343,63 @@ body .partner-call-btn:hover {
 
 [data-theme="light"] .partner-call-btn {
   color: #047857;
+}
+
+/* ===================================================
+   작은 표시(상태·분류·날짜·개수 등)도 모두 '오픈 D-38' 모양:
+   알약 모양 + 글자색과 같은 색의 얇은 테두리 + 아주 연한 바탕, 그림자 없음
+   =================================================== */
+body .lessons-now {
+  color: #c2410c;
+}
+
+body .badge,
+body .branch-tag,
+body .compact-timeline-badge,
+body .daily-log-block-tag,
+body .daily-log-meta-chip,
+body .lessons-cat,
+body .lessons-now,
+body .partner-reuse,
+body .plan-due,
+body .report-status,
+body .sb-dday,
+body .section-badge,
+body .stage-section-count,
+body .status-pill,
+body .timeline-card-type-tag,
+body .timeline-meta-chip,
+body .week-task-badge,
+body .schedule-state-badge,
+body .defect-status,
+body .alert-item-badge,
+body .person-tag,
+body .edit-chip,
+body .partner-category-badge,
+body .partner-call-btn,
+body .cmp-status,
+body .search-type,
+body .cost-due-badge,
+body .cat-tag,
+body .stage-check-count,
+body .timeline-compact-today-badge,
+body .compact-date-badge,
+body .compact-timeline-tip,
+body .open-dday {
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent) !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, currentColor 10%, transparent) !important;
+  box-shadow: none !important;
+  font-weight: 800;
+}
+
+body .badge,
+body .branch-tag,
+body .compact-timeline-badge,
+body .daily-log-block-tag,
+body .report-status,
+body .timeline-card-type-tag,
+body .timeline-meta-chip,
+body .week-task-badge {
+  padding: 2px 10px;
 }
