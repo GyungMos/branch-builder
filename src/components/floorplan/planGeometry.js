@@ -1,5 +1,5 @@
 import { scaledPoints, lShapePoints, lStairPoints, stairArm } from './planShapes';
-import { isBeam } from './planLibrary';
+import { isBeam, NO_COLLIDE_KINDS, recommendedLux } from './planLibrary';
 
 /** 배치도 계산 도구 (단위 mm) */
 
@@ -122,7 +122,7 @@ export function josa(word = '', pair = '이가') {
 
 const TOUCH = 15; // 15mm 이하로 맞닿은 것은 겹침으로 안 봄
 
-const collides = (it) => !['zone', 'text', 'floor', 'void'].includes(it.kind);
+const collides = (it) => !NO_COLLIDE_KINDS.includes(it.kind);
 
 /**
  * 경고 찾기
@@ -204,8 +204,10 @@ export function neededHeight(it, vehicleH = 1800, margin = 200) {
   return Math.max(own, lifted) || 0;
 }
 
-export const fmtM = (mm) => `${(mm / 1000).toFixed(2).replace(/\.?0+$/, '')}m`;
-export const fmtLen = (mm) => (Math.abs(mm) >= 1000 ? `${(mm / 1000).toFixed(2).replace(/\.?0+$/, '')}m` : `${Math.round(mm)}mm`);
+/** 길이는 모두 mm로 (예: 4,500mm) */
+export const fmtMm = (mm) => `${Math.round(Number(mm) || 0).toLocaleString('ko-KR')}mm`;
+export const fmtM = fmtMm;
+export const fmtLen = fmtMm;
 
 /** 면적: ㎡ 와 평 */
 export function areaText(wmm, dmm) {
@@ -287,6 +289,7 @@ export function planBounds(plan, bgBox) {
   (plan.items || []).forEach(it => pts.push(...clearancePolygon(it)));
   (plan.walls || []).forEach(w => pts.push(...wallPolygon(w)));
   (plan.dims || []).forEach(d => pts.push({ x: d.x1, y: d.y1 }, { x: d.x2, y: d.y2 }));
+  (plan.lines || []).forEach(l => pts.push(...(l.pts || [])));
   if (bgBox) pts.push({ x: bgBox.x0, y: bgBox.y0 }, { x: bgBox.x1, y: bgBox.y1 });
   if (!pts.length) return { x0: -5000, y0: -5000, x1: 15000, y1: 10000 };
   return aabb(pts);
@@ -294,8 +297,8 @@ export function planBounds(plan, bgBox) {
 
 /**
  * 계단·경사로가 층 높이(H)에 맞는지 계산 (참고용)
- * - 단높이 18cm 이하, 단너비 26cm 이상 (판매·근린생활시설 기준)
- * - 높이 3m 넘는 일자 계단은 중간에 1.2m 계단참
+ * - 단높이 180mm 이하, 단너비 260mm 이상 (판매·근린생활시설 기준)
+ * - 높이 3,000mm 넘는 일자 계단은 중간에 1,200mm 계단참
  * - 차량 직선 경사로 기울기 17% 이하
  */
 export const STAIR_RULE = { rise: 180, going: 260, landingOver: 3000, landing: 1200, rampMax: 0.17 };
@@ -323,4 +326,19 @@ export function stairInfo(item, H) {
     have = (item.d - sw) + (item.w - sw);
   }
   return { n, rise, need, have, ok: need === null || have >= need };
+}
+
+/**
+ * 구역 밝기(평균 조도) 어림 계산: 구역 안 조명 밝기(lm) 합 × 이용률 0.6 × 보수율 0.8 ÷ 넓이(㎡)
+ * 정확한 값은 조명 설계가 필요하지만, 모자라거나 넘치는지 가늠하는 데 써요.
+ */
+export function zoneLighting(zone, items = []) {
+  const poly = bodyPolygon(zone);
+  const lights = items.filter(it => it.kind === 'light' && pointInPolygon({ x: it.x, y: it.y }, poly));
+  const lm = lights.reduce((s, it) => s + (Number(it.lm) || 0), 0);
+  const watt = lights.reduce((s, it) => s + (Number(it.watt) || 0), 0);
+  const area = (zone.w * zone.d) / 1e6;
+  const lux = area > 0 ? Math.round((lm * 0.6 * 0.8) / area) : 0;
+  const need = zone.luxTarget || recommendedLux(zone.name);
+  return { count: lights.length, lm, watt, area, lux, need, ok: lux >= need * 0.9 };
 }

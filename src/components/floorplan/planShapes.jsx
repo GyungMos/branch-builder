@@ -582,6 +582,156 @@ export function ItemShape({ item, z = 0.05 }) {
         </g>
       );
     }
+    case 'reel': {
+      // 호스 릴: 둥근 감개 + 감긴 줄
+      const r = Math.min(w, d) / 2;
+      return (
+        <g>
+          <Outline w={w} d={d} color={c} fillOpacity={0.15} />
+          <circle cx={0} cy={0} r={r * 0.85} fill={c} fillOpacity={0.3} stroke={c} strokeWidth={1.4} {...NS} />
+          <circle cx={0} cy={0} r={r * 0.45} fill="none" stroke={c} strokeWidth={1} {...NS} />
+          <path d={`M${r * 0.85},0 Q${hw},${hd} ${hw * 0.6},${hd}`} {...line(c, { strokeDasharray: '4 3' })} />
+        </g>
+      );
+    }
+    case 'roller': {
+      // 브레이크 테스터: 좌우 바퀴 자리마다 롤러 두 줄
+      const pw = w * 0.32;
+      return (
+        <g>
+          <Outline w={w} d={d} color={c} fillOpacity={0.15} />
+          {[-1, 1].map(sx => (
+            <g key={sx}>
+              <rect x={sx * (hw - pw / 2) - pw / 2} y={-hd + d * 0.1} width={pw} height={d * 0.8} fill={c} fillOpacity={0.25} stroke={c} {...NS} />
+              {[-0.2, 0.2].map(k => <path key={k} d={`M${sx * (hw - pw / 2) - pw / 2},${k * d} h${pw}`} {...line(c, { strokeWidth: 2.4 })} />)}
+            </g>
+          ))}
+        </g>
+      );
+    }
+    case 'crane': {
+      // 엔진 크레인: ㄷ자 다리 + 기둥 + 붐
+      return (
+        <g>
+          <path d={`M${-hw},${hd} V${-hd * 0.6} H${hw} V${hd}`} {...line(c, { strokeWidth: 2.4 })} />
+          <rect x={-w * 0.08} y={-hd * 0.75} width={w * 0.16} height={w * 0.16} fill={c} {...NS} />
+          <path d={`M0,${-hd * 0.6} V${hd * 0.7}`} {...line(c, { strokeWidth: 3 })} />
+          <circle cx={0} cy={hd * 0.75} r={w * 0.06} fill="none" stroke={c} strokeWidth={1.4} {...NS} />
+        </g>
+      );
+    }
+    case 'evcharger':
+      return (
+        <g>
+          <Outline w={w} d={d} r={m * 0.15} color={c} fillOpacity={0.35} />
+          <path d={`M${w * 0.06},${-hd * 0.6} L${-w * 0.12},${hd * 0.05} H${w * 0.08} L${-w * 0.06},${hd * 0.65}`} {...line(c, { strokeWidth: 2 })} />
+        </g>
+      );
+    case 'kiosk':
+      return (
+        <g>
+          <Outline w={w} d={d} r={m * 0.1} color={c} fillOpacity={0.3} />
+          <rect x={-hw * 0.75} y={hd * 0.15} width={w * 0.75} height={d * 0.3} fill="#38bdf8" fillOpacity={0.6} stroke={c} {...NS} />
+        </g>
+      );
+    case 'benchseat': {
+      const n = Math.max(1, Math.round(w / 560));
+      return (
+        <g>
+          <rect x={-hw} y={-hd} width={w} height={d * 0.22} fill={c} fillOpacity={0.6} stroke={c} {...NS} />
+          {Array.from({ length: n }, (_, i) => (
+            <rect key={i} x={-hw + (w / n) * i + 20} y={-hd + d * 0.25} width={w / n - 40} height={d * 0.7} rx={40} fill={c} fillOpacity={0.3} stroke={c} {...NS} />
+          ))}
+        </g>
+      );
+    }
+    case 'sign':
+      return (
+        <g>
+          <rect x={-hw} y={-hd} width={w} height={d} fill={c} fillOpacity={0.7} stroke={c} {...NS} />
+          <path d={`M${-hw},${hd + 120} H${hw}`} {...line(c, { strokeDasharray: '6 4' })} />
+        </g>
+      );
+    case 'pylon':
+      return (
+        <g>
+          <rect x={-hw} y={-hd} width={w} height={d} fill={c} fillOpacity={0.5} stroke={c} strokeWidth={1.6} {...NS} />
+          <path d={`M${-hw * 0.6},0 H${hw * 0.6}`} {...line('#ffffff', { strokeWidth: 2 })} />
+        </g>
+      );
+    case 'fence': {
+      const n = Math.max(1, Math.round(w / 1000));
+      return (
+        <g>
+          <rect x={-hw} y={-hd} width={w} height={d} fill={c} fillOpacity={0.35} stroke={c} {...NS} />
+          {Array.from({ length: n + 1 }, (_, i) => <circle key={i} cx={-hw + (w / n) * i} cy={0} r={Math.max(d, 40)} fill={c} />)}
+        </g>
+      );
+    }
+    case 'parking':
+      return (
+        <g>
+          <path d={`M${-hw},${-hd} V${hd} M${hw},${-hd} V${hd} M${-hw},${-hd} H${hw}`} stroke={c === '#e5e7eb' ? '#94a3b8' : c} strokeWidth={2.4} fill="none" {...NS} />
+          <path d={`M${-hw * 0.3},${hd * 0.5} L0,${hd * 0.2} L${hw * 0.3},${hd * 0.5}`} {...line('#94a3b8')} />
+        </g>
+      );
+    case 'light':
+      return (
+        <g>
+          <rect x={-hw} y={-hd} width={w} height={d} fill="#fef9c3" fillOpacity={0.9} stroke={c} strokeWidth={1.4} {...NS} />
+          <path d={`M${-hw},${-hd} L${hw},${hd} M${hw},${-hd} L${-hw},${hd}`} {...line(c, { strokeWidth: 1 })} />
+        </g>
+      );
+    case 'lightline':
+      return (
+        <g>
+          <rect x={-hw} y={-hd} width={w} height={d} rx={d / 2} fill="#fef9c3" stroke={c} strokeWidth={1.4} {...NS} />
+          <path d={`M${-hw},0 H${hw}`} {...line(c, { strokeWidth: 1 })} />
+        </g>
+      );
+    case 'lightround':
+      return (
+        <g>
+          <ellipse cx={0} cy={0} rx={hw} ry={hd} fill="#fef9c3" stroke={c} strokeWidth={1.4} {...NS} />
+          <path d={`M${-hw * 0.7},${-hd * 0.7} L${hw * 0.7},${hd * 0.7} M${hw * 0.7},${-hd * 0.7} L${-hw * 0.7},${hd * 0.7}`} {...line(c, { strokeWidth: 1 })} />
+        </g>
+      );
+    case 'outlet':
+      return (
+        <g>
+          <path d={`M${-hw},${hd} A${hw},${hw} 0 0 1 ${hw},${hd} Z`} fill={c} fillOpacity={0.25} stroke={c} strokeWidth={1.4} {...NS} />
+          <path d={`M${-hw},${hd} H${hw} M${-hw * 0.3},${hd - hw * 0.5} v${-hw * 0.3} M${hw * 0.3},${hd - hw * 0.5} v${-hw * 0.3}`} {...line(c, { strokeWidth: 1.4 })} />
+        </g>
+      );
+    case 'switchsym':
+      return (
+        <g>
+          <circle cx={0} cy={0} r={Math.min(hw, hd) * 0.8} fill={c} fillOpacity={0.25} stroke={c} strokeWidth={1.4} {...NS} />
+          <path d={`M0,0 L${hw * 1.4},${-hd * 1.4}`} {...line(c, { strokeWidth: 1.4 })} />
+        </g>
+      );
+    case 'aircock':
+      return (
+        <g>
+          <circle cx={0} cy={0} r={Math.min(hw, hd)} fill="#dbeafe" stroke={c} strokeWidth={1.6} {...NS} />
+          <text x={0} y={0} textAnchor="middle" dominantBaseline="central" fontSize={Math.min(w, d) * 0.7} fontWeight={800} fill={c}>A</text>
+        </g>
+      );
+    case 'faucet':
+      return (
+        <g>
+          <circle cx={0} cy={0} r={Math.min(hw, hd)} fill="#dcfce7" stroke={c} strokeWidth={1.6} {...NS} />
+          <path d={`M${-hw * 0.6},0 H${hw * 0.6} M0,${-hd * 0.6} V${hd * 0.6}`} {...line(c, { strokeWidth: 1.6 })} />
+        </g>
+      );
+    case 'roof':
+      return (
+        <g>
+          <rect x={-hw} y={-hd} width={w} height={d} fill={c} fillOpacity={0.15} stroke={c} strokeWidth={1.4} strokeDasharray="8 5" {...NS} />
+          {item.roofType === 'gable' && <path d={`M${-hw},0 H${hw}`} {...line(c, { strokeWidth: 1.6 })} />}
+          {item.roofType !== 'gable' && item.roofType !== 'flat' && <path d={`M0,${-hd * 0.6} V${hd * 0.6} m${-w * 0.05},${-w * 0.05} l${w * 0.05},${w * 0.05} l${w * 0.05},${-w * 0.05}`} {...line(c)} />}
+        </g>
+      );
     case 'photobox':
       return (
         <g>
@@ -623,6 +773,21 @@ export function ItemShape({ item, z = 0.05 }) {
           <path d={`M${-hw},${hd + w} A${w},${w} 0 0 0 ${hw},${hd}`} {...line(c, { strokeDasharray: '4 3' })} />
         </g>
       );
+    case 'autodoor1': {
+      // 편개 자동문: 문짝 하나가 오른쪽(벽 쪽)으로 열림. 점선 = 문짝이 들어가는 자리
+      const pt = Math.max(20, d * 0.25);
+      const a = w * 0.06;
+      const leaf = item.opaque ? c : '#bae6fd';
+      return (
+        <g>
+          <rect x={-hw} y={-hd} width={w} height={d} fill="var(--fp-bg)" stroke="none" />
+          <path d={`M${-hw},${-hd} V${hd} M${hw},${-hd} V${hd}`} {...line(c, { strokeWidth: 2 })} />
+          <rect x={-hw} y={-pt / 2} width={w} height={pt} fill={leaf} fillOpacity={item.opaque ? 0.45 : 0.65} stroke={c} strokeWidth={1.4} {...NS} />
+          <rect x={hw} y={-pt / 2 - pt} width={w} height={pt} fill="none" stroke={c} strokeWidth={1} strokeDasharray="5 4" {...NS} />
+          <path d={`M${-w * 0.2},${hd + w * 0.12} H${w * 0.3} l${-a},${-a * 0.6} M${w * 0.3},${hd + w * 0.12} l${-a},${a * 0.6}`} {...line(c)} />
+        </g>
+      );
+    }
     case 'autodoor': {
       const pt = Math.max(20, d * 0.25);
       const a = w * 0.05;

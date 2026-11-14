@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import {
-  PLAN_CATEGORIES, PLAN_LIBRARY, ITEM_COLORS, guessLibraryFromName, FLOOR_TYPES, floorTypeOf, WALL_TYPES, wallTypeOf, WALL_COLORS, isVertical, hasFaces, STEEL_SIZES, steelProfile,
+  PLAN_CATEGORIES, PLAN_LIBRARY, ITEM_COLORS, guessLibraryFromName, FLOOR_TYPES, floorTypeOf, WALL_TYPES, wallTypeOf, WALL_COLORS, isVertical, hasFaces, STEEL_SIZES, steelProfile, PAINT_COLORS, LOUVER_COLORS, ROOF_TYPES, ROOF_MATERIALS, MEP_LINE_TYPES, mepLineTypeOf,
 } from './planLibrary';
 import { LookSelect, FacePhotos, ModelPicker, inspectModel } from './Plan3DInputs';
 import { ShapeThumb, stairArm } from './planShapes';
-import { areaText, fmtM, neededHeight, stairInfo } from './planGeometry';
+import { areaText, fmtM, neededHeight, stairInfo, zoneLighting } from './planGeometry';
 
 /** 색 고르기: 자주 쓰는 색 + 직접 고르기 */
 function ColorPicker({ value, colors, onChange, onReset, resetLabel = '기본 색' }) {
@@ -46,6 +46,7 @@ const tplOf = (it) => ({
   key: it.key, name: it.name, shape: it.shape, kind: it.kind, w: it.w, d: it.d, h: it.h, lift: it.lift, clear: it.clear,
   color: it.color, points: it.points, baseW: it.baseW, baseD: it.baseD, img: it.img, arm: it.arm, elev: it.elev,
   look: it.look, faces: it.faces, model: it.model, modelRot: it.modelRot, prof: it.prof,
+  lm: it.lm, watt: it.watt, roofType: it.roofType, rise: it.rise, material: it.material, opaque: it.opaque,
 });
 
 /* ───────── 왼쪽: 비품 목록 ───────── */
@@ -129,7 +130,7 @@ export function LibraryPanel({ onPick, onCustom, myLibrary, onRemoveTemplate, eq
 
 /* ───────── 오른쪽: 고른 것 고치기 ───────── */
 export function InspectorPanel({
-  sel, items, wall, dim, equipments, ceiling, vehicleH, levelH, levelName, aboveName, onCopyUp, demoMode,
+  sel, items, wall, dim, equipments, ceiling, vehicleH, levelH, levelName, aboveName, onCopyUp, demoMode, onAllWalls, line, onLine, allItems = [],
   onItems, onWall, onDelete, onDuplicate, onRotate, onSaveTemplate, onClose, onAlign,
 }) {
   if (sel.kind === 'wall' && wall) {
@@ -181,12 +182,16 @@ export function InspectorPanel({
             <p className="fp-muted">높이를 비워 두면 층고까지로 봐요. (3D로 볼 때 써요)</p>
           </>
         )}
-        <div className="fp-label">{wt.type === 'glass' || wt.type === 'curtain' ? '유리 틀 색' : wt.beam ? '보 색(도장)' : '벽 색'}</div>
+        <div className="fp-label">{wt.type === 'glass' || wt.type === 'curtain' ? '유리 틀 색' : wt.beam ? '보 색(도장)' : '벽 색 (도면·벽 두께 면)'}</div>
         <ColorPicker value={wall.color || wt.color || ''} colors={WALL_COLORS} onChange={(c) => onWall({ color: c })} onReset={wall.color ? () => onWall({ color: null }) : null} />
+        {!wt.beam && wt.type !== 'glass' && wt.type !== 'curtain' && <WallFaceEditor key={wall.id} wall={wall} onWall={onWall} onAllWalls={onAllWalls} />}
         <p className="fp-muted">양 끝 동그라미를 끌어 길이·방향을 바꿔요.</p>
         <button type="button" className="btn btn-danger btn-sm" onClick={onDelete}>{wt.beam ? '보 지우기' : '벽 지우기'}</button>
       </section>
     );
+  }
+  if (sel.kind === 'line' && line) {
+    return <LineEditor line={line} onLine={onLine} onDelete={onDelete} onClose={onClose} />;
   }
   if (sel.kind === 'dim' && dim) {
     return (
@@ -227,7 +232,7 @@ export function InspectorPanel({
 
   const it = items[0];
   const set = (patch) => onItems(ids, patch);
-  const isZone = it.kind === 'zone'; const isText = it.kind === 'text';
+  const isZone = it.kind === 'zone'; const isText = it.kind === 'text'; const isRoof = it.kind === 'roof';
   const need = neededHeight(it, vehicleH);
   const setClear = (k, v) => set({ clear: { ...(it.clear || {}), [k]: v || 0 } });
 
@@ -244,7 +249,7 @@ export function InspectorPanel({
         <div className="fp-grid2">
           <Num label="가로" value={Math.round(it.w)} onChange={(v) => v && set({ w: v })} />
           <Num label="세로" value={Math.round(it.d)} onChange={(v) => v && set({ d: v })} />
-          {!isZone && <Num label="높이" value={it.h || ''} onChange={(v) => set({ h: v || 0 })} />}
+          {!isZone && !isRoof && <Num label="높이" value={it.h || ''} onChange={(v) => set({ h: v || 0 })} />}
           {it.shape === 'lshape' && <Num label="팔 두께" value={it.arm || Math.round(Math.min(it.w, it.d) / 2)} onChange={(v) => v && set({ arm: v })} />}
           {(it.shape === 'stairsL' || it.shape === 'stairsU') && <Num label="계단 폭" value={Math.round(stairArm(it))} onChange={(v) => v && set({ arm: v })} />}
         </div>
@@ -286,7 +291,18 @@ export function InspectorPanel({
       )}
       {isZone && <p className="fp-area">넓이 {areaText(it.w, it.d)}</p>}
       {isZone && <FloorEditor it={it} set={set} />}
-      {!isZone && !isText && (it.elev !== undefined || it.kind === 'arch') && (
+      {isZone && <ZoneCeilingLight it={it} set={set} allItems={allItems} />}
+      {isRoof && <RoofEditor it={it} set={set} levelH={levelH} />}
+      {it.kind === 'light' && (
+        <>
+          <div className="fp-grid2">
+            <Num label="밝기" unit="lm" step={100} value={it.lm || ''} onChange={(v) => set({ lm: v || 0 })} />
+            <Num label="전력" unit="W" step={1} value={it.watt || ''} onChange={(v) => set({ watt: v || 0 })} />
+          </div>
+          <p className="fp-muted">'바닥에서 띄운 높이'를 비우면 구역 천장 높이(없으면 층고)에 붙어요. 구역을 고르면 그 방 밝기(lux)를 계산해 줘요.</p>
+        </>
+      )}
+      {!isZone && !isText && !isRoof && (it.elev !== undefined || ['arch', 'light', 'mount', 'mep'].includes(it.kind)) && (
         <Num label="바닥에서 띄운 높이" value={it.elev || ''} onChange={(v) => set({ elev: v || 0 })} />
       )}
 
@@ -299,7 +315,7 @@ export function InspectorPanel({
         {!isText && <button type="button" className="filter-pill" onClick={() => set({ flip: !it.flip })}>좌우 뒤집기</button>}
       </div>
 
-      {!isZone && !isText && (
+      {!isZone && !isText && !isRoof && (
         <>
           <div className="fp-label">비워 둘 작업 공간 <small>(앞=아래쪽, 돌리면 같이 돌아요)</small></div>
           <div className="fp-grid2">
@@ -323,9 +339,9 @@ export function InspectorPanel({
       <div className="fp-label">{isZone ? '테두리·이름 색' : '색'}</div>
       <ColorPicker value={it.color} colors={ITEM_COLORS} onChange={(c) => set({ color: c })} />
 
-      {!isZone && !isText && it.kind !== 'void' && <Item3DSection key={it.id} it={it} set={set} demoMode={demoMode} />}
+      {!isZone && !isText && !isRoof && it.kind !== 'void' && <Item3DSection key={it.id} it={it} set={set} demoMode={demoMode} />}
 
-      {!isZone && !isText && equipments.length > 0 && (
+      {!isZone && !isText && !isRoof && equipments.length > 0 && (
         <label className="fp-field">
           <span>장비 대장과 잇기</span>
           <select value={it.equipId || ''} onChange={(e) => set({ equipId: e.target.value || null })}>
@@ -342,19 +358,143 @@ export function InspectorPanel({
 
       <div className="fp-btn-row">
         <label className="fp-check"><input type="checkbox" checked={Boolean(it.locked)} onChange={(e) => set({ locked: e.target.checked })} /> 잠그기(안 움직이게)</label>
-        {!isZone && !isText && (
+        {!isZone && !isText && !isRoof && (
           <label className="fp-check"><input type="checkbox" checked={Boolean(it.hideClear)} onChange={(e) => set({ hideClear: e.target.checked })} /> 작업 공간 검사 안 함</label>
         )}
       </div>
       <div className="fp-btn-row">
         <button type="button" className="btn btn-secondary btn-sm" onClick={onDuplicate}>복사</button>
-        {!isZone && !isText && onSaveTemplate && (
+        {!isZone && !isText && !isRoof && onSaveTemplate && (
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => { onSaveTemplate(tplOf(it)); alert(`'${it.name}'을(를) 내 비품에 저장했어요.`); }}>내 비품에 저장</button>
         )}
         <button type="button" className="btn btn-danger btn-sm" onClick={onDelete} disabled={it.locked}>지우기</button>
       </div>
-      <p className="fp-muted fp-keys">단축키: 화살표 1cm(Shift 10cm) 옮기기 · R 돌리기 · Ctrl+D 복사 · Delete 지우기 · Ctrl+Z 되돌리기</p>
+      <p className="fp-muted fp-keys">단축키: 화살표 10mm(Shift 100mm) 옮기기 · R 돌리기 · Ctrl+D 복사 · Delete 지우기 · Ctrl+Z 되돌리기</p>
     </section>
+  );
+}
+
+/* 전기·배관 선 */
+function LineEditor({ line, onLine, onDelete, onClose }) {
+  const lt = mepLineTypeOf(line.type);
+  const pts = line.pts || [];
+  const len = pts.reduce((s, q, i) => (i ? s + Math.hypot(q.x - pts[i - 1].x, q.y - pts[i - 1].y) : 0), 0);
+  return (
+    <section className="fp-panel">
+      <div className="fp-panel-head"><strong>{lt.label}</strong><button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>닫기</button></div>
+      <div className="fp-label">종류</div>
+      <div className="fp-btn-row">
+        {MEP_LINE_TYPES.map(t => (
+          <button key={t.type} type="button" className={`filter-pill${t.type === lt.type ? ' on' : ''}`} onClick={() => onLine({ type: t.type, h: t.h })}>
+            <i className="fp-line-dot" style={{ background: t.color }} /> {t.label}
+          </button>
+        ))}
+      </div>
+      <p className="fp-area">길이 {fmtM(len)} · 꺾인 곳 {Math.max(0, pts.length - 2)}개</p>
+      <Num label="지나가는 높이" step={100} value={line.h ?? lt.h} onChange={(v) => onLine({ h: v ?? 0 })} />
+      <p className="fp-muted">3D에서 이 높이로 지나가요. (전기 배선·에어 배관은 보통 천장 쪽, 급수·배수는 바닥 쪽)</p>
+      <button type="button" className="btn btn-danger btn-sm" onClick={onDelete}>선 지우기</button>
+    </section>
+  );
+}
+
+/* 구역 천장 높이·밝기(조도) */
+function ZoneCeilingLight({ it, set, allItems }) {
+  const L = zoneLighting(it, allItems);
+  return (
+    <div className="fp-3d-sec">
+      <div className="fp-label">천장·조명</div>
+      <div className="fp-grid2">
+        <Num label="천장 높이" step={50} value={it.ceilH || ''} onChange={(v) => set({ ceilH: v || null })} />
+        <Num label="목표 밝기" unit="lux" step={50} value={it.luxTarget || L.need} onChange={(v) => set({ luxTarget: v || null })} />
+      </div>
+      <p className="fp-muted">천장 높이를 적으면 이 방 조명이 그 높이에 붙고, 3D에서 천장판이 보여요. 비우면 층고까지 뚫린 공간이에요.</p>
+      <div className={`fp-stair-box${L.count && L.ok ? '' : ' bad'}`}>
+        <strong>밝기(평균 조도) 어림</strong>
+        {L.count ? (
+          <>
+            <div>조명 {L.count}개 · {L.lm.toLocaleString()}lm · {L.watt.toLocaleString()}W</div>
+            <div>약 {L.lux.toLocaleString()} lux / 목표 {L.need.toLocaleString()} lux {L.ok ? '✓' : '— 모자라요'}</div>
+          </>
+        ) : <div>이 구역 안에 놓은 조명이 없어요. '조명·전기·배관'에서 조명을 놓아 보세요.</div>}
+        <small className="fp-muted">정비 작업 500 · 사무 400 · 대기실 200 · 화장실·창고 150 lux가 기준이에요. 구역 이름으로 목표를 짐작해요.</small>
+      </div>
+    </div>
+  );
+}
+
+/* 지붕: 모양·처마 높이·경사·재료 */
+function RoofEditor({ it, set, levelH }) {
+  const type = it.roofType || 'flat';
+  const slope = it.d ? Math.round(((it.rise || 0) / (type === 'gable' ? it.d / 2 : it.d)) * 1000) / 10 : 0;
+  return (
+    <div className="fp-3d-sec">
+      <div className="fp-label">지붕 모양</div>
+      <div className="fp-btn-row">
+        {ROOF_TYPES.map(t => (
+          <button key={t.id} type="button" className={`filter-pill${type === t.id ? ' on' : ''}`} title={t.tip || ''}
+            onClick={() => set({ roofType: t.id, rise: t.id === 'flat' ? 0 : (it.rise || Math.round(((t.id === 'gable' ? it.d / 2 : it.d) * 0.05) / 10) * 10) })}>{t.label}</button>
+        ))}
+      </div>
+      <div className="fp-grid2">
+        <Num label="처마 높이" step={50} value={it.h || ''} onChange={(v) => set({ h: v || 0 })} />
+        {type !== 'flat' && <Num label="경사로 오르는 높이" step={10} value={it.rise || 0} onChange={(v) => set({ rise: v ?? 0 })} />}
+      </div>
+      <p className="fp-muted">
+        {type === 'flat' ? '평평한 지붕이에요.' : `기울기 약 ${slope}% · 가장 높은 곳 ${fmtM((it.h || 0) + (it.rise || 0))}`}
+        {type === 'mono' ? ' 뒤쪽(위)이 높아요. 돌리기로 방향을 바꿔요.' : ''}
+        {!it.h && levelH ? ` 처마 높이를 비우면 3D에서는 층고(${fmtM(levelH)})로 봐요.` : ''}
+      </p>
+      <div className="fp-label">재료</div>
+      <div className="fp-btn-row">
+        {ROOF_MATERIALS.map(m => (
+          <button key={m.id} type="button" className={`filter-pill${(it.material || 'panel') === m.id ? ' on' : ''}`} onClick={() => set({ material: m.id, color: m.color })}>{m.label}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* 벽면 꾸미기: 면(A·B)마다 페인트 색, 아래쪽 루바(나무 판) */
+function WallFaceEditor({ wall, onWall, onAllWalls }) {
+  const [side, setSide] = useState('a');
+  const faces = wall.faces || {};
+  const f = faces[side] || {};
+  const write = (nf) => {
+    const clean = Object.fromEntries(Object.entries(nf).filter(([, v]) => v !== null && v !== undefined));
+    onWall({ faces: { ...faces, [side]: Object.keys(clean).length ? clean : null } });
+  };
+  const setF = (patch) => write({ ...f, ...patch });
+  const w = f.wainscot || null;
+  const setW = (patch) => setF({ wainscot: { h: 1200, color: '#c8a273', pitch: 100, ...(w || {}), ...patch } });
+  const dot = (s) => (faces[s] ? ' ●' : '');
+  return (
+    <div className="fp-3d-sec">
+      <div className="fp-label">벽면 꾸미기 <small>(도면에 보이는 A면·B면 글자로 어느 쪽인지 확인)</small></div>
+      <div className="fp-btn-row">
+        <button type="button" className={`filter-pill${side === 'a' ? ' on' : ''}`} onClick={() => setSide('a')}>A면{dot('a')}</button>
+        <button type="button" className={`filter-pill${side === 'b' ? ' on' : ''}`} onClick={() => setSide('b')}>B면{dot('b')}</button>
+      </div>
+      <div className="fp-label">페인트 색</div>
+      <ColorPicker value={f.paint || ''} colors={PAINT_COLORS} onChange={(c) => setF({ paint: c })} onReset={f.paint ? () => setF({ paint: null }) : null} resetLabel="칠 안 함" />
+      <label className="fp-check"><input type="checkbox" checked={Boolean(w)} onChange={(e) => setF({ wainscot: e.target.checked ? { h: 1200, color: '#c8a273', pitch: 100 } : null })} /> 아래쪽 루바(나무 판) 두르기</label>
+      {w && (
+        <>
+          <div className="fp-grid2">
+            <Num label="루바 높이" step={50} value={w.h} onChange={(v) => v && setW({ h: v })} />
+            <Num label="판 한 장 폭" step={10} value={w.pitch || 100} onChange={(v) => v && setW({ pitch: v })} />
+          </div>
+          <div className="fp-label">루바 색</div>
+          <ColorPicker value={w.color} colors={LOUVER_COLORS} onChange={(c) => setW({ color: c })} />
+          <p className="fp-muted">문·창 자리는 비우고 둘러요. 보통 바닥에서 900~1,200mm 높이까지 둘러요.</p>
+        </>
+      )}
+      <div className="fp-btn-row">
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onWall({ faces: { a: faces[side] || null, b: faces[side] || null } })}>양쪽 면 같게</button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { if (window.confirm('이 벽의 꾸미기(A면·B면)를 모든 벽에 똑같이 적용할까요? (유리벽·보는 빼요)')) onAllWalls({ faces: wall.faces || null }); }}>모든 벽에 같게</button>
+      </div>
+      <p className="fp-muted">'건물 크기로 벽 만들기'로 만든 벽은 A면이 건물 안쪽이에요.</p>
+    </div>
   );
 }
 
@@ -457,7 +597,7 @@ function StairCheck({ it, levelH, levelName }) {
           )}
         </>
       )}
-      <small className="fp-muted">{info.ramp ? '주차장법 직선 경사로 17% 이하 기준이에요.' : '단높이 18cm 이하·단너비 26cm 이상, 높이 3m가 넘으면 계단참 기준이에요.'} 용도에 따라 기준이 달라 설계사무소 확인이 필요해요.</small>
+      <small className="fp-muted">{info.ramp ? '주차장법 직선 경사로 17% 이하 기준이에요.' : '단높이 180mm 이하·단너비 260mm 이상, 높이 3,000mm가 넘으면 계단참 기준이에요.'} 용도에 따라 기준이 달라 설계사무소 확인이 필요해요.</small>
     </div>
   );
 }
@@ -544,13 +684,13 @@ export function PlanSettingsPanel({ plan, levelName, levelH, onPlan, onPickBg, o
         <Num label="층고" unit="mm" step={50} value={plan.ceiling || ''} onChange={(v) => onPlan({ ceiling: v || null })} />
         <Num label="가장 높은 차" unit="mm" step={50} value={plan.vehicleH || 1800} onChange={(v) => onPlan({ vehicleH: v || 1800 })} />
       </div>
-      <p className="fp-muted">리프트를 끝까지 올리고 차를 얹었을 때 천장(보·배관·조명 포함)에 닿지 않는지 봐요. 여유 20cm를 더해요.</p>
+      <p className="fp-muted">리프트를 끝까지 올리고 차를 얹었을 때 천장(보·배관·조명 포함)에 닿지 않는지 봐요. 여유 200mm를 더해요.</p>
       {!plan.ceiling && <p className="fp-muted">층고를 안 적으면 계단 계산과 3D는 {fmtM(levelH)}로 봐요.</p>}
 
       <div className="fp-panel-head fp-sub"><strong>건물 크기로 벽 만들기</strong></div>
       <div className="fp-grid2">
-        <Num label="가로" unit="m" step={0.1} value={roomW} onChange={(v) => setRoomW(v ?? '')} />
-        <Num label="세로" unit="m" step={0.1} value={roomD} onChange={(v) => setRoomD(v ?? '')} />
+        <Num label="가로" step={100} value={roomW} onChange={(v) => setRoomW(v ?? '')} />
+        <Num label="세로" step={100} value={roomD} onChange={(v) => setRoomD(v ?? '')} />
         <Num label="벽 두께" value={plan.wallT || 200} onChange={(v) => onPlan({ wallT: v || 200 })} />
       </div>
       <button type="button" className="btn btn-secondary btn-sm" disabled={!roomW || !roomD} onClick={() => { onRoom(Number(roomW), Number(roomD), plan.wallT || 200); setRoomW(''); setRoomD(''); }}>네모 벽 만들기</button>
@@ -559,7 +699,9 @@ export function PlanSettingsPanel({ plan, levelName, levelH, onPlan, onPickBg, o
 }
 
 /* ───────── 오른쪽 아래: 점검(경고)·개수 세기 ───────── */
-export function ChecksPanel({ warnings, items, walls = [], equipments, onFocus, onPlaceEquipment }) {
+export function ChecksPanel({ warnings, items, walls = [], lines = [], equipments, onFocus, onPlaceEquipment }) {
+  const lightRows = useMemo(() => items.filter(i => i.kind === 'zone').map(z => ({ z, L: zoneLighting(z, items) })).filter(r => r.L.count), [items]);
+  const lineSum = useMemo(() => MEP_LINE_TYPES.map(t => ({ t, len: lines.filter(l => (l.type || 'elec') === t.type).reduce((s, l) => s + (l.pts || []).reduce((a, q, i, arr) => (i ? a + Math.hypot(q.x - arr[i - 1].x, q.y - arr[i - 1].y) : 0), 0), 0) })).filter(r => r.len > 0), [lines]);
   const finishes = useMemo(() => {
     const m = new Map();
     items.filter(i => i.kind === 'zone' && i.floor?.type).forEach(z => {
@@ -583,7 +725,7 @@ export function ChecksPanel({ warnings, items, walls = [], equipments, onFocus, 
   const [tab, setTab] = useState('warn');
   const counts = useMemo(() => {
     const m = new Map();
-    items.filter(i => !['zone', 'text'].includes(i.kind)).forEach(i => {
+    items.filter(i => !['zone', 'text', 'roof'].includes(i.kind)).forEach(i => {
       const k = i.name || '비품';
       m.set(k, (m.get(k) || 0) + 1);
     });
@@ -656,12 +798,32 @@ export function ChecksPanel({ warnings, items, walls = [], equipments, onFocus, 
               </table>
             </>
           )}
+          {lightRows.length > 0 && (
+            <>
+              <div className="fp-label">방별 밝기 (어림)</div>
+              <table className="fp-table">
+                <tbody>
+                  {lightRows.map(({ z, L }) => <tr key={z.id} className={L.ok ? '' : 'fp-bad-row'}><td>{z.name}</td><td>{L.lux.toLocaleString()} / {L.need.toLocaleString()} lux{L.ok ? '' : ' ⚠'}</td></tr>)}
+                </tbody>
+              </table>
+            </>
+          )}
+          {lineSum.length > 0 && (
+            <>
+              <div className="fp-label">전기·배관 길이</div>
+              <table className="fp-table">
+                <tbody>
+                  {lineSum.map(({ t, len }) => <tr key={t.type}><td><i className="fp-line-dot" style={{ background: t.color }} /> {t.label}</td><td>{Math.round(len).toLocaleString()}mm</td></tr>)}
+                </tbody>
+              </table>
+            </>
+          )}
           {wallSum.length > 0 && (
             <>
               <div className="fp-label">벽 길이</div>
               <table className="fp-table">
                 <tbody>
-                  {wallSum.map(([k, v]) => <tr key={k}><td>{k}</td><td>{v.toFixed(1)}m</td></tr>)}
+                  {wallSum.map(([k, v]) => <tr key={k}><td>{k}</td><td>{Math.round(v * 1000).toLocaleString()}mm</td></tr>)}
                 </tbody>
               </table>
             </>

@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { bodyPolygon, wallPolygon, aabb } from './planGeometry';
+import { bodyPolygon, wallPolygon, aabb, pointInPolygon } from './planGeometry';
 import { scaledPoints, lShapePoints, stairArm, shade, hProfilePoints, rectPoints } from './planShapes';
-import { isVertical, defaultLevelHeight, wallTypeOf, libraryByKey, steelProfile } from './planLibrary';
+import { isVertical, defaultLevelHeight, wallTypeOf, libraryByKey, steelProfile, mepLineTypeOf } from './planLibrary';
 import { fileUrl } from './planFiles';
 import { loadModelScene, faceTexture, fitModel } from './modelTools';
 import { hasFaces } from './planLibrary';
@@ -18,7 +18,7 @@ import { hasFaces } from './planLibrary';
 
 const M = 0.001;
 const GLASS = '#bae6fd';
-const OPENING_SHAPES = ['door', 'door2', 'sliding', 'shutter', 'window', 'glassdoor', 'autodoor'];
+const OPENING_SHAPES = ['door', 'door2', 'sliding', 'shutter', 'window', 'glassdoor', 'autodoor', 'autodoor1'];
 const TABLE_SHAPES = ['desk', 'table4', 'bench'];
 
 export function levelElevations(levels) {
@@ -79,8 +79,25 @@ function makeKit() {
     texs.set(key, t);
     return t;
   };
+  /** 루바(세로 나무 판) 무늬: 한 칸 = 판 하나 */
+  const louverTex = (color) => {
+    const key = `louver|${color}`;
+    if (texs.has(key)) return texs.get(key);
+    const cv = document.createElement('canvas'); cv.width = 64; cv.height = 256;
+    const g = cv.getContext('2d');
+    g.fillStyle = color; g.fillRect(0, 0, 64, 256);
+    g.fillStyle = shade(color, 0.12); g.fillRect(6, 0, 10, 256);
+    g.fillStyle = shade(color, -0.45); g.fillRect(0, 0, 5, 256);
+    g.globalAlpha = 0.18; g.fillStyle = shade(color, -0.3);
+    for (let y = 20; y < 256; y += 37) g.fillRect(20, y, 30, 2);
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    texs.set(key, t);
+    return t;
+  };
   const dispose = () => { mats.forEach(m => m.dispose()); texs.forEach(t => t.dispose()); };
-  return { mat, glass, see, floorTex, dispose };
+  return { mat, glass, see, floorTex, louverTex, dispose };
 }
 
 /* ───────── 기본 도형 (단위 mm, 그룹 안쪽 좌표: 앞쪽 = +z) ───────── */
@@ -435,11 +452,19 @@ function buildItem(src, ctx) {
       if (it.shape === 'door2') box(g, 20, dh, 60, 0, 0, 0, darker);
       break;
     }
-    case 'glassdoor': case 'autodoor': case 'glasspanel': {
+    case 'glassdoor': case 'autodoor': case 'glasspanel': case 'autodoor1': {
       const dh = h || (it.shape === 'glasspanel' ? 2400 : 2100);
-      box(g, w, dh, 25, 0, 0, 0, kit.glass(), false);
+      const leaf = it.opaque ? kit.mat(c, { roughness: 0.5 }) : kit.glass();
+      if (it.shape === 'autodoor') {
+        // 양개: 문짝 둘 + 가운데 틈
+        [-1, 1].forEach(sx => box(g, w / 2 - 10, dh, 25, sx * (w / 4), 0, 0, leaf, false));
+      } else {
+        box(g, w, dh, 25, 0, 0, 0, leaf, false);
+      }
       box(g, w, 50, Math.max(d, 60), 0, dh - 50, 0, kit.mat(shade(c, -0.2)));
+      // 자동문 위 구동부(무목) 상자
       if (it.shape === 'autodoor') box(g, w + 200, 300, 250, 0, dh, 0, kit.mat('#64748b'));
+      if (it.shape === 'autodoor1') box(g, w * 2 + 100, 300, 250, w / 2, dh, 0, kit.mat('#64748b'));
       break;
     }
     case 'window':
@@ -469,6 +494,88 @@ function buildItem(src, ctx) {
     case 'tv':
       box(g, w, h || 830, Math.max(d, 60), 0, 0, 0, kit.mat('#111827', { roughness: 0.3 }));
       break;
+    case 'light': case 'lightline': case 'lightround': {
+      // 조명: 빛나는 판 (실제 빛 계산은 하지 않고 밝게만)
+      const glow = kit.mat('#fffbeb', { emissive: '#fde68a', emissiveIntensity: 0.9, roughness: 0.4 });
+      const lh = Math.max(30, h || 40);
+      if (it.shape === 'lightround') cyl(g, hw, lh, 0, 0, 0, glow, 1, d / w);
+      else box(g, w, lh, d, 0, 0, 0, glow, false);
+      break;
+    }
+    case 'outlet': case 'switchsym': case 'aircock': case 'faucet':
+      box(g, w, h || 120, Math.max(d, 30), 0, 0, 0, kit.mat(it.shape === 'aircock' ? '#dbeafe' : it.shape === 'faucet' ? '#dcfce7' : '#f8fafc'));
+      box(g, w * 0.5, (h || 120) * 0.4, 12, 0, (h || 120) * 0.3, Math.max(d, 30) / 2, kit.mat(c));
+      break;
+    case 'reel': {
+      const r = Math.min(w, h || w) / 2;
+      const reel = cyl(g, r, d, 0, 0, 0, m); reel.rotation.x = Math.PI / 2; reel.position.y = r * M;
+      box(g, w, 40, 40, 0, r * 2, -d / 2 + 20, darker);
+      break;
+    }
+    case 'roller': {
+      box(g, w, 15, d, 0, 0, 0, kit.mat('#475569', { metalness: 0.4 }), false);
+      const pw = w * 0.32;
+      [-1, 1].forEach(sx => [-0.2, 0.2].forEach(k => {
+        const r = cyl(g, 110, pw, 0, 0, 0, kit.mat('#9ca3af', { metalness: 0.6, roughness: 0.3 }));
+        r.rotation.z = Math.PI / 2; r.position.set(sx * (hw - pw / 2) * M, 20 * M, k * d * M);
+      }));
+      break;
+    }
+    case 'crane': {
+      const ch = h || 2000;
+      box(g, 100, 100, d, -hw + 50, 0, 0, m); box(g, 100, 100, d, hw - 50, 0, 0, m);
+      box(g, w, 100, 100, 0, 0, -hd + 50, m);
+      box(g, 120, ch, 120, 0, 0, -hd + 150, m);
+      const boom = box(g, 100, 100, d * 0.85, 0, 0, 0, m);
+      if (boom) { boom.rotation.x = -0.35; boom.position.set(0, (ch - 150) * M, (-hd + 150 + d * 0.4) * M); }
+      box(g, 40, 400, 40, 0, ch - 900, hd * 0.6, kit.mat('#9ca3af', { metalness: 0.6 }));
+      break;
+    }
+    case 'evcharger': {
+      const eh = h || 1600;
+      box(g, w, eh, d, 0, 0, 0, kit.mat(c, { roughness: 0.4 }));
+      box(g, w * 0.6, eh * 0.18, 12, 0, eh * 0.62, d / 2, kit.mat('#111827', { roughness: 0.2 }));
+      break;
+    }
+    case 'kiosk': {
+      const kh = h || 1600;
+      box(g, w * 0.6, kh * 0.6, d * 0.6, 0, 0, 0, m);
+      const scr = box(g, w, kh * 0.4, 60, 0, kh * 0.55, d * 0.1, kit.mat('#0f172a', { roughness: 0.2 }));
+      if (scr) scr.rotation.x = -0.25;
+      break;
+    }
+    case 'benchseat': {
+      const n = Math.max(1, Math.round(w / 560));
+      box(g, w, 60, d * 0.15, 0, 0, -hd + d * 0.1, darker);
+      for (let i = 0; i < n; i++) {
+        const x = -hw + (w / n) * (i + 0.5);
+        box(g, w / n - 40, 60, d * 0.75, x, 420, d * 0.05, m);
+        box(g, w / n - 40, (h || 800) - 480, 50, x, 480, -hd + d * 0.2, m);
+      }
+      [-1, 1].forEach(sx => box(g, 60, 420, d * 0.6, sx * (hw - 60), 0, 0, darker));
+      break;
+    }
+    case 'sign':
+      box(g, w, h || 1000, Math.max(d, 80), 0, 0, 0, kit.mat(c, { emissive: c, emissiveIntensity: 0.25, roughness: 0.4 }));
+      break;
+    case 'pylon': {
+      const ph = h || 5000;
+      box(g, w * 0.25, ph * 0.6, d * 0.6, 0, 0, 0, kit.mat('#94a3b8', { metalness: 0.4 }));
+      box(g, w, ph * 0.4, d, 0, ph * 0.6, 0, kit.mat(c, { emissive: c, emissiveIntensity: 0.25 }));
+      break;
+    }
+    case 'fence': {
+      const fh = h || 1100; const n = Math.max(1, Math.round(w / 1000));
+      for (let i = 0; i <= n; i++) cyl(g, 30, fh, -hw + (w / n) * i, 0, 0, m);
+      [0.35, 0.9].forEach(k => box(g, w, 40, 40, 0, fh * k, 0, m));
+      break;
+    }
+    case 'parking': {
+      const lineM = kit.mat('#f8fafc', { roughness: 0.8 });
+      box(g, 100, 8, d, -hw + 50, 0, 0, lineM, false); box(g, 100, 8, d, hw - 50, 0, 0, lineM, false);
+      box(g, w, 8, 100, 0, 0, -hd + 50, lineM, false);
+      break;
+    }
     case 'trench': case 'drain':
       box(g, w, 12, d, 0, 0, 0, kit.mat('#475569', { metalness: 0.5, roughness: 0.4 }), false);
       break;
@@ -616,17 +723,37 @@ function buildWall(wall, items, H, kit) {
     mesh.position.y = (top - depth / 2) * M;
     mesh.castShadow = true; mesh.receiveShadow = true;
     g.add(mesh);
-    g.userData.label = `${wt.short} (아래 ${((top - depth) / 1000).toFixed(2)}m)`;
+    g.userData.label = `${wt.short} (아래 ${Math.round(top - depth).toLocaleString()}mm)`;
     return g;
   }
   const glassy = type === 'glass' || type === 'curtain';
   const solid = glassy ? kit.glass() : kit.mat(wall.color || (type === 'light' ? (wt.color || '#d6d3d1') : '#e7e5e4'), { roughness: 0.9 });
   const frame = kit.mat(wall.color || (glassy ? '#64748b' : '#a8a29e'));
-  // 벽 길이 방향 = 그룹의 +x, 두께 방향 = z
+  // 벽 길이 방향 = 그룹의 +x, 두께 방향 = z (A면 = +z 쪽, B면 = -z 쪽)
+  // 벽면 꾸미기: 면마다 페인트 색, 아래쪽 루바(나무 판)
+  const faces = glassy ? {} : (wall.faces || {});
+  const faceMat = (f) => (f?.paint ? kit.mat(f.paint, { roughness: 0.85 }) : solid);
+  const mats = glassy ? solid : [solid, solid, solid, solid, faceMat(faces.a), faceMat(faces.b)];
+  const louver = (s0, s1, y1, side) => {
+    const f = faces[side];
+    const wh = Math.min(Number(f?.wainscot?.h) || 0, y1);
+    if (!f?.wainscot || wh < 50) return;
+    const lenS = s1 - s0;
+    const tex = kit.louverTex(f.wainscot.color || '#b08968').clone();
+    tex.needsUpdate = true;
+    tex.repeat.set(Math.max(1, lenS / (Number(f.wainscot.pitch) || 100)), 1);
+    const m = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75 });
+    m.userData.own = true;
+    const sz = side === 'a' ? 1 : -1;
+    box(g, lenS, wh, 18, (s0 + s1) / 2, 0, sz * (t / 2 + 9), m);
+    // 위쪽 마감 몰딩
+    box(g, lenS, 30, 30, (s0 + s1) / 2, wh - 15, sz * (t / 2 + 15), kit.mat(shade(f.wainscot.color || '#b08968', -0.25)));
+  };
   const piece = (s0, s1, y0, y1) => {
     if (s1 - s0 < 5 || y1 - y0 < 5) return;
-    const mesh = box(g, s1 - s0, y1 - y0, t, (s0 + s1) / 2, y0, 0, solid, !glassy);
+    const mesh = box(g, s1 - s0, y1 - y0, t, (s0 + s1) / 2, y0, 0, mats, !glassy);
     if (mesh && glassy) mesh.renderOrder = 2;
+    if (!glassy && y0 === 0) { louver(s0, s1, y1, 'a'); louver(s0, s1, y1, 'b'); }
   };
   const start = -t / 2; const end = len + t / 2;
   let cur = start;
@@ -711,17 +838,95 @@ function buildLevel(L, i, levels, el, opts, kit) {
   });
   // 벽
   L.walls.forEach(w => g.add(buildWall(w, L.items, H, kit)));
+  // 구역 천장 (천장 높이를 적은 방)
+  const zones = L.items.filter(z => z.kind === 'zone');
+  const zoneCeil = (it) => {
+    const z = zones.find(zz => zz.ceilH && pointInPolygon({ x: it.x, y: it.y }, bodyPolygon(zz)));
+    return z ? Number(z.ceilH) : null;
+  };
+  if (opts.showCeil) {
+    zones.filter(z => z.ceilH).forEach(z => {
+      const cg = new THREE.Group();
+      cg.position.set(z.x * M, Number(z.ceilH) * M, z.y * M);
+      cg.rotation.y = -((z.rot || 0) * Math.PI) / 180;
+      box(cg, z.w, 20, z.d, 0, 0, 0, kit.mat('#f8fafc', { transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }), false);
+      cg.userData.label = `${z.name} 천장 (${Math.round(z.ceilH).toLocaleString()}mm)`;
+      g.add(cg);
+    });
+  }
+
+  // 전기·배관 선: 종류별 색 관
+  if (opts.showMep) {
+    (L.lines || []).forEach(line => {
+      const lt = mepLineTypeOf(line.type);
+      const y = Math.max(30, Number(line.h ?? lt.h) || 0);
+      const mat = kit.mat(lt.color, { roughness: 0.5 });
+      const pts = line.pts || [];
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1]; const b = pts[i];
+        const len = Math.hypot(b.x - a.x, b.y - a.y);
+        if (len < 1) continue;
+        const pipe = new THREE.Mesh(new THREE.CylinderGeometry(25 * M, 25 * M, len * M, 10), mat);
+        pipe.position.set(((a.x + b.x) / 2) * M, y * M, ((a.y + b.y) / 2) * M);
+        pipe.rotation.z = Math.PI / 2; // 눕혀서 x 방향으로
+        const wrap = new THREE.Group();
+        wrap.position.copy(pipe.position); pipe.position.set(0, 0, 0);
+        wrap.rotation.y = -Math.atan2(b.y - a.y, b.x - a.x);
+        wrap.add(pipe);
+        wrap.userData.label = `${lt.label} (높이 ${Math.round(y).toLocaleString()}mm)`;
+        g.add(wrap);
+      }
+    });
+  }
+
+  // 지붕
+  if (opts.showRoof) L.items.filter(it => it.kind === 'roof').forEach(it => g.add(buildRoof(it, H, kit)));
+
   // 비품
   L.items.forEach(it => {
-    if (['zone', 'text', 'void'].includes(it.kind)) return;
+    if (['zone', 'text', 'void', 'roof'].includes(it.kind)) return;
     const ig = buildItem(it, { kit, H, showCar: opts.showCar, vehicleH: opts.vehicleH, onModelError: opts.onModelError });
-    ig.position.set(it.x * M, (it.elev || 0) * M, it.y * M);
+    // 조명은 높이를 안 적었으면 천장(구역 천장 높이 → 층고) 바로 아래에
+    const y = it.kind === 'light' && !it.elev ? (zoneCeil(it) || H) - (it.h || 40) - 10 : (it.elev || 0);
+    ig.position.set(it.x * M, y * M, it.y * M);
     ig.rotation.y = -((it.rot || 0) * Math.PI) / 180;
     if (it.flip) ig.scale.x = -1;
     ig.userData.label = it.name;
     g.add(ig);
   });
   g.userData.levelName = L.name;
+  return g;
+}
+
+/** 지붕: 평지붕 / 한쪽 경사(뒤쪽이 높음) / 양쪽 경사(가운데가 높음) */
+function buildRoof(it, H, kit) {
+  const g = new THREE.Group();
+  const eave = Number(it.h) || H;
+  const rise = it.roofType === 'flat' ? 0 : Math.max(0, Number(it.rise) || 0);
+  const mat = it.material === 'poly'
+    ? kit.mat(it.color || '#bae6fd', { transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide, roughness: 0.2 })
+    : kit.mat(it.color || '#e5e7eb', { side: THREE.DoubleSide, roughness: 0.6, metalness: it.material === 'steel' ? 0.4 : 0.1 });
+  const T = it.material === 'panel' ? 75 : 30;
+  g.position.set(it.x * M, 0, it.y * M);
+  g.rotation.y = -((it.rot || 0) * Math.PI) / 180;
+  if (it.flip) g.scale.x = -1;
+  const slab = (depth, angle, cz, cy) => {
+    const L = Math.hypot(depth, depth * Math.tan(angle));
+    const m = new THREE.Mesh(new THREE.BoxGeometry(it.w * M, T * M, L * M), mat);
+    m.rotation.x = angle;
+    m.position.set(0, cy * M, cz * M);
+    m.castShadow = it.material !== 'poly'; m.receiveShadow = true;
+    g.add(m);
+  };
+  if (it.roofType === 'gable' && rise > 0) {
+    const half = it.d / 2; const a = Math.atan2(rise, half);
+    slab(half, a, half / 2, eave + rise / 2);       // 앞쪽 반: 앞(처마)에서 가운데(용마루)로 올라감
+    slab(half, -a, -half / 2, eave + rise / 2);     // 뒤쪽 반
+  } else {
+    const a = Math.atan2(rise, it.d);
+    slab(it.d, a, 0, eave + rise / 2);              // 한쪽 경사: 뒤쪽(-z)이 높음
+  }
+  g.userData.label = `${it.name} (처마 ${Math.round(eave).toLocaleString()}mm${rise ? ` · 최고 ${Math.round(eave + rise).toLocaleString()}mm` : ''})`;
   return g;
 }
 
@@ -748,6 +953,9 @@ export default function Plan3D({ levels, currentId, vehicleH, title, onClose }) 
   const three = useRef(null);
   const [upTo, setUpTo] = useState(levels.length - 1);
   const [showCar, setShowCar] = useState(false);
+  const [showRoof, setShowRoof] = useState(true);
+  const [showCeil, setShowCeil] = useState(true);
+  const [showMep, setShowMep] = useState(true);
   const [err, setErr] = useState('');
   const [modelErrs, setModelErrs] = useState([]);
 
@@ -835,7 +1043,7 @@ export default function Plan3D({ levels, currentId, vehicleH, title, onClose }) 
     const kit = makeKit();
     const el = levelElevations(levels);
     const root = new THREE.Group();
-    levels.forEach((L, i) => { if (i <= upTo) root.add(buildLevel(L, i, levels, el, { showCar, vehicleH, onModelError: (name) => setModelErrs(e => (e.includes(name) ? e : [...e, name])) }, kit)); });
+    levels.forEach((L, i) => { if (i <= upTo) root.add(buildLevel(L, i, levels, el, { showCar, showRoof, showCeil, showMep, vehicleH, onModelError: (name) => setModelErrs(e => (e.includes(name) ? e : [...e, name])) }, kit)); });
     t.scene.add(root);
     t.root = root; t.kit = kit;
     // 땅·격자·그림자 범위 맞추기
@@ -856,7 +1064,7 @@ export default function Plan3D({ levels, currentId, vehicleH, title, onClose }) 
       t.bb = bb;
       if (!t.fitted) { setView('iso'); t.fitted = true; }
     }
-  }, [levels, upTo, showCar, vehicleH]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [levels, upTo, showCar, showRoof, showCeil, showMep, vehicleH]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setView = (id) => {
     const t = three.current;
@@ -904,6 +1112,9 @@ export default function Plan3D({ levels, currentId, vehicleH, title, onClose }) 
         <div className="fp-btn-row">
           {VIEWS.map(v => <button key={v.id} type="button" className="filter-pill" onClick={() => setView(v.id)}>{v.label}</button>)}
           <label className="fp-check"><input type="checkbox" checked={showCar} onChange={(e) => setShowCar(e.target.checked)} /> 리프트 올린 모습</label>
+          <label className="fp-check"><input type="checkbox" checked={showRoof} onChange={(e) => setShowRoof(e.target.checked)} /> 지붕</label>
+          <label className="fp-check"><input type="checkbox" checked={showCeil} onChange={(e) => setShowCeil(e.target.checked)} /> 천장</label>
+          <label className="fp-check"><input type="checkbox" checked={showMep} onChange={(e) => setShowMep(e.target.checked)} /> 전기·배관</label>
           <button type="button" className="btn btn-secondary btn-sm" onClick={savePng}>3D 그림 저장</button>
           <button type="button" className="btn btn-primary btn-sm" onClick={onClose}>2D로</button>
         </div>

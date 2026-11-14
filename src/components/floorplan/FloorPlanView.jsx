@@ -4,6 +4,7 @@ import { db } from '../../config/firebase';
 import { useSubcollection } from '../../hooks/useSubcollection';
 import ModalPortal from '../common/ModalPortal';
 import FloorPlanner from './FloorPlanner';
+import LayoutCompare from './LayoutCompare';
 import './FloorPlan.css';
 
 const pickKey = (branchId) => `bb_fp_last_${branchId}`;
@@ -24,6 +25,7 @@ export default function FloorPlanView({ branch, branchId, demoMode, equipments, 
     try { return localStorage.getItem(pickKey(branchId)) || ''; } catch { return ''; }
   });
   const [importOpen, setImportOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const active = layouts.find(l => l.id === activeId) || layouts[0] || null;
 
@@ -66,6 +68,7 @@ export default function FloorPlanView({ branch, branchId, demoMode, equipments, 
           <div className="fp-layout-actions">
             <button type="button" className="btn btn-ghost btn-sm" onClick={rename}>이름 바꾸기</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={duplicate}>복사해서 새 안</button>
+            {layouts.length > 1 && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setCompareOpen(true)}>배치안 비교</button>}
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setImportOpen(true)}>다른 지점에서 가져오기</button>
             <button type="button" className="btn btn-ghost btn-sm fp-danger-text" onClick={del}>지우기</button>
           </div>
@@ -99,6 +102,16 @@ export default function FloorPlanView({ branch, branchId, demoMode, equipments, 
             {branches.length > 1 && <button type="button" className="btn btn-secondary" onClick={() => setImportOpen(true)}>다른 지점 배치도 가져오기</button>}
           </div>
         </div>
+      )}
+
+      {compareOpen && (
+        <LayoutCompare
+          layouts={layouts}
+          initialA={active?.id}
+          vehicleH={active?.vehicleH || 1800}
+          onClose={() => setCompareOpen(false)}
+          onOpen={(id) => { setCompareOpen(false); setActiveId(id); }}
+        />
       )}
 
       {importOpen && (

@@ -1,6 +1,8 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ItemShape, FloorFill, polygonPath } from './planShapes';
-import { WALL_TYPES, wallTypeOf, STAIR_SHAPES, isVertical, defaultLevelHeight, isBeam } from './planLibrary';
+import { ItemShape, FloorFill, polygonPath, shade } from './planShapes';
+import {
+  WALL_TYPES, wallTypeOf, STAIR_SHAPES, isVertical, defaultLevelHeight, isBeam, MEP_LINE_TYPES, mepLineTypeOf, ROOF_MATERIALS,
+} from './planLibrary';
 import {
   bodyPolygon, clearancePolygon, clearanceLocalRect, findWarnings, hasClearance, itemBox, wallBox, nearestGaps,
   snapToEdges, aabb, toLocal, toWorld, itemTransform, fmtLen, areaText, planBounds,
@@ -16,18 +18,20 @@ const HISTORY_MAX = 60;
 const TOOLS = [
   { id: 'select', label: '고르기·옮기기', hint: '비품을 끌어 옮겨요. 빈 곳을 끌면 화면이 움직이고, 휠(두 손가락)로 키우고 줄여요. Shift를 누르고 누르면 여러 개를 골라요.' },
   { id: 'wall', label: '벽·보 그리기', hint: '벽(또는 보)이 꺾이는 곳을 차례로 누르세요. 보는 기둥을 누르면 기둥 가운데에 붙어요. 마지막 점에서 두 번 누르거나 Esc·오른쪽 버튼으로 끝내요. 가로·세로는 저절로 똑바로 맞춰져요.' },
+  { id: 'roof', label: '지붕 그리기', hint: '지붕(또는 캐노피) 크기만큼 네모를 끌어서 그려요. 오른쪽 칸에서 처마 높이·경사·재료를 정해요. 기둥 밖으로 내밀면 처마가 돼요.' },
+  { id: 'line', label: '전기·배관 선', hint: '전기 배선·에어 배관·급수·배수·가스 길을 차례로 눌러 그려요. 마지막 점에서 두 번 누르거나 Esc로 끝내요. 길이가 물량으로 모여요.' },
   { id: 'zone', label: '구역(방) 그리기', hint: '네모를 끌어서 그리면 넓이(㎡·평)가 나와요. 정비동, 고객 대기실, 화장실처럼 이름을 붙이세요.' },
   { id: 'measure', label: '줄자(치수)', hint: '두 점을 누르면 길이가 나오고 치수선으로 남아요. 치수선을 눌러 지울 수 있어요.' },
   { id: 'poly', label: '점 찍어 모양 만들기', hint: '모서리를 차례로 누르고, 첫 점을 다시 누르거나 두 번 눌러 끝내면 그 모양대로 비품이 만들어져요.' },
   { id: 'calibrate', label: '축척 맞추기', hint: '도면에서 길이를 아는 곳(벽 끝~끝, 치수선 등)의 양 끝을 차례로 누르고 실제 길이를 적으세요.' },
 ];
 
-const emptyPlan = () => ({ items: [], walls: [], dims: [], bg: null, ceiling: null, vehicleH: 1800, wallT: 200 });
+const emptyPlan = () => ({ items: [], walls: [], dims: [], lines: [], bg: null, ceiling: null, vehicleH: 1800, wallT: 200 });
 
 const clean = (v) => JSON.parse(JSON.stringify(v));
 
 /** 한 층에 따로 저장하는 것 */
-const pickLevel = (p) => ({ items: p.items || [], walls: p.walls || [], dims: p.dims || [], bg: p.bg || null, ceiling: p.ceiling || null });
+const pickLevel = (p) => ({ items: p.items || [], walls: p.walls || [], dims: p.dims || [], lines: p.lines || [], bg: p.bg || null, ceiling: p.ceiling || null });
 
 const Plan3D = lazy(() => import('./Plan3D'));
 
@@ -61,6 +65,8 @@ export function makeItem(tpl, at = { x: 0, y: 0 }) {
   if (tpl.lift) it.lift = tpl.lift;
   if (tpl.elev) it.elev = tpl.elev;
   if (tpl.prof) it.prof = { ...tpl.prof };
+  // 조명 밝기·전력, 지붕 모양, 불투명 자동문
+  ['lm', 'watt', 'roofType', 'rise', 'material', 'opaque', 'ceilH'].forEach(k => { if (tpl[k] !== undefined) it[k] = tpl[k]; });
   // 3D 모습: 모양 빌리기 / 사진 상자 / 3D 모델 파일
   if (tpl.look) it.look = tpl.look;
   if (tpl.faces) it.faces = { ...tpl.faces };
@@ -89,8 +95,56 @@ function LevelGhost({ level, z }) {
 
 const isLiftShape = (s) => ['lift2', 'lift4', 'scissor'].includes(s);
 
-const PlanItem = memo(function PlanItem({ item, z, warn, showClear, showCar, showFloor = true, selected }) {
+/** 크기 조절 손잡이 8개 (sx·sy: 비품 안쪽에서 어느 쪽 변인지, 앞=아래 +y) */
+const RESIZE_HANDLES = [
+  { id: 'se', sx: 1, sy: 1, cursor: 'nwse-resize' },
+  { id: 'nw', sx: -1, sy: -1, cursor: 'nwse-resize' },
+  { id: 'ne', sx: 1, sy: -1, cursor: 'nesw-resize' },
+  { id: 'sw', sx: -1, sy: 1, cursor: 'nesw-resize' },
+  { id: 'n', sx: 0, sy: -1, cursor: 'ns-resize' },
+  { id: 's', sx: 0, sy: 1, cursor: 'ns-resize' },
+  { id: 'e', sx: 1, sy: 0, cursor: 'ew-resize' },
+  { id: 'w', sx: -1, sy: 0, cursor: 'ew-resize' },
+];
+
+const PlanItem = memo(function PlanItem({ item, z, warn, showClear, showCar, showFloor = true, showLightRange, levelH, selected }) {
   const fs = 12 / z;
+  if (item.kind === 'roof') {
+    // 지붕: 머리 위라 점선·빗금. 테두리와 이름표를 눌러야 고름 (안쪽은 아래 비품을 누를 수 있게)
+    const hw = item.w / 2; const hd = item.d / 2;
+    const c = item.color || '#94a3b8';
+    const pid = `fp-roof-${item.id}`;
+    const step = Math.max(300, 18 / z);
+    const typeLabel = { flat: '평지붕', mono: '한쪽 경사', gable: '양쪽 경사' }[item.roofType] || '지붕';
+    return (
+      <g transform={itemTransform(item)}>
+        <defs>
+          <pattern id={pid} width={step} height={step} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <path d={`M0,0 V${step}`} stroke={c} strokeWidth={Math.max(4, 1 / z)} strokeOpacity={0.35} />
+          </pattern>
+        </defs>
+        <rect x={-hw} y={-hd} width={item.w} height={item.d} fill={`url(#${pid})`} stroke="none" pointerEvents="none" />
+        <g pointerEvents="none"><ItemShape item={item} z={z} /></g>
+        <rect data-role="item" data-id={item.id} x={-hw} y={-hd} width={item.w} height={item.d} fill="none" stroke="transparent" strokeWidth={14} vectorEffect="non-scaling-stroke" style={{ cursor: 'move' }} />
+        <g data-role="item" data-id={item.id} transform={item.flip ? 'scale(-1 1)' : undefined} style={{ cursor: 'move' }}>
+          <text x={0} y={-hd + fs * 1.6} textAnchor="middle" fontSize={fs * 1.1} fontWeight={800} fill={c === '#e5e7eb' ? 'var(--fp-text)' : c} stroke="var(--fp-bg)" strokeWidth={fs * 0.3} paintOrder="stroke">
+            {item.name} · {typeLabel} · 처마 {fmtLen(item.h || 0)}
+          </text>
+        </g>
+        {selected && <rect x={-hw} y={-hd} width={item.w} height={item.d} fill="none" stroke="var(--color-accent)" strokeWidth={2} vectorEffect="non-scaling-stroke" pointerEvents="none" />}
+      </g>
+    );
+  }
+  if (item.kind === 'light' && showLightRange) {
+    // 조명이 비추는 범위(어림): 붙은 높이의 0.7배 반지름
+    const mount = Number(item.elev) || Number(item.ceilMount) || levelH || 3000;
+    return (
+      <g>
+        <circle cx={item.x} cy={item.y} r={mount * 0.7} fill="#fde047" fillOpacity={0.12} stroke="#eab308" strokeOpacity={0.4} strokeDasharray="4 4" strokeWidth={1} vectorEffect="non-scaling-stroke" pointerEvents="none" />
+        <PlanItem item={item} z={z} warn={warn} showClear={showClear} selected={selected} />
+      </g>
+    );
+  }
   if (item.kind === 'zone') {
     const hw = item.w / 2; const hd = item.d / 2;
     return (
@@ -151,7 +205,7 @@ const PlanItem = memo(function PlanItem({ item, z, warn, showClear, showCar, sho
 });
 
 /** 벽 그리기: 일반 벽 / 가벽 / 유리벽 / 통유리 외벽 */
-const WallShape = memo(function WallShape({ wall, selected }) {
+const WallShape = memo(function WallShape({ wall, selected, z }) {
   const type = wall.type || 'concrete';
   const pts = wallPolygonFor(wall);
   const d = polygonPath(pts);
@@ -171,7 +225,7 @@ const WallShape = memo(function WallShape({ wall, selected }) {
     const dx = wall.x2 - wall.x1; const dy = wall.y2 - wall.y1;
     const len = Math.hypot(dx, dy) || 1;
     const ux = dx / len; const uy = dy / len; const nx = -uy * (wall.t / 2); const ny = ux * (wall.t / 2);
-    // 통유리 외벽은 1.2m마다 세로 틀(멀리언)
+    // 통유리 외벽은 1,200mm마다 세로 틀(멀리언)
     const n = type === 'curtain' ? Math.max(1, Math.round(len / 1200)) : 0;
     const mull = Array.from({ length: Math.max(0, n - 1) }, (_, i) => {
       const k = (len / n) * (i + 1);
@@ -185,15 +239,88 @@ const WallShape = memo(function WallShape({ wall, selected }) {
       </g>
     );
   }
-  if (type === 'light') {
-    return (
-      <g>
-        <path {...common} fill={c} fillOpacity={0.45} stroke={selected ? sel.stroke : c} strokeWidth={selected ? sel.strokeWidth : 1.3} />
-        <path d={`M${wall.x1},${wall.y1} L${wall.x2},${wall.y2}`} stroke={c} strokeWidth={1} strokeDasharray="6 4" fill="none" vectorEffect="non-scaling-stroke" pointerEvents="none" />
-      </g>
-    );
-  }
-  return <path {...common} fill={c} stroke={selected ? sel.stroke : c} strokeWidth={selected ? sel.strokeWidth : 1} />;
+  const body = type === 'light' ? (
+    <>
+      <path {...common} fill={c} fillOpacity={0.45} stroke={selected ? sel.stroke : c} strokeWidth={selected ? sel.strokeWidth : 1.3} />
+      <path d={`M${wall.x1},${wall.y1} L${wall.x2},${wall.y2}`} stroke={c} strokeWidth={1} strokeDasharray="6 4" fill="none" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+    </>
+  ) : <path {...common} fill={c} stroke={selected ? sel.stroke : c} strokeWidth={selected ? sel.strokeWidth : 1} />;
+  return (
+    <g>
+      {body}
+      <WallFaces wall={wall} z={z} selected={selected} />
+    </g>
+  );
+});
+
+/**
+ * 벽면 꾸미기 표시: A면(벽을 그린 방향의 한쪽)·B면에 페인트 색 줄, 그 바깥에 루바(나무) 줄
+ * 고른 벽에는 어느 쪽이 A·B인지 글자로 보여줌
+ */
+function WallFaces({ wall, z, selected }) {
+  const faces = wall.faces || {};
+  const dx = wall.x2 - wall.x1; const dy = wall.y2 - wall.y1;
+  const len = Math.hypot(dx, dy);
+  if (len < 1 || (!selected && !faces.a && !faces.b)) return null;
+  const nx = -dy / len; const ny = dx / len;
+  const t = wall.t || 200;
+  const band = (sign, from, to) => {
+    const o0 = sign * (t / 2 + from); const o1 = sign * (t / 2 + to);
+    return `M${wall.x1 + nx * o0},${wall.y1 + ny * o0} L${wall.x2 + nx * o0},${wall.y2 + ny * o0} L${wall.x2 + nx * o1},${wall.y2 + ny * o1} L${wall.x1 + nx * o1},${wall.y1 + ny * o1} Z`;
+  };
+  const sp = Math.max(20, 2.5 / z); const sw = Math.max(35, 4.5 / z);
+  return (
+    <g pointerEvents="none">
+      {['a', 'b'].map(side => {
+        const f = faces[side];
+        if (!f) return null;
+        const sign = side === 'a' ? 1 : -1;
+        const paintW = f.paint ? sp : 0;
+        return (
+          <g key={side}>
+            {f.paint && <path d={band(sign, 0, sp)} fill={f.paint} stroke={shade(f.paint, -0.3)} strokeWidth={0.6} vectorEffect="non-scaling-stroke" />}
+            {f.wainscot && (
+              <path d={band(sign, paintW, paintW + sw)} fill={f.wainscot.color || '#b08968'} fillOpacity={0.9}
+                stroke={shade(f.wainscot.color || '#b08968', -0.4)} strokeWidth={1} strokeDasharray="3 2" vectorEffect="non-scaling-stroke" />
+            )}
+          </g>
+        );
+      })}
+      {selected && ['a', 'b'].map(side => {
+        const sign = side === 'a' ? 1 : -1;
+        const off = sign * (t / 2 + sp + sw + 12 / z);
+        return (
+          <text key={side} className="fp-ui" x={(wall.x1 + wall.x2) / 2 + nx * off} y={(wall.y1 + wall.y2) / 2 + ny * off}
+            textAnchor="middle" dominantBaseline="central" fontSize={13 / z} fontWeight={800}
+            fill="var(--color-accent)" stroke="var(--fp-bg)" strokeWidth={3 / z} paintOrder="stroke">{side.toUpperCase()}면</text>
+        );
+      })}
+    </g>
+  );
+}
+
+/** 전기·배관 선: 종류별 색·선 모양, 전체 길이 표시 */
+const polyLen = (pts = []) => pts.reduce((s, p, i) => (i ? s + Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) : 0), 0);
+const MepLine = memo(function MepLine({ line, z, selected }) {
+  const lt = mepLineTypeOf(line.type);
+  const pts = line.pts || [];
+  if (pts.length < 2) return null;
+  const d = `M${pts.map(p => `${p.x},${p.y}`).join(' L')}`;
+  const fs = 11 / z;
+  // 가장 긴 구간 가운데에 이름·길이
+  let best = 1; let bl = 0;
+  pts.forEach((p, i) => { if (i) { const l = Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y); if (l > bl) { bl = l; best = i; } } });
+  const a = pts[best - 1]; const b = pts[best];
+  return (
+    <g>
+      <path d={d} fill="none" stroke="transparent" strokeWidth={14} vectorEffect="non-scaling-stroke" data-role="line" data-id={line.id} style={{ cursor: 'pointer' }} />
+      <path d={d} fill="none" stroke={selected ? 'var(--color-accent)' : lt.color} strokeWidth={selected ? 3.2 : 2.2} strokeDasharray={lt.dash || undefined}
+        strokeLinejoin="round" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+      {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={3 / z} fill={lt.color} pointerEvents="none" />)}
+      <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - fs * 0.6} textAnchor="middle" fontSize={fs} fontWeight={700} fill={lt.color}
+        stroke="var(--fp-bg)" strokeWidth={fs * 0.3} paintOrder="stroke" pointerEvents="none">{lt.label} {fmtLen(polyLen(pts))}</text>
+    </g>
+  );
 });
 
 function DimLine({ x1, y1, x2, y2, z, color = 'var(--fp-dim)', label, selected, id }) {
@@ -227,7 +354,7 @@ export default function FloorPlanner({
       items: layout.items || [], walls: layout.walls || [], dims: layout.dims || [], bg: layout.bg || null, ceiling: layout.ceiling || null,
     });
     const levels = (src.levels || [{ id: 'L1', name: '1층', items: src.items, walls: src.walls, dims: src.dims, bg: src.bg, ceiling: src.ceiling }])
-      .map((l, i) => ({ id: l.id || generateId(), name: l.name || `${i + 1}층`, items: l.items || [], walls: l.walls || [], dims: l.dims || [], bg: l.bg || null, ceiling: l.ceiling || null }));
+      .map((l, i) => ({ id: l.id || generateId(), name: l.name || `${i + 1}층`, items: l.items || [], walls: l.walls || [], dims: l.dims || [], lines: l.lines || [], bg: l.bg || null, ceiling: l.ceiling || null }));
     if (!levels[0].ceiling && branch?.property?.floorHeight) levels[0].ceiling = Math.round(Number(branch.property.floorHeight) * 1000);
     return { levels, vehicleH: layout.vehicleH || 1800, wallT: layout.wallT || 200 };
   }, [layout.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -420,7 +547,8 @@ export default function FloorPlanner({
   const [cursor, setCursor] = useState(null);
   const [sel, setSel] = useState({ kind: null, ids: [] });
   const [guides, setGuides] = useState([]);
-  const [opts, setOpts] = useState({ snap: true, clear: true, car: false, gaps: true, grid: true, floor: true, below: true });
+  const [opts, setOpts] = useState({ snap: true, clear: true, car: false, gaps: true, grid: true, floor: true, below: true, roof: true, mep: true, lightRange: false });
+  const [lineType, setLineType] = useState('elec'); // 새로 그릴 전기·배관 선 종류
   const [view3d, setView3d] = useState(false);
   const [wallType, setWallType] = useState('concrete'); // 새로 그릴 벽 종류
   const [customOpen, setCustomOpen] = useState(null);
@@ -431,6 +559,7 @@ export default function FloorPlanner({
   const selectedItems = sel.kind === 'item' ? plan.items.filter(it => sel.ids.includes(it.id)) : [];
   const selectedWall = sel.kind === 'wall' ? plan.walls.find(w => w.id === sel.ids[0]) : null;
   const selectedDim = sel.kind === 'dim' ? plan.dims.find(d => d.id === sel.ids[0]) : null;
+  const selectedLine = sel.kind === 'line' ? (plan.lines || []).find(l => l.id === sel.ids[0]) : null;
 
   const warnings = useMemo(() => findWarnings(plan.items, plan.walls, { ceiling: plan.ceiling, vehicleH: plan.vehicleH }), [plan.items, plan.walls, plan.ceiling, plan.vehicleH]);
   const warnMap = useMemo(() => {
@@ -471,6 +600,11 @@ export default function FloorPlanner({
   const finishPath = (override) => {
     const draft = override || draftRef.current;
     if (!draft?.pts) return;
+    if (tool === 'line' && draft.pts.length >= 2) {
+      const lt = mepLineTypeOf(lineType);
+      const line = { id: generateId(), type: lt.type, pts: draft.pts.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) })), h: lt.h };
+      commit({ ...planRef.current, lines: [...(planRef.current.lines || []), line] });
+    }
     if (tool === 'wall' && draft.pts.length >= 2) {
       const t = wallType === 'concrete' ? (planRef.current.wallT || 200) : wallTypeOf(wallType).t;
       const walls = [];
@@ -525,7 +659,7 @@ export default function FloorPlanner({
       }
       return;
     }
-    if (tool === 'wall' || tool === 'poly') {
+    if (tool === 'wall' || tool === 'poly' || tool === 'line') {
       const pts = draft?.pts || [];
       const last = pts[pts.length - 1];
       let p = sp(w);
@@ -547,8 +681,8 @@ export default function FloorPlanner({
       setDraft({ pts: [...pts, p] });
       return;
     }
-    if (tool === 'zone') {
-      drag.current = { type: 'zone', start: sp(w) };
+    if (tool === 'zone' || tool === 'roof') {
+      drag.current = { type: 'zone', start: sp(w), roof: tool === 'roof' };
       setDraft({ rect: { x0: sp(w).x, y0: sp(w).y, x1: sp(w).x, y1: sp(w).y } });
       return;
     }
@@ -559,7 +693,7 @@ export default function FloorPlanner({
     const startPlan = planRef.current;
     if (role === 'rotate' || role === 'resize') {
       const it = startPlan.items.find(x => x.id === id);
-      if (it) drag.current = { type: role, id, startPlan, it, moved: false };
+      if (it) drag.current = { type: role, id, startPlan, it, moved: false, h: target.dataset.h || 'se' };
       return;
     }
     if (role === 'wallEnd') {
@@ -584,6 +718,10 @@ export default function FloorPlanner({
     }
     if (role === 'dim') {
       setSel({ kind: 'dim', ids: [id] });
+      return;
+    }
+    if (role === 'line') {
+      setSel({ kind: 'line', ids: [id] });
       return;
     }
     drag.current = { type: 'pan', sx: e.clientX, sy: e.clientY, v: viewRef.current, moved: false, shift: e.shiftKey };
@@ -656,13 +794,28 @@ export default function FloorPlanner({
       return;
     }
     if (dr.type === 'resize') {
+      // 끄는 손잡이 쪽 변만 움직이고 반대쪽 변은 그대로 (비품 안쪽 좌표에서 계산 → 돌려 놓아도 맞음)
       const it = dr.it;
+      const h = RESIZE_HANDLES.find(x => x.id === dr.h) || RESIZE_HANDLES[0];
       const p = toLocal(it, w);
       const step = opts.snap ? 10 : 1;
-      const nw = Math.max(50, Math.round((p.x + it.w / 2) / step) * step);
-      const nd = Math.max(50, Math.round((p.y + it.d / 2) / step) * step);
-      const c = toWorld(it, { x: -it.w / 2 + nw / 2, y: -it.d / 2 + nd / 2 });
+      const r = (v) => Math.round(v / step) * step;
+      let x0 = -it.w / 2; let x1 = it.w / 2; let y0 = -it.d / 2; let y1 = it.d / 2;
+      if (h.sx > 0) x1 = Math.max(x0 + 50, x0 + r(p.x - x0));
+      if (h.sx < 0) x0 = Math.min(x1 - 50, x1 - r(x1 - p.x));
+      if (h.sy > 0) y1 = Math.max(y0 + 50, y0 + r(p.y - y0));
+      if (h.sy < 0) y0 = Math.min(y1 - 50, y1 - r(y1 - p.y));
+      let nw = x1 - x0; let nd = y1 - y0;
+      // 모서리 + Shift: 가로·세로 비율 그대로
+      if (e.shiftKey && h.sx && h.sy) {
+        const k = Math.max(nw / it.w, nd / it.d);
+        nw = Math.max(50, r(it.w * k)); nd = Math.max(50, r(it.d * k));
+        if (h.sx > 0) x1 = x0 + nw; else x0 = x1 - nw;
+        if (h.sy > 0) y1 = y0 + nd; else y0 = y1 - nd;
+      }
+      const c = toWorld(it, { x: (x0 + x1) / 2, y: (y0 + y1) / 2 });
       dr.moved = true;
+      setGuides([]);
       setPlan({ ...sp, items: sp.items.map(x => (x.id === it.id ? { ...x, w: nw, d: nd, x: c.x, y: c.y } : x)) });
       return;
     }
@@ -698,6 +851,20 @@ export default function FloorPlanner({
     if (dr.type === 'zone') {
       const r = draft?.rect;
       setDraft(null);
+      if (dr.roof && r && r.x1 - r.x0 > 300 && r.y1 - r.y0 > 300) {
+        // 지붕: 처마 높이 = 층고(없으면 4,500mm), 한쪽 경사 5%
+        const n = planRef.current.items.filter(i => i.kind === 'roof').length + 1;
+        const d = r.y1 - r.y0;
+        const it = {
+          ...makeItem({ name: `지붕 ${n}`, shape: 'roof', kind: 'roof', w: r.x1 - r.x0, d, color: ROOF_MATERIALS[0].color }, { x: 0, y: 0 }),
+          x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2,
+          roofType: 'mono', rise: Math.round((d * 0.05) / 10) * 10, material: 'panel', h: planRef.current.ceiling || 4500,
+        };
+        commit({ ...planRef.current, items: [...planRef.current.items, it] });
+        setToolState('select');
+        setSel({ kind: 'item', ids: [it.id] });
+        return;
+      }
       if (r && r.x1 - r.x0 > 300 && r.y1 - r.y0 > 300) {
         const n = planRef.current.items.filter(i => i.kind === 'zone').length + 1;
         const it = { ...makeItem({ name: `구역 ${n}`, shape: 'zone', kind: 'zone', w: r.x1 - r.x0, d: r.y1 - r.y0, color: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'][(n - 1) % 5] }, { x: 0, y: 0 }), x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2 };
@@ -710,6 +877,43 @@ export default function FloorPlanner({
     if (dr.startPlan && dr.moved && planRef.current !== dr.startPlan) commit(planRef.current, dr.startPlan);
   };
 
+  /**
+   * 치수 자동: 건물 전체 가로·세로, 기둥 간격(가로 줄·세로 줄), 벽마다 길이를 치수선으로
+   * - 자동으로 그린 치수선은 auto 표시 → 다시 누르면 새로 그리고, '자동 치수 지우기'로 한 번에 지움
+   */
+  const makeAutoDims = () => {
+    const p = planRef.current;
+    const walls = p.walls.filter(w => !isBeam(w));
+    const cols = p.items.filter(it => it.kind === 'column');
+    const pts = [...walls.flatMap(w => [{ x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 }]), ...cols.map(c => ({ x: c.x, y: c.y }))];
+    if (pts.length < 2) { alert('치수를 그릴 벽이나 기둥이 없어요. 벽이나 기둥을 먼저 놓아 주세요.'); return; }
+    const b = aabb(pts);
+    const cx = (b.x0 + b.x1) / 2; const cy = (b.y0 + b.y1) / 2;
+    const out = [];
+    const add = (x1, y1, x2, y2) => { if (Math.hypot(x2 - x1, y2 - y1) >= 300) out.push({ id: generateId(), x1, y1, x2, y2, auto: true }); };
+    // 전체 크기 (가장 바깥)
+    add(b.x0, b.y0 - 2700, b.x1, b.y0 - 2700);
+    add(b.x0 - 2700, b.y0, b.x0 - 2700, b.y1);
+    // 기둥 간격
+    if (cols.length >= 2) {
+      const uniq = (arr) => arr.sort((a, c) => a - c).filter((v, i, a) => i === 0 || v - a[i - 1] > 50);
+      const xs = uniq(cols.map(c => Math.round(c.x)));
+      const ys = uniq(cols.map(c => Math.round(c.y)));
+      for (let i = 1; i < xs.length; i++) add(xs[i - 1], b.y0 - 1800, xs[i], b.y0 - 1800);
+      for (let i = 1; i < ys.length; i++) add(b.x0 - 1800, ys[i - 1], b.x0 - 1800, ys[i]);
+    }
+    // 벽마다 길이 (건물 바깥쪽으로 띄워서)
+    walls.forEach(w => {
+      const dx = w.x2 - w.x1; const dy = w.y2 - w.y1; const len = Math.hypot(dx, dy);
+      if (len < 500) return;
+      let nx = -dy / len; let ny = dx / len;
+      if (nx * ((w.x1 + w.x2) / 2 - cx) + ny * ((w.y1 + w.y2) / 2 - cy) < 0) { nx = -nx; ny = -ny; }
+      const off = (w.t || 200) / 2 + 600;
+      add(w.x1 + nx * off, w.y1 + ny * off, w.x2 + nx * off, w.y2 + ny * off);
+    });
+    commit({ ...p, dims: [...p.dims.filter(d => !d.auto), ...out] });
+  };
+
   // 단추·키보드로 하는 일
   const updateItems = useCallback((ids, patch) => {
     apply(p => ({ ...p, items: p.items.map(it => (ids.includes(it.id) ? { ...it, ...(typeof patch === 'function' ? patch(it) : patch) } : it)) }));
@@ -720,6 +924,7 @@ export default function FloorPlanner({
     if (sel.kind === 'item') apply(p => ({ ...p, items: p.items.filter(it => !sel.ids.includes(it.id) || it.locked) }));
     if (sel.kind === 'wall') apply(p => ({ ...p, walls: p.walls.filter(w => !sel.ids.includes(w.id)) }));
     if (sel.kind === 'dim') apply(p => ({ ...p, dims: p.dims.filter(d => !sel.ids.includes(d.id)) }));
+    if (sel.kind === 'line') apply(p => ({ ...p, lines: (p.lines || []).filter(l => !sel.ids.includes(l.id)) }));
     setSel({ kind: null, ids: [] });
   }, [sel, apply]);
 
@@ -800,11 +1005,11 @@ export default function FloorPlanner({
 
   const applyCalibration = () => {
     const draft = draftRef.current;
-    const meters = parseFloat(String(calibInput).replace(/,/g, ''));
-    if (!draft?.p1 || !draft?.p2 || !meters || !plan.bg) return;
+    const realMm = parseFloat(String(calibInput).replace(/,/g, '')); // 실제 길이(mm)
+    if (!draft?.p1 || !draft?.p2 || !realMm || !plan.bg) return;
     const dw = Math.hypot(draft.p2.x - draft.p1.x, draft.p2.y - draft.p1.y);
     if (dw < 1) return;
-    const k = (meters * 1000) / dw;
+    const k = realMm / dw;
     const bg = plan.bg; const o = draft.p1;
     // 첫 점을 기준으로 도면만 늘이거나 줄임
     const next = { ...plan, bg: { ...bg, mmPerPx: bg.mmPerPx * k, x: o.x + (bg.x - o.x) * k, y: o.y + (bg.y - o.y) * k, calibrated: true } };
@@ -851,7 +1056,7 @@ export default function FloorPlanner({
     ctx.fillStyle = '#0f172a'; ctx.font = 'bold 36px sans-serif';
     ctx.fillText(`${branch?.name || ''} 배치도 · ${layout.name || ''}`, 30, 50);
     ctx.font = '22px sans-serif'; ctx.fillStyle = '#475569';
-    ctx.fillText(`${new Date().toLocaleDateString('ko-KR')} · 격자 한 칸 ${gridStep / 1000}m`, 30, 80);
+    ctx.fillText(`${new Date().toLocaleDateString('ko-KR')} · 격자 한 칸 ${gridStep.toLocaleString()}mm`, 30, 80);
     return c.toDataURL('image/png');
   };
 
@@ -885,15 +1090,17 @@ export default function FloorPlanner({
   const gridStep = z * 1000 >= 18 ? 1000 : 5000;
   const single = selectedItems.length === 1 ? selectedItems[0] : null;
   const gaps = useMemo(() => {
-    if (!opts.gaps || !single || ['zone', 'text'].includes(single.kind)) return [];
+    if (!opts.gaps || !single || ['zone', 'text', 'roof', 'light'].includes(single.kind)) return [];
     return nearestGaps(itemBox(single), [
-      ...plan.items.filter(it => it.id !== single.id && !['zone', 'text'].includes(it.kind)).map(itemBox),
+      ...plan.items.filter(it => it.id !== single.id && !['zone', 'text', 'roof', 'light'].includes(it.kind)).map(itemBox),
       ...plan.walls.filter(w => !isBeam(w)).map(wallBox),
     ]);
   }, [opts.gaps, single, plan.items, plan.walls]);
 
   const zones = plan.items.filter(it => it.kind === 'zone');
-  const others = plan.items.filter(it => it.kind !== 'zone');
+  const others = plan.items.filter(it => it.kind !== 'zone' && it.kind !== 'roof');
+  const roofs = plan.items.filter(it => it.kind === 'roof');
+  const levelHNow = plan.ceiling || defaultLevelHeight(Math.max(0, levels.findIndex(l => l.id === lvId)));
   const toolInfo = TOOLS.find(t => t.id === tool);
   const lvIndex = Math.max(0, levels.findIndex(l => l.id === lvId));
   const below = lvIndex > 0 ? levels[lvIndex - 1] : null;
@@ -938,18 +1145,30 @@ export default function FloorPlanner({
       </div>
       <div className="fp-toolbar fp-toolbar-sub">
         <div className="fp-tool-group">
-          {[['snap', '붙이기·격자 맞춤'], ['clear', '작업 공간 보기'], ['gaps', '거리 보기'], ['car', '리프트에 차 올려 보기'], ['floor', '바닥 마감 보기'], ...(below ? [['below', `아래층(${below.name}) 비춰 보기`]] : []), ['grid', '격자']].map(([k, label]) => (
+          {[['snap', '붙이기·격자 맞춤'], ['clear', '작업 공간 보기'], ['gaps', '거리 보기'], ['car', '리프트에 차 올려 보기'], ['floor', '바닥 마감 보기'], ['roof', '지붕 보기'], ['mep', '전기·배관 보기'], ['lightRange', '조명 범위 보기'], ...(below ? [['below', `아래층(${below.name}) 비춰 보기`]] : []), ['grid', '격자']].map(([k, label]) => (
             <label key={k} className="fp-check">
               <input type="checkbox" checked={opts[k]} onChange={(e) => setOpts(o => ({ ...o, [k]: e.target.checked }))} /> {label}
             </label>
           ))}
         </div>
         <div className="fp-tool-group">
+          <button type="button" className="btn btn-secondary btn-sm" onClick={makeAutoDims} title="벽 길이·건물 전체 크기·기둥 간격 치수선을 한 번에 그려요">치수 자동</button>
+          {plan.dims.some(d => d.auto) && <button type="button" className="btn btn-ghost btn-sm" onClick={() => apply(p => ({ ...p, dims: p.dims.filter(d => !d.auto) }))}>자동 치수 지우기</button>}
           <button type="button" className="btn btn-secondary btn-sm" onClick={downloadPng}>그림 저장</button>
           <button type="button" className="btn btn-secondary btn-sm" onClick={printPlan}>인쇄</button>
         </div>
       </div>
       <p className={`fp-hint${tool !== 'select' ? ' fp-hint-tool' : ''}`}>{toolInfo?.hint}</p>
+      {tool === 'line' && (
+        <div className="fp-wall-types">
+          <span>그릴 선:</span>
+          {MEP_LINE_TYPES.map(lt => (
+            <button key={lt.type} type="button" className={`filter-pill${lineType === lt.type ? ' on' : ''}`} onClick={() => setLineType(lt.type)}>
+              <i className="fp-line-dot" style={{ background: lt.color }} /> {lt.label}
+            </button>
+          ))}
+        </div>
+      )}
       {tool === 'wall' && (
         <div className="fp-wall-types">
           <span>그릴 벽·보:</span>
@@ -1005,11 +1224,20 @@ export default function FloorPlanner({
             ))}
 
             {plan.walls.map(wl => (
-              <WallShape key={wl.id} wall={wl} selected={sel.ids.includes(wl.id)} />
+              <WallShape key={wl.id} wall={wl} z={z} selected={sel.ids.includes(wl.id)} />
             ))}
 
             {others.map(it => (
-              <PlanItem key={it.id} item={it} z={z} warn={warnMap.get(it.id)} showClear={opts.clear} showCar={opts.car} selected={sel.ids.includes(it.id)} />
+              <PlanItem key={it.id} item={it} z={z} warn={warnMap.get(it.id)} showClear={opts.clear} showCar={opts.car}
+                showLightRange={opts.lightRange} levelH={levelHNow} selected={sel.ids.includes(it.id)} />
+            ))}
+
+            {/* 전기·배관 선 */}
+            {opts.mep && (plan.lines || []).map(l => <MepLine key={l.id} line={l} z={z} selected={sel.ids.includes(l.id)} />)}
+
+            {/* 지붕 (머리 위라 맨 위에) */}
+            {opts.roof && roofs.map(it => (
+              <PlanItem key={it.id} item={it} z={z} selected={sel.ids.includes(it.id)} />
             ))}
 
             {plan.dims.map(d => (
@@ -1025,12 +1253,22 @@ export default function FloorPlanner({
               {single && !single.locked && (() => {
                 const top = toWorld(single, { x: 0, y: -single.d / 2 });
                 const handle = toWorld(single, { x: 0, y: -single.d / 2 - 30 / z });
-                const corner = toWorld(single, { x: single.w / 2, y: single.d / 2 });
+                // 크기 조절 손잡이: 네 모서리 + (충분히 크게 보이면) 네 변 가운데. 끄는 쪽만 늘고 반대쪽은 그대로
+                const big = Math.min(single.w, single.d) * z > 46;
+                const handles = RESIZE_HANDLES.filter(h => big || h.id.length === 2);
                 return (
                   <g>
                     <line x1={top.x} y1={top.y} x2={handle.x} y2={handle.y} stroke="var(--color-accent)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
                     <circle data-role="rotate" data-id={single.id} cx={handle.x} cy={handle.y} r={8 / z} fill="var(--fp-bg)" stroke="var(--color-accent)" strokeWidth={2} vectorEffect="non-scaling-stroke" style={{ cursor: 'grab' }} />
-                    <rect data-role="resize" data-id={single.id} x={corner.x - 6 / z} y={corner.y - 6 / z} width={12 / z} height={12 / z} fill="var(--color-accent)" style={{ cursor: 'nwse-resize' }} />
+                    {handles.map(h => {
+                      const p = toWorld(single, { x: (h.sx * single.w) / 2, y: (h.sy * single.d) / 2 });
+                      const s = (h.id.length === 2 ? 12 : 10) / z;
+                      return (
+                        <rect key={h.id} data-role="resize" data-id={single.id} data-h={h.id} x={p.x - s / 2} y={p.y - s / 2} width={s} height={s}
+                          fill={h.id.length === 2 ? 'var(--color-accent)' : 'var(--fp-bg)'} stroke="var(--color-accent)" strokeWidth={1.5} vectorEffect="non-scaling-stroke"
+                          style={{ cursor: h.cursor }} />
+                      );
+                    })}
                   </g>
                 );
               })()}
@@ -1059,7 +1297,7 @@ export default function FloorPlanner({
               {draft?.pts && (
                 <g pointerEvents="none">
                   <polyline points={[...draft.pts, ...(cursor ? [cursor] : [])].map(p => `${p.x},${p.y}`).join(' ')} fill={tool === 'poly' ? '#8b5cf6' : 'none'} fillOpacity={0.12}
-                    stroke={tool === 'wall' ? (wallTypeOf(wallType).color || 'var(--fp-wall)') : '#8b5cf6'} strokeWidth={tool === 'wall' ? Math.max(2, (wallType === 'concrete' ? (plan.wallT || 200) : wallTypeOf(wallType).t) * z) : 2} strokeOpacity={0.7} vectorEffect="non-scaling-stroke" />
+                    stroke={tool === 'wall' ? (wallTypeOf(wallType).color || 'var(--fp-wall)') : tool === 'line' ? mepLineTypeOf(lineType).color : '#8b5cf6'} strokeWidth={tool === 'wall' ? Math.max(2, (wallType === 'concrete' ? (plan.wallT || 200) : wallTypeOf(wallType).t) * z) : 2} strokeOpacity={0.7} vectorEffect="non-scaling-stroke" />
                   {draft.pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={5 / z} fill={i === 0 && tool === 'poly' ? '#8b5cf6' : 'var(--fp-bg)'} stroke="#8b5cf6" strokeWidth={2} vectorEffect="non-scaling-stroke" />)}
                   {cursor && draft.pts.length > 0 && (
                     <DimLine x1={draft.pts[draft.pts.length - 1].x} y1={draft.pts[draft.pts.length - 1].y} x2={cursor.x} y2={cursor.y} z={z} color="#8b5cf6" />
@@ -1084,7 +1322,7 @@ export default function FloorPlanner({
 
           <div className="fp-scale-bar" aria-hidden="true">
             <span style={{ width: Math.max(20, z * (z * 1000 > 40 ? 1000 : 5000)) }} />
-            {z * 1000 > 40 ? '1m' : '5m'}
+            {z * 1000 > 40 ? '1,000mm' : '5,000mm'}
           </div>
 
           {!plan.bg && !plan.items.length && !plan.walls.length && (
@@ -1100,7 +1338,7 @@ export default function FloorPlanner({
 
           {draft?.pts && draft.pts.length >= (tool === 'poly' ? 3 : 2) && (
             <button id="fp-finish-path" type="button" className="btn btn-primary btn-sm fp-finish" onClick={() => finishPath()}>
-              {tool === 'wall' ? '벽 그리기 끝내기' : '모양 완성'}
+              {tool === 'wall' ? '벽 그리기 끝내기' : tool === 'line' ? '선 그리기 끝내기' : '모양 완성'}
             </button>
           )}
 
@@ -1108,9 +1346,9 @@ export default function FloorPlanner({
             <div className="fp-float-form" onPointerDown={(e) => e.stopPropagation()}>
               <label htmlFor="fp-calib">두 점 사이 실제 길이</label>
               <div className="fp-inline">
-                <input id="fp-calib" type="number" inputMode="decimal" step="0.01" min="0" autoFocus value={calibInput}
-                  onChange={(e) => setCalibInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') applyCalibration(); }} placeholder="예: 12.5" />
-                <span>m</span>
+                <input id="fp-calib" type="number" inputMode="decimal" step="1" min="0" autoFocus value={calibInput}
+                  onChange={(e) => setCalibInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') applyCalibration(); }} placeholder="예: 12500" />
+                <span>mm</span>
               </div>
               <div className="fp-inline">
                 <button type="button" className="btn btn-primary btn-sm" onClick={applyCalibration} disabled={!calibInput}>맞추기</button>
@@ -1139,6 +1377,9 @@ export default function FloorPlanner({
               items={selectedItems}
               wall={selectedWall}
               dim={selectedDim}
+              line={selectedLine}
+              onLine={(patch) => apply(p => ({ ...p, lines: (p.lines || []).map(l => (l.id === selectedLine.id ? { ...l, ...patch } : l)) }))}
+              allItems={plan.items}
               equipments={equipments}
               ceiling={plan.ceiling}
               levelH={levelH}
@@ -1149,6 +1390,7 @@ export default function FloorPlanner({
               vehicleH={plan.vehicleH}
               onItems={(ids, patch) => updateItems(ids, patch)}
               onWall={(patch) => apply(p => ({ ...p, walls: p.walls.map(w => (w.id === selectedWall.id ? { ...w, ...patch } : w)) }))}
+              onAllWalls={(patch) => apply(p => ({ ...p, walls: p.walls.map(w => (isBeam(w) || ['glass', 'curtain'].includes(w.type) ? w : { ...w, ...patch })) }))}
               onDelete={deleteSelection}
               onDuplicate={duplicateSelection}
               onRotate={rotateSelection}
@@ -1165,7 +1407,7 @@ export default function FloorPlanner({
               onPickBg={() => fileRef.current?.click()}
               onCalibrate={() => setTool('calibrate')}
               onRoom={(wm, dm, t) => {
-                const W = wm * 1000; const D = dm * 1000;
+                const W = wm; const D = dm; // mm
                 const v = viewRef.current;
                 const ox = snapV(v.x + size.w / v.z / 2 - W / 2, 1000); const oy = snapV(v.y + size.h / v.z / 2 - D / 2, 1000);
                 const c = [[ox, oy], [ox + W, oy], [ox + W, oy + D], [ox, oy + D]];
@@ -1180,6 +1422,7 @@ export default function FloorPlanner({
             warnings={warnings}
             items={plan.items}
             walls={plan.walls}
+            lines={plan.lines || []}
             equipments={equipments}
             onFocus={(w) => {
               setSel({ kind: 'item', ids: w.ids.slice(0, 2) });
@@ -1249,3 +1492,6 @@ function alignItems(items, ids, mode) {
   }
   return items.map(it => (patch.has(it.id) ? { ...it, ...patch.get(it.id) } : it));
 }
+
+// 배치안 비교 화면(LayoutCompare)에서 같은 모양으로 그리려고 내보냄
+export { PlanItem, WallShape, MepLine, DimLine };
