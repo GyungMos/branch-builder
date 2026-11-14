@@ -46,6 +46,11 @@ export async function buildCloudBackup(onProgress) {
     } catch { entry.data.budget = null; }
     out.branches.push(entry);
   }
+  // 모든 지점이 같이 쓰는 기록 (배치도 '내 비품', 보고서함)
+  out.shared = {};
+  for (const n of ['layoutLibrary', 'reports']) {
+    out.shared[n] = await readCollection(['branches', '_shared', n]);
+  }
   for (const name of ['members', 'people']) {
     try {
       const s = await getDoc(doc(db, 'settings', name));

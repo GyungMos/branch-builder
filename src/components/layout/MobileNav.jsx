@@ -98,6 +98,15 @@ export default function MobileNav({ activeTab, onTabChange }) {
         <span className="mobile-nav-label">지점 비교</span>
       </button>
       <button
+        className={`mobile-nav-item ${location.pathname === '/reports' ? 'active' : ''}`}
+        onClick={() => navigate('/reports')}
+      >
+        <span className="mobile-nav-icon">
+          <NeonIcon name="document" color="cyan" size="sm" badge={false} />
+        </span>
+        <span className="mobile-nav-label">보고서함</span>
+      </button>
+      <button
         className={`mobile-nav-item ${location.pathname === '/settings' ? 'active' : ''}`}
         onClick={() => navigate('/settings')}
       >

@@ -6,9 +6,10 @@
   NPM_FLAGS = "--legacy-peer-deps"
 
 # 배치도 3D 화면이 저장소(Storage)의 3D 모델·사진을 같은 사이트 주소로 읽게 (브라우저의 다른 주소 막기(CORS) 피하기)
+# 우리 저장소(.env 의 VITE_FIREBASE_STORAGE_BUCKET)의 파일 내려받기 주소만 통과
 [[redirects]]
-  from = "/fbfiles/*"
-  to = "https://firebasestorage.googleapis.com/:splat"
+  from = "/fbfiles/v0/b/pw-archi.firebasestorage.app/o/:object"
+  to = "https://firebasestorage.googleapis.com/v0/b/pw-archi.firebasestorage.app/o/:object"
   status = 200
   force = true
 

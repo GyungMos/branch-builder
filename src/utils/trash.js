@@ -15,7 +15,7 @@ export const TRASH_DAYS = 30;
 const COLLECTION_LABEL = {
   stages: '단계', schedules: '일정', costs: '비용', documents: '서류·사진', dailyLogs: '현장 일지',
   partners: '협력업체', equipments: '장비', compliance: '인허가 항목', openPlans: '오픈 계획', openTasks: '오픈 준비',
-  defects: '하자·A/S', shortfalls: '부족했던 점', layouts: '배치도', layoutLibrary: '내 비품',
+  defects: '하자·A/S', shortfalls: '부족했던 점', layouts: '배치도', layoutLibrary: '내 비품', reports: '보고서',
 };
 export const trashLabel = (coll) => COLLECTION_LABEL[coll] || coll;
 
@@ -62,7 +62,8 @@ const toMillis = (v) => (v?.toMillis ? v.toMillis() : new Date(v || 0).getTime()
 /** 휴지통 목록 (최근에 지운 것부터) */
 export async function listTrash(branches, demoMode) {
   const out = [];
-  for (const b of branches) {
+  // 모든 지점이 같이 쓰는 기록(보고서함·배치도 내 비품)은 branches/_shared 아래 휴지통에 들어감
+  for (const b of [...branches, { id: '_shared', name: '공용(보고서함·내 비품)' }]) {
     if (demoMode || !db) {
       readLocal(`trash_${b.id}`).forEach(t => out.push({ ...t, branchId: b.id, branchName: b.name }));
     } else {

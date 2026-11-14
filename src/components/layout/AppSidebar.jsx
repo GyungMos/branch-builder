@@ -139,6 +139,7 @@ export default function AppSidebar() {
         <Item collapsed={collapsed} icon="building" label="지점 목록" active={path === '/'} onClick={() => navigate('/')} />
         <Item collapsed={collapsed} icon="chart" label="지점 비교" active={path === '/compare'} onClick={() => navigate('/compare')} />
         <Item collapsed={collapsed} icon="search" label="통합 검색" active={path === '/search'} onClick={() => navigate('/search')} />
+        <Item collapsed={collapsed} icon="document" label="보고서함" active={path === '/reports'} onClick={() => navigate('/reports')} />
 
         <p className="sb-section">{collapsed ? '·' : `지점 (${branches.length})`}</p>
         {branches.map(b => {
