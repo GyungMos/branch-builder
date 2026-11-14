@@ -1,4 +1,5 @@
 import { scaledPoints, lShapePoints, lStairPoints, stairArm } from './planShapes';
+import { isBeam } from './planLibrary';
 
 /** 배치도 계산 도구 (단위 mm) */
 
@@ -132,7 +133,8 @@ export function findWarnings(items = [], walls = [], { ceiling, vehicleH = 1800,
   const list = items.filter(collides);
   const body = new Map(list.map(it => [it.id, bodyPolygon(it, TOUCH)]));
   const clear = new Map(list.filter(it => hasClearance(it) && !it.hideClear).map(it => [it.id, clearancePolygon(it, TOUCH)]));
-  const wallPolys = walls.map(w => ({ w, p: wallPolygon(w, TOUCH) }));
+  // 보(머리 위 가로대)는 바닥 비품과 겹쳐도 되므로 벽 검사에서 빼고, 아래에서 높이만 봄
+  const wallPolys = walls.filter(w => !isBeam(w)).map(w => ({ w, p: wallPolygon(w, TOUCH) }));
   const label = (it) => it.name || '비품';
 
   for (let i = 0; i < list.length; i++) {
@@ -167,6 +169,20 @@ export function findWarnings(items = [], walls = [], { ceiling, vehicleH = 1800,
     const vp = bodyPolygon(v, TOUCH);
     list.forEach(it => {
       if (polygonsOverlap(vp, body.get(it.id))) out.push({ type: 'overlap', ids: [it.id, v.id], text: `${josa(label(it))} 뚫린 곳 위에 있어요${label(v).startsWith('뚫린 곳') ? '' : ` (${label(v)})`}` });
+    });
+  });
+
+  // 보 아래 높이: 리프트를 올리고 차를 얹었을 때(또는 높은 비품이) 보 아래에 닿는지
+  walls.filter(isBeam).forEach(bm => {
+    const top = Number(bm.h) || ceiling;
+    if (!top) return;
+    const bottom = top - (Number(bm.depth) || Number(bm.t) || 0);
+    const bp = wallPolygon(bm);
+    list.forEach(it => {
+      const need = neededHeight(it, vehicleH, margin);
+      if (need && need > bottom && polygonsOverlap(bp, body.get(it.id))) {
+        out.push({ type: 'height', ids: [it.id], wallId: bm.id, text: `${label(it)}: 필요한 높이 ${fmtM(need)} > 보 아래 ${fmtM(bottom)}` });
+      }
     });
   });
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  PLAN_CATEGORIES, PLAN_LIBRARY, ITEM_COLORS, guessLibraryFromName, FLOOR_TYPES, floorTypeOf, WALL_TYPES, wallTypeOf, WALL_COLORS, isVertical, hasFaces,
+  PLAN_CATEGORIES, PLAN_LIBRARY, ITEM_COLORS, guessLibraryFromName, FLOOR_TYPES, floorTypeOf, WALL_TYPES, wallTypeOf, WALL_COLORS, isVertical, hasFaces, STEEL_SIZES, steelProfile,
 } from './planLibrary';
 import { LookSelect, FacePhotos, ModelPicker, inspectModel } from './Plan3DInputs';
 import { ShapeThumb, stairArm } from './planShapes';
@@ -45,7 +45,7 @@ function Num({ label, value, onChange, unit = 'mm', step = 10, min = 0 }) {
 const tplOf = (it) => ({
   key: it.key, name: it.name, shape: it.shape, kind: it.kind, w: it.w, d: it.d, h: it.h, lift: it.lift, clear: it.clear,
   color: it.color, points: it.points, baseW: it.baseW, baseD: it.baseD, img: it.img, arm: it.arm, elev: it.elev,
-  look: it.look, faces: it.faces, model: it.model, modelRot: it.modelRot,
+  look: it.look, faces: it.faces, model: it.model, modelRot: it.modelRot, prof: it.prof,
 });
 
 /* ───────── 왼쪽: 비품 목록 ───────── */
@@ -147,19 +147,44 @@ export function InspectorPanel({
         <div className="fp-btn-row">
           {WALL_TYPES.map(t => (
             <button key={t.type} type="button" className={`filter-pill${wt.type === t.type ? ' on' : ''}`}
-              onClick={() => onWall({ type: t.type === 'concrete' ? null : t.type, t: t.t, color: null })}>{t.short}</button>
+              onClick={() => onWall({ type: t.type === 'concrete' ? null : t.type, t: t.t, color: null, depth: t.beam ? t.depth : null })}>{t.short}</button>
           ))}
         </div>
-        <div className="fp-grid2">
-          <Num label="길이" value={len} onChange={setLen} />
-          <Num label="두께" value={wall.t} onChange={(v) => v && onWall({ t: v })} />
-          <Num label="높이" value={wall.h || ''} onChange={(v) => onWall({ h: v || null })} />
-        </div>
-        <p className="fp-muted">높이를 비워 두면 층고까지로 봐요. (나중에 3D로 볼 때 써요)</p>
-        <div className="fp-label">{wt.type === 'glass' || wt.type === 'curtain' ? '유리 틀 색' : '벽 색'}</div>
+        {wt.beam ? (
+          <>
+            <label className="fp-field">
+              <span>규격</span>
+              <select value={(STEEL_SIZES[wt.beam] || []).find(s => s.w === wall.t && s.d === (wall.depth || wall.t))?.id || ''}
+                onChange={(e) => { const s = STEEL_SIZES[wt.beam].find(x => x.id === e.target.value); if (s) onWall({ t: s.w, depth: s.d }); }}>
+                <option value="">직접 적은 크기</option>
+                {(STEEL_SIZES[wt.beam] || []).map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+            </label>
+            <div className="fp-grid2">
+              <Num label="길이" value={len} onChange={setLen} />
+              <Num label="단면 폭" value={wall.t} onChange={(v) => v && onWall({ t: v })} />
+              <Num label="단면 높이" value={wall.depth || wall.t} onChange={(v) => v && onWall({ depth: v })} />
+              <Num label="보 윗면 높이" value={wall.h || ''} onChange={(v) => onWall({ h: v || null })} />
+            </div>
+            <p className="fp-muted">
+              보 윗면 높이를 비우면 층고{ceiling ? `(${fmtM(ceiling)})` : ''}에 붙여요.
+              {(Number(wall.h) || ceiling) ? ` 보 아래 높이는 ${fmtM((Number(wall.h) || ceiling) - (wall.depth || wall.t))}예요. 리프트를 올렸을 때 닿는지 점검에서 같이 봐요.` : ' 층고를 넣으면 리프트가 보 아래에 닿는지 점검해요.'}
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="fp-grid2">
+              <Num label="길이" value={len} onChange={setLen} />
+              <Num label="두께" value={wall.t} onChange={(v) => v && onWall({ t: v })} />
+              <Num label="높이" value={wall.h || ''} onChange={(v) => onWall({ h: v || null })} />
+            </div>
+            <p className="fp-muted">높이를 비워 두면 층고까지로 봐요. (3D로 볼 때 써요)</p>
+          </>
+        )}
+        <div className="fp-label">{wt.type === 'glass' || wt.type === 'curtain' ? '유리 틀 색' : wt.beam ? '보 색(도장)' : '벽 색'}</div>
         <ColorPicker value={wall.color || wt.color || ''} colors={WALL_COLORS} onChange={(c) => onWall({ color: c })} onReset={wall.color ? () => onWall({ color: null }) : null} />
         <p className="fp-muted">양 끝 동그라미를 끌어 길이·방향을 바꿔요.</p>
-        <button type="button" className="btn btn-danger btn-sm" onClick={onDelete}>벽 지우기</button>
+        <button type="button" className="btn btn-danger btn-sm" onClick={onDelete}>{wt.beam ? '보 지우기' : '벽 지우기'}</button>
       </section>
     );
   }
@@ -223,6 +248,35 @@ export function InspectorPanel({
           {it.shape === 'lshape' && <Num label="팔 두께" value={it.arm || Math.round(Math.min(it.w, it.d) / 2)} onChange={(v) => v && set({ arm: v })} />}
           {(it.shape === 'stairsL' || it.shape === 'stairsU') && <Num label="계단 폭" value={Math.round(stairArm(it))} onChange={(v) => v && set({ arm: v })} />}
         </div>
+      )}
+      {(it.shape === 'hbeam' || it.shape === 'sqpipe') && (
+        <>
+          <label className="fp-field">
+            <span>규격</span>
+            <select value={STEEL_SIZES[it.shape].find(s => s.w === it.w && s.d === it.d)?.id || ''}
+              onChange={(e) => {
+                const s = STEEL_SIZES[it.shape].find(x => x.id === e.target.value);
+                if (!s) return;
+                const kindLabel = it.shape === 'hbeam' ? 'H빔 기둥' : '각파이프 기둥';
+                const auto = !it.name || /^(H빔|각파이프) 기둥/.test(it.name);
+                set({ w: s.w, d: s.d, prof: it.shape === 'hbeam' ? { tw: s.tw, tf: s.tf } : { t: s.t }, ...(auto ? { name: `${kindLabel} ${s.label.split(' ')[0]}` } : {}) });
+              }}>
+              <option value="">직접 적은 크기</option>
+              {STEEL_SIZES[it.shape].map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+          </label>
+          <div className="fp-grid2">
+            {it.shape === 'hbeam' ? (
+              <>
+                <Num label="웨브 두께" step={0.5} value={steelProfile('hbeam', it.w, it.d, it.prof).tw} onChange={(v) => v && set({ prof: { ...steelProfile('hbeam', it.w, it.d, it.prof), tw: v } })} />
+                <Num label="플랜지 두께" step={0.5} value={steelProfile('hbeam', it.w, it.d, it.prof).tf} onChange={(v) => v && set({ prof: { ...steelProfile('hbeam', it.w, it.d, it.prof), tf: v } })} />
+              </>
+            ) : (
+              <Num label="두께" step={0.1} value={steelProfile('sqpipe', it.w, it.d, it.prof).t} onChange={(v) => v && set({ prof: { t: v } })} />
+            )}
+          </div>
+          <p className="fp-muted">높이를 비우면 그 층 층고까지 올라가요. H빔은 R 키(90° 돌리기)로 방향을 바꿔요.</p>
+        </>
       )}
       {isVertical(it) && <StairCheck it={it} levelH={levelH} levelName={levelName} />}
       {isVertical(it) && aboveName && onCopyUp && (

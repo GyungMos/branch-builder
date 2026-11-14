@@ -16,6 +16,7 @@ export const PLAN_CATEGORIES = [
   { id: 'storage', label: '수납' },
   { id: 'arch', label: '문·창·기둥' },
   { id: 'vertical', label: '계단·승강기' },
+  { id: 'steel', label: 'H빔·각파이프' },
   { id: 'finish', label: '바닥·유리' },
   { id: 'etc', label: '기타' },
 ];
@@ -80,6 +81,14 @@ export const PLAN_LIBRARY = [
   { key: 'window24', cat: 'arch', name: '큰 창(2400)', shape: 'window', w: 2400, d: 150, h: 1500, elev: 600, clear: {}, color: '#38bdf8', kind: 'arch' },
   { key: 'column4', cat: 'arch', name: '기둥(400각)', shape: 'column', w: 400, d: 400, h: 0, clear: {}, color: '#475569', kind: 'column' },
   { key: 'column6', cat: 'arch', name: '기둥(600각)', shape: 'column', w: 600, d: 600, h: 0, clear: {}, color: '#475569', kind: 'column' },
+
+  // H빔·각파이프 (기둥. 높이 0 = 그 층 층고까지. 보는 '벽 그리기'에서 'H빔 보·각파이프 보'를 골라 기둥 사이를 이어요)
+  { key: 'hcol200', cat: 'steel', name: 'H빔 기둥 H-200×200', shape: 'hbeam', w: 200, d: 200, prof: { tw: 8, tf: 12 }, h: 0, clear: {}, color: '#475569', kind: 'column', tip: '오른쪽 칸 ‘규격’에서 H-150·250·300 등으로 바꿀 수 있어요. R 키로 돌리면 방향이 바뀌어요.' },
+  { key: 'hcol250', cat: 'steel', name: 'H빔 기둥 H-250×250', shape: 'hbeam', w: 250, d: 250, prof: { tw: 9, tf: 14 }, h: 0, clear: {}, color: '#475569', kind: 'column' },
+  { key: 'hcol300', cat: 'steel', name: 'H빔 기둥 H-300×300', shape: 'hbeam', w: 300, d: 300, prof: { tw: 10, tf: 15 }, h: 0, clear: {}, color: '#475569', kind: 'column' },
+  { key: 'sqcol100', cat: 'steel', name: '각파이프 기둥 □100×100', shape: 'sqpipe', w: 100, d: 100, prof: { t: 3.2 }, h: 0, clear: {}, color: '#64748b', kind: 'column', tip: '캐노피·가벽 틀·작은 지붕 기둥에 많이 써요. 규격은 오른쪽 칸에서 바꿔요.' },
+  { key: 'sqcol150', cat: 'steel', name: '각파이프 기둥 □150×150', shape: 'sqpipe', w: 150, d: 150, prof: { t: 6 }, h: 0, clear: {}, color: '#64748b', kind: 'column' },
+  { key: 'sqcol75', cat: 'steel', name: '각파이프 기둥 □75×75', shape: 'sqpipe', w: 75, d: 75, prof: { t: 3.2 }, h: 0, clear: {}, color: '#64748b', kind: 'column' },
 
   // 계단·승강기 (층을 잇는 것. 높이 0 = 그 층 층고만큼)
   { key: 'stairs', cat: 'vertical', name: '일자 계단', shape: 'stairs', w: 1200, d: 4500, h: 0, clear: { f: 1200 }, color: '#94a3b8', tip: '화살표 쪽으로 올라가요. 오른쪽 칸에서 층고에 맞는 길이인지 계산해 줘요.' },
@@ -173,8 +182,52 @@ export const WALL_TYPES = [
   { type: 'light', label: '가벽(경량 칸막이)', short: '가벽', t: 100, color: '#a8a29e' },
   { type: 'glass', label: '유리벽(유리 칸막이)', short: '유리벽', t: 100, color: '#38bdf8' },
   { type: 'curtain', label: '통유리 외벽(커튼월)', short: '통유리 외벽', t: 150, color: '#0ea5e9' },
+  // 보: 바닥이 아니라 머리 위(천장 쪽)에 걸리는 가로대. t = 단면 폭, depth = 단면 높이, h = 보 윗면 높이(비우면 층고)
+  { type: 'beamH', label: 'H빔 보 (머리 위)', short: 'H빔 보', t: 200, depth: 200, color: '#475569', beam: 'hbeam' },
+  { type: 'beamSq', label: '각파이프 보 (머리 위)', short: '각파이프 보', t: 100, depth: 100, color: '#64748b', beam: 'sqpipe' },
 ];
 export const wallTypeOf = (type) => WALL_TYPES.find(w => w.type === type) || WALL_TYPES[0];
+/** 보(머리 위 가로대)인지: 바닥 비품과 겹쳐도 경고하지 않고, 높이만 봄 */
+export const isBeam = (w) => Boolean(wallTypeOf(w?.type).beam);
+
+/**
+ * 철골 규격 (KS 많이 쓰는 것, mm)
+ * - H빔: H-높이×폭×웨브 두께(tw)×플랜지 두께(tf)
+ * - 각파이프: □가로×세로×두께(t)
+ */
+export const STEEL_SIZES = {
+  hbeam: [
+    { id: 'H100', label: 'H-100×100', w: 100, d: 100, tw: 6, tf: 8 },
+    { id: 'H125', label: 'H-125×125', w: 125, d: 125, tw: 6.5, tf: 9 },
+    { id: 'H150', label: 'H-150×150', w: 150, d: 150, tw: 7, tf: 10 },
+    { id: 'H200', label: 'H-200×200', w: 200, d: 200, tw: 8, tf: 12 },
+    { id: 'H250', label: 'H-250×250', w: 250, d: 250, tw: 9, tf: 14 },
+    { id: 'H300', label: 'H-300×300', w: 300, d: 300, tw: 10, tf: 15 },
+    { id: 'H350', label: 'H-350×350', w: 350, d: 350, tw: 12, tf: 19 },
+    { id: 'H400', label: 'H-400×400', w: 400, d: 400, tw: 13, tf: 21 },
+    { id: 'H300x150', label: 'H-300×150 (보용)', w: 150, d: 300, tw: 6.5, tf: 9 },
+    { id: 'H400x200', label: 'H-400×200 (보용)', w: 200, d: 400, tw: 8, tf: 13 },
+  ],
+  sqpipe: [
+    { id: 'S50', label: '□50×50×2.3', w: 50, d: 50, t: 2.3 },
+    { id: 'S75', label: '□75×75×3.2', w: 75, d: 75, t: 3.2 },
+    { id: 'S100', label: '□100×100×3.2', w: 100, d: 100, t: 3.2 },
+    { id: 'S125', label: '□125×125×4.5', w: 125, d: 125, t: 4.5 },
+    { id: 'S150', label: '□150×150×6.0', w: 150, d: 150, t: 6 },
+    { id: 'S200', label: '□200×200×8.0', w: 200, d: 200, t: 8 },
+    { id: 'R50x100', label: '□50×100×2.3 (직사각)', w: 50, d: 100, t: 2.3 },
+    { id: 'R100x200', label: '□100×200×4.5 (직사각)', w: 100, d: 200, t: 4.5 },
+  ],
+};
+
+/** 단면 두께 찾기 (규격표에 없으면 크기로 짐작) */
+export function steelProfile(kind, w, d, prof) {
+  if (prof && (prof.tw || prof.t)) return prof;
+  const hit = (STEEL_SIZES[kind] || []).find(s => s.w === w && s.d === d);
+  if (hit) return kind === 'hbeam' ? { tw: hit.tw, tf: hit.tf } : { t: hit.t };
+  const m = Math.min(w, d);
+  return kind === 'hbeam' ? { tw: Math.max(5, Math.round(m * 0.045)), tf: Math.max(7, Math.round(m * 0.065)) } : { t: Math.max(2, Math.round(m * 0.04 * 10) / 10) };
+}
 export const WALL_COLORS = ['#334155', '#64748b', '#a8a29e', '#d6d3d1', '#f5f5f4', '#b45309', '#38bdf8', '#0ea5e9'];
 
 /** 사진 상자: 면마다 사진 (3D에서 상자 겉에 붙임) */

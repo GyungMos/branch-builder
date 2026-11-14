@@ -6,6 +6,7 @@
  */
 
 import { useId } from 'react';
+import { steelProfile } from './planLibrary';
 
 const NS = { vectorEffect: 'non-scaling-stroke' };
 
@@ -114,6 +115,20 @@ export function lShapePoints(w, d, t) {
   return [
     { x: x0, y: y0 }, { x: x0 + w, y: y0 }, { x: x0 + w, y: y0 + tt },
     { x: x0 + tt, y: y0 + tt }, { x: x0 + tt, y: y0 + d }, { x: x0, y: y0 + d },
+  ];
+}
+
+/** 가운데가 (0,0)인 네모 점 */
+export const rectPoints = (w, d) => [{ x: -w / 2, y: -d / 2 }, { x: w / 2, y: -d / 2 }, { x: w / 2, y: d / 2 }, { x: -w / 2, y: d / 2 }];
+
+/** H빔 단면: 폭 w(플랜지), 높이 d, 웨브 두께 tw, 플랜지 두께 tf. 플랜지가 위·아래(±y), 웨브가 가운데 세로 */
+export function hProfilePoints(w, d, tw, tf) {
+  const hw = w / 2; const hd = d / 2;
+  const a = Math.min(tw, w * 0.5) / 2; const f = Math.min(tf, d * 0.3);
+  return [
+    { x: -hw, y: -hd }, { x: hw, y: -hd }, { x: hw, y: -hd + f }, { x: a, y: -hd + f },
+    { x: a, y: hd - f }, { x: hw, y: hd - f }, { x: hw, y: hd }, { x: -hw, y: hd },
+    { x: -hw, y: hd - f }, { x: -a, y: hd - f }, { x: -a, y: -hd + f }, { x: -hw, y: -hd + f },
   ];
 }
 
@@ -460,6 +475,24 @@ export function ItemShape({ item, z = 0.05 }) {
       );
     case 'column':
       return <rect x={-hw} y={-hd} width={w} height={d} fill={c} fillOpacity={0.9} stroke={c} strokeWidth={1.4} {...NS} />;
+    case 'hbeam': {
+      const p = steelProfile('hbeam', w, d, item.prof);
+      return (
+        <g>
+          {/* 바닥판(베이스 플레이트) 자리 흐리게 + H 단면 */}
+          <rect x={-hw} y={-hd} width={w} height={d} fill={c} fillOpacity={0.08} stroke="none" />
+          <path d={polygonPath(hProfilePoints(w, d, p.tw, p.tf))} fill={c} fillOpacity={0.95} stroke={c} strokeWidth={1} {...NS} />
+        </g>
+      );
+    }
+    case 'sqpipe': {
+      const p = steelProfile('sqpipe', w, d, item.prof);
+      const t = Math.min(p.t, w / 3, d / 3);
+      return (
+        <path d={`${polygonPath(rectPoints(w, d))} ${polygonPath(rectPoints(w - 2 * t, d - 2 * t))}`} fillRule="evenodd"
+          fill={c} fillOpacity={0.95} stroke={c} strokeWidth={1} {...NS} />
+      );
+    }
     case 'stairs': {
       const n = Math.max(3, Math.round(d / 280));
       return (

@@ -1,6 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ItemShape, FloorFill, polygonPath } from './planShapes';
-import { WALL_TYPES, wallTypeOf, STAIR_SHAPES, isVertical, defaultLevelHeight } from './planLibrary';
+import { WALL_TYPES, wallTypeOf, STAIR_SHAPES, isVertical, defaultLevelHeight, isBeam } from './planLibrary';
 import {
   bodyPolygon, clearancePolygon, clearanceLocalRect, findWarnings, hasClearance, itemBox, wallBox, nearestGaps,
   snapToEdges, aabb, toLocal, toWorld, itemTransform, fmtLen, areaText, planBounds,
@@ -15,7 +15,7 @@ const HISTORY_MAX = 60;
 
 const TOOLS = [
   { id: 'select', label: '고르기·옮기기', hint: '비품을 끌어 옮겨요. 빈 곳을 끌면 화면이 움직이고, 휠(두 손가락)로 키우고 줄여요. Shift를 누르고 누르면 여러 개를 골라요.' },
-  { id: 'wall', label: '벽 그리기', hint: '벽이 꺾이는 곳을 차례로 누르세요. 마지막 점에서 두 번 누르거나 Esc·오른쪽 버튼으로 끝내요. 가로·세로는 저절로 똑바로 맞춰져요.' },
+  { id: 'wall', label: '벽·보 그리기', hint: '벽(또는 보)이 꺾이는 곳을 차례로 누르세요. 보는 기둥을 누르면 기둥 가운데에 붙어요. 마지막 점에서 두 번 누르거나 Esc·오른쪽 버튼으로 끝내요. 가로·세로는 저절로 똑바로 맞춰져요.' },
   { id: 'zone', label: '구역(방) 그리기', hint: '네모를 끌어서 그리면 넓이(㎡·평)가 나와요. 정비동, 고객 대기실, 화장실처럼 이름을 붙이세요.' },
   { id: 'measure', label: '줄자(치수)', hint: '두 점을 누르면 길이가 나오고 치수선으로 남아요. 치수선을 눌러 지울 수 있어요.' },
   { id: 'poly', label: '점 찍어 모양 만들기', hint: '모서리를 차례로 누르고, 첫 점을 다시 누르거나 두 번 눌러 끝내면 그 모양대로 비품이 만들어져요.' },
@@ -60,6 +60,7 @@ export function makeItem(tpl, at = { x: 0, y: 0 }) {
   };
   if (tpl.lift) it.lift = tpl.lift;
   if (tpl.elev) it.elev = tpl.elev;
+  if (tpl.prof) it.prof = { ...tpl.prof };
   // 3D 모습: 모양 빌리기 / 사진 상자 / 3D 모델 파일
   if (tpl.look) it.look = tpl.look;
   if (tpl.faces) it.faces = { ...tpl.faces };
@@ -157,6 +158,15 @@ const WallShape = memo(function WallShape({ wall, selected }) {
   const sel = { stroke: 'var(--color-accent)', strokeWidth: 2.5 };
   const common = { 'data-role': 'wall', 'data-id': wall.id, d, vectorEffect: 'non-scaling-stroke', style: { cursor: 'move' } };
   const c = wall.color || wallTypeOf(type).color || 'var(--fp-wall)';
+  if (isBeam(wall)) {
+    // 보: 머리 위에 걸리는 것이라 점선으로 (바닥 비품과 겹쳐도 됨)
+    return (
+      <g>
+        <path {...common} fill={c} fillOpacity={0.12} stroke={selected ? sel.stroke : c} strokeWidth={selected ? sel.strokeWidth : 1.3} strokeDasharray="10 6" />
+        <path d={`M${wall.x1},${wall.y1} L${wall.x2},${wall.y2}`} stroke={c} strokeWidth={1} strokeDasharray="14 4 2 4" fill="none" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+      </g>
+    );
+  }
   if (type === 'glass' || type === 'curtain') {
     const dx = wall.x2 - wall.x1; const dy = wall.y2 - wall.y1;
     const len = Math.hypot(dx, dy) || 1;
@@ -455,7 +465,7 @@ export default function FloorPlanner({
 
   const otherBoxes = (excludeIds) => [
     ...planRef.current.items.filter(it => !excludeIds.includes(it.id) && !['zone', 'text'].includes(it.kind)).map(itemBox),
-    ...planRef.current.walls.map(wallBox),
+    ...planRef.current.walls.filter(w => !isBeam(w)).map(wallBox),
   ];
 
   const finishPath = (override) => {
@@ -466,7 +476,7 @@ export default function FloorPlanner({
       const walls = [];
       for (let i = 1; i < draft.pts.length; i++) {
         const a = draft.pts[i - 1]; const b = draft.pts[i];
-        if (Math.hypot(b.x - a.x, b.y - a.y) > 50) walls.push({ id: generateId(), x1: a.x, y1: a.y, x2: b.x, y2: b.y, t, ...(wallType !== 'concrete' ? { type: wallType } : {}) });
+        if (Math.hypot(b.x - a.x, b.y - a.y) > 50) walls.push({ id: generateId(), x1: a.x, y1: a.y, x2: b.x, y2: b.y, t, ...(wallType !== 'concrete' ? { type: wallType } : {}), ...(wallTypeOf(wallType).beam ? { depth: wallTypeOf(wallType).depth } : {}) });
       }
       if (walls.length) commit({ ...planRef.current, walls: [...planRef.current.walls, ...walls] });
     }
@@ -523,6 +533,12 @@ export default function FloorPlanner({
       if (tool === 'wall') {
         const tol = 12 / z;
         planRef.current.walls.forEach(wl => [[wl.x1, wl.y1], [wl.x2, wl.y2]].forEach(([x, y]) => { if (Math.hypot(x - w.x, y - w.y) < tol) p = { x, y }; }));
+        // 보는 기둥 가운데에 붙이기 (기둥 크기 안을 누르면 가운데로)
+        if (wallTypeOf(wallType).beam) {
+          planRef.current.items.filter(it => it.kind === 'column').forEach(it => {
+            if (Math.hypot(it.x - w.x, it.y - w.y) < Math.max(tol, Math.max(it.w, it.d) / 2 + 4 / z)) p = { x: it.x, y: it.y };
+          });
+        }
       }
       p = orthoSnap(p, last, z);
       if (pts.length >= 3 && tool === 'poly' && Math.hypot(p.x - pts[0].x, p.y - pts[0].y) < 14 / z) { finishPath(); return; }
@@ -872,7 +888,7 @@ export default function FloorPlanner({
     if (!opts.gaps || !single || ['zone', 'text'].includes(single.kind)) return [];
     return nearestGaps(itemBox(single), [
       ...plan.items.filter(it => it.id !== single.id && !['zone', 'text'].includes(it.kind)).map(itemBox),
-      ...plan.walls.map(wallBox),
+      ...plan.walls.filter(w => !isBeam(w)).map(wallBox),
     ]);
   }, [opts.gaps, single, plan.items, plan.walls]);
 
@@ -936,7 +952,7 @@ export default function FloorPlanner({
       <p className={`fp-hint${tool !== 'select' ? ' fp-hint-tool' : ''}`}>{toolInfo?.hint}</p>
       {tool === 'wall' && (
         <div className="fp-wall-types">
-          <span>그릴 벽:</span>
+          <span>그릴 벽·보:</span>
           {WALL_TYPES.map(wt => (
             <button key={wt.type} type="button" className={`filter-pill${wallType === wt.type ? ' on' : ''}`} onClick={() => setWallType(wt.type)}>
               {wt.short} <small>{wt.type === 'concrete' ? (plan.wallT || 200) : wt.t}mm</small>

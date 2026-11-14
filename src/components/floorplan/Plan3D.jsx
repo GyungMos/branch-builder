@@ -3,8 +3,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { bodyPolygon, wallPolygon, aabb } from './planGeometry';
-import { scaledPoints, lShapePoints, stairArm, shade } from './planShapes';
-import { isVertical, defaultLevelHeight, wallTypeOf, libraryByKey } from './planLibrary';
+import { scaledPoints, lShapePoints, stairArm, shade, hProfilePoints, rectPoints } from './planShapes';
+import { isVertical, defaultLevelHeight, wallTypeOf, libraryByKey, steelProfile } from './planLibrary';
 import { fileUrl } from './planFiles';
 import { loadModelScene, faceTexture, fitModel } from './modelTools';
 import { hasFaces } from './planLibrary';
@@ -452,6 +452,20 @@ function buildItem(src, ctx) {
     case 'column':
       box(g, w, H, d, 0, 0, 0, kit.mat('#a8a29e'));
       break;
+    case 'hbeam': {
+      // H빔 기둥: 단면 그대로 층고까지 + 바닥 베이스 플레이트
+      const p = steelProfile('hbeam', w, d, it.prof);
+      extrude(g, hProfilePoints(w, d, p.tw, p.tf), h || H, 0, kit.mat(c, { metalness: 0.55, roughness: 0.4 }));
+      box(g, w + 120, 20, d + 120, 0, 0, 0, darker);
+      break;
+    }
+    case 'sqpipe': {
+      const p = steelProfile('sqpipe', w, d, it.prof);
+      const t = Math.min(p.t, w / 3, d / 3);
+      extrude(g, rectPoints(w, d), h || H, 0, kit.mat(c, { metalness: 0.55, roughness: 0.4 }), [rectPoints(w - 2 * t, d - 2 * t)]);
+      box(g, w + 80, 12, d + 80, 0, 0, 0, darker);
+      break;
+    }
     case 'tv':
       box(g, w, h || 830, Math.max(d, 60), 0, 0, 0, kit.mat('#111827', { roughness: 0.3 }));
       break;
@@ -578,6 +592,33 @@ function buildWall(wall, items, H, kit) {
   const Hw = wall.h || H;
   g.position.set(wall.x1 * M, 0, wall.y1 * M);
   g.rotation.y = -Math.atan2(dy, dx);
+
+  // 보(H빔·각파이프): 단면을 벽 길이만큼 뽑아 머리 위(윗면 = 보 높이 또는 층고)에 걸침
+  if (wt.beam) {
+    const depth = Number(wall.depth) || t;
+    const top = Number(wall.h) || H;
+    let outer; let holes = [];
+    if (wt.beam === 'hbeam') {
+      const p = steelProfile('hbeam', t, depth);
+      outer = hProfilePoints(t, depth, p.tw, p.tf);
+    } else {
+      const p = steelProfile('sqpipe', t, depth);
+      const th = Math.min(p.t, t / 3, depth / 3);
+      outer = rectPoints(t, depth);
+      holes = [rectPoints(t - 2 * th, depth - 2 * th)];
+    }
+    const toV = (pts) => pts.map(p => new THREE.Vector2(p.x * M, p.y * M));
+    const shape = new THREE.Shape(toV(outer));
+    holes.forEach(hp => shape.holes.push(new THREE.Path(toV(hp))));
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: len * M, bevelEnabled: false });
+    geo.rotateY(Math.PI / 2); // 뽑는 방향(+z)을 벽 길이 방향(+x)으로
+    const mesh = new THREE.Mesh(geo, kit.mat(wall.color || wt.color || '#475569', { metalness: 0.55, roughness: 0.4 }));
+    mesh.position.y = (top - depth / 2) * M;
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    g.add(mesh);
+    g.userData.label = `${wt.short} (아래 ${((top - depth) / 1000).toFixed(2)}m)`;
+    return g;
+  }
   const glassy = type === 'glass' || type === 'curtain';
   const solid = glassy ? kit.glass() : kit.mat(wall.color || (type === 'light' ? (wt.color || '#d6d3d1') : '#e7e5e4'), { roughness: 0.9 });
   const frame = kit.mat(wall.color || (glassy ? '#64748b' : '#a8a29e'));
