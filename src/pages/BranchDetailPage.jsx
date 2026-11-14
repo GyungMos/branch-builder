@@ -34,6 +34,7 @@ import ActivityLog from '../components/log/ActivityLog';
 import PartnerList from '../components/partner/PartnerList';
 import ComplianceManager from '../components/compliance/ComplianceManager';
 import EquipmentList from '../components/equipment/EquipmentList';
+import FloorPlanView from '../components/floorplan/FloorPlanView';
 import DailyLogList from '../components/log/DailyLogList';
 import DailyLogForm from '../components/log/DailyLogForm';
 import BranchTimelineFeed from '../components/branch/BranchTimelineFeed';
@@ -991,6 +992,18 @@ export default function BranchDetailPage({ initialTab }) {
               progressPercent={compliancePercent}
             />
           </div>
+        )}
+
+        {/* 배치도: 도면 위에 리프트·장비·비품을 실제 크기로 놓아 보기 */}
+        {activeTab === 'floorplan' && (
+          <FloorPlanView
+            branch={branch}
+            branchId={branchId}
+            demoMode={demoMode}
+            equipments={equipments}
+            branches={branches}
+            canDelete={canDelete}
+          />
         )}
 
         {/* 5. 협력업체 / 거래처 연락망 */}

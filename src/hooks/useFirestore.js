@@ -104,7 +104,7 @@ export function useBranches() {
       const updated = getLocalData('branches').filter(b => b.id !== branchId);
       setLocalData('branches', updated);
       setBranches(updated);
-      ['stages', 'schedules', 'costs', 'documents', 'dailyLogs', 'partners', 'equipments', 'compliance', 'openPlans', 'openTasks', 'defects', 'trash']
+      ['stages', 'schedules', 'costs', 'documents', 'dailyLogs', 'partners', 'equipments', 'compliance', 'openPlans', 'openTasks', 'defects', 'shortfalls', 'layouts', 'layoutImages', 'trash']
         .forEach(n => localStorage.removeItem(`bb_${n}_${branchId}`));
       return;
     }

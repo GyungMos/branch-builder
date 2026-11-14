@@ -5,6 +5,13 @@
 [build.environment]
   NPM_FLAGS = "--legacy-peer-deps"
 
+# 배치도 3D 화면이 저장소(Storage)의 3D 모델·사진을 같은 사이트 주소로 읽게 (브라우저의 다른 주소 막기(CORS) 피하기)
+[[redirects]]
+  from = "/fbfiles/*"
+  to = "https://firebasestorage.googleapis.com/:splat"
+  status = 200
+  force = true
+
 # SPA 라우팅을 위한 리다이렉트 설정
 [[redirects]]
   from = "/*"

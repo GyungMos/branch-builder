@@ -1,5 +1,5 @@
 /**
- * 지점 메뉴 8개. 메뉴 하나에 화면(views)이 여러 개면 메뉴 안 위쪽에서 바꿔 봄
+ * 지점 메뉴 9개. 메뉴 하나에 화면(views)이 여러 개면 메뉴 안 위쪽에서 바꿔 봄
  * - 주소의 ?tab= 에는 화면 이름(view id)이 들어감 → 예전 주소(tab=plans, tab=partner 등)도 그대로 열림
  * - mobile: 휴대폰 아래 막대에 바로 보이는 메뉴 (나머지는 '전체 메뉴')
  */
@@ -16,6 +16,7 @@ export const BRANCH_MENUS = [
   { id: 'dailylog', label: '현장 일지', shortLabel: '일지', iconName: 'edit', color: 'emerald', mobile: true, views: [{ id: 'dailylog', label: '현장 일지' }] },
   { id: 'lessons', label: '부족했던 점', shortLabel: '부족한점', iconName: 'alert', color: 'amber', mobile: true, views: [{ id: 'lessons', label: '부족했던 점' }] },
   { id: 'cost', label: '비용·예산', shortLabel: '비용', iconName: 'money', color: 'emerald', mobile: true, views: [{ id: 'cost', label: '비용·예산' }] },
+  { id: 'floorplan', label: '배치도', shortLabel: '배치도', iconName: 'design', color: 'emerald', views: [{ id: 'floorplan', label: '배치도' }] },
   { id: 'documents', label: '서류·사진', shortLabel: '서류', iconName: 'document', color: 'emerald', views: [{ id: 'documents', label: '서류·사진' }] },
   {
     id: 'facility', label: '업체·시설', shortLabel: '업체·시설', iconName: 'partner', color: 'emerald',

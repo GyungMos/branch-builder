@@ -37,7 +37,7 @@ export async function buildCloudBackup(onProgress) {
   for (const [i, b] of branches.entries()) {
     onProgress?.(`${b.name || b.id} (${i + 1}/${branches.length})`);
     const entry = { ...b, data: {} };
-    for (const n of [...BRANCH_COLLECTIONS, 'trash', 'logs']) {
+    for (const n of [...BRANCH_COLLECTIONS, 'layouts', 'layoutImages', 'trash', 'logs']) {
       entry.data[n] = await readCollection(['branches', b.id, n]);
     }
     try {
