@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  PLAN_CATEGORIES, PLAN_LIBRARY, ITEM_COLORS, guessLibraryFromName, FLOOR_TYPES, floorTypeOf, WALL_TYPES, wallTypeOf, WALL_COLORS, isVertical, hasFaces, STEEL_SIZES, steelProfile, PAINT_COLORS, LOUVER_COLORS, ROOF_TYPES, ROOF_MATERIALS, MEP_LINE_TYPES, mepLineTypeOf,
+  PLAN_CATEGORIES, PLAN_LIBRARY, ITEM_COLORS, guessLibraryFromName, FLOOR_TYPES, floorTypeOf, WALL_TYPES, wallTypeOf, WALL_COLORS, isVertical, hasFaces, STEEL_SIZES, steelProfile, PAINT_COLORS, LOUVER_COLORS, ROOF_TYPES, ROOF_MATERIALS, MEP_LINE_TYPES, mepLineTypeOf, STAIR_SHAPES, STAIR_COLOR_DEFAULTS, STAIR_COLORS, RAIL_COLORS, POST_COLORS,
 } from './planLibrary';
 import { LookSelect, FacePhotos, ModelPicker, inspectModel } from './Plan3DInputs';
 import { ShapeThumb, stairArm } from './planShapes';
@@ -47,6 +47,7 @@ const tplOf = (it) => ({
   color: it.color, points: it.points, baseW: it.baseW, baseD: it.baseD, img: it.img, arm: it.arm, elev: it.elev,
   look: it.look, faces: it.faces, model: it.model, modelRot: it.modelRot, prof: it.prof,
   lm: it.lm, watt: it.watt, roofType: it.roofType, rise: it.rise, material: it.material, opaque: it.opaque, openUnder: it.openUnder,
+  railColor: it.railColor, postColor: it.postColor, noRail: it.noRail,
 });
 
 /* ───────── 왼쪽: 비품 목록 ───────── */
@@ -337,8 +338,12 @@ export function InspectorPanel({
         </>
       )}
 
-      <div className="fp-label">{isZone ? '테두리·이름 색' : '색'}</div>
-      <ColorPicker value={it.color} colors={ITEM_COLORS} onChange={(c) => set({ color: c })} />
+      {STAIR_SHAPES.includes(it.shape) ? <StairColors it={it} set={set} /> : (
+        <>
+          <div className="fp-label">{isZone ? '테두리·이름 색' : '색'}</div>
+          <ColorPicker value={it.color} colors={ITEM_COLORS} onChange={(c) => set({ color: c })} />
+        </>
+      )}
 
       {!isZone && !isText && !isRoof && it.kind !== 'void' && <Item3DSection key={it.id} it={it} set={set} demoMode={demoMode} />}
 
@@ -570,6 +575,26 @@ function Item3DSection({ it, set, demoMode }) {
           {(it.model || hasFaces(it)) && it.look && <p className="fp-muted">모델·사진이 있으면 그것이 먼저 보여요.</p>}
         </>
       )}
+    </div>
+  );
+}
+
+/* 계단 색: 계단 / 손잡이 / 기둥 따로 */
+function StairColors({ it, set }) {
+  return (
+    <div className="fp-3d-sec">
+      <div className="fp-label">계단 색 <small>(디딤판·챌판·옆판)</small></div>
+      <ColorPicker value={it.color} colors={STAIR_COLORS} onChange={(c) => set({ color: c })} />
+      <label className="fp-check"><input type="checkbox" checked={!it.noRail} onChange={(e) => set({ noRail: !e.target.checked })} /> 난간 달기</label>
+      {!it.noRail && (
+        <>
+          <div className="fp-label">손잡이 색 <small>(난간 위쪽 잡는 부분)</small></div>
+          <ColorPicker value={it.railColor || STAIR_COLOR_DEFAULTS.rail} colors={RAIL_COLORS} onChange={(c) => set({ railColor: c })} />
+          <div className="fp-label">기둥 색 <small>(난간 세로 기둥·계단참 받침 기둥)</small></div>
+          <ColorPicker value={it.postColor || STAIR_COLOR_DEFAULTS.post} colors={POST_COLORS} onChange={(c) => set({ postColor: c })} />
+        </>
+      )}
+      <p className="fp-muted">색은 3D 보기에서 보여요. 2D 도면에는 계단 색만 보여요.</p>
     </div>
   );
 }

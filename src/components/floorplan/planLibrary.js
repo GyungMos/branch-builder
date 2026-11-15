@@ -345,3 +345,9 @@ export function recommendedLux(name = '') {
   if (/화장실|복도|계단|창고|탈의/.test(name)) return 150;
   return 300;
 }
+
+/** 계단 색 고르기: 계단(디딤판·챌판·옆판) / 손잡이 / 기둥(난간 세로 기둥·받침) */
+export const STAIR_COLOR_DEFAULTS = { rail: '#a47148', post: '#374151' };
+export const STAIR_COLORS = ['#e3caa5', '#c8a273', '#a47148', '#6b4f3a', '#d6d3d1', '#94a3b8', '#64748b', '#374151', '#f8fafc'];
+export const RAIL_COLORS = ['#e3caa5', '#c8a273', '#a47148', '#6b4f3a', '#374151', '#111827', '#d1d5db', '#f8fafc'];
+export const POST_COLORS = ['#374151', '#111827', '#64748b', '#d1d5db', '#f8fafc', '#a47148', '#c8a273'];
