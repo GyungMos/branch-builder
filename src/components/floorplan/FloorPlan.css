@@ -621,3 +621,4 @@ body.fp-fullscreen-on .animate-fadeIn { animation: none !important; transform: n
 @media (max-width: 820px) {
   .fp-cmp-cols { grid-template-columns: minmax(0, 1fr); }
 }
+.fp-under-list { margin: 0; padding-left: 18px; font-size: var(--font-size-xs); color: var(--color-text-primary); display: grid; gap: 2px; }

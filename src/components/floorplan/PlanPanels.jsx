@@ -4,7 +4,7 @@ import {
 } from './planLibrary';
 import { LookSelect, FacePhotos, ModelPicker, inspectModel } from './Plan3DInputs';
 import { ShapeThumb, stairArm } from './planShapes';
-import { areaText, fmtM, neededHeight, stairInfo, zoneLighting } from './planGeometry';
+import { areaText, fmtM, neededHeight, stairInfo, zoneLighting, stairDistanceForHeight, josa } from './planGeometry';
 
 /** 색 고르기: 자주 쓰는 색 + 직접 고르기 */
 function ColorPicker({ value, colors, onChange, onReset, resetLabel = '기본 색' }) {
@@ -46,7 +46,7 @@ const tplOf = (it) => ({
   key: it.key, name: it.name, shape: it.shape, kind: it.kind, w: it.w, d: it.d, h: it.h, lift: it.lift, clear: it.clear,
   color: it.color, points: it.points, baseW: it.baseW, baseD: it.baseD, img: it.img, arm: it.arm, elev: it.elev,
   look: it.look, faces: it.faces, model: it.model, modelRot: it.modelRot, prof: it.prof,
-  lm: it.lm, watt: it.watt, roofType: it.roofType, rise: it.rise, material: it.material, opaque: it.opaque,
+  lm: it.lm, watt: it.watt, roofType: it.roofType, rise: it.rise, material: it.material, opaque: it.opaque, openUnder: it.openUnder,
 });
 
 /* ───────── 왼쪽: 비품 목록 ───────── */
@@ -284,6 +284,7 @@ export function InspectorPanel({
         </>
       )}
       {isVertical(it) && <StairCheck it={it} levelH={levelH} levelName={levelName} />}
+      {['stairs', 'stairsL', 'stairsU'].includes(it.shape) && <StairUnder it={it} set={set} levelH={levelH} />}
       {isVertical(it) && aboveName && onCopyUp && (
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => onCopyUp(it)}>
           {it.shape === 'elevator' ? `${aboveName}에도 같은 자리에 놓기` : `${aboveName}에 뚫린 곳(계단 구멍) 표시`}
@@ -573,6 +574,32 @@ function Item3DSection({ it, set, demoMode }) {
   );
 }
 
+/* 계단 아래: 막힘 / 빈 공간 (빈 공간이면 아래에 비품을 넣을 수 있음) */
+function StairUnder({ it, set, levelH }) {
+  const H = levelH || 3500;
+  const at = (h) => stairDistanceForHeight(it, h, H);
+  return (
+    <div className="fp-3d-sec">
+      <div className="fp-label">계단 아래</div>
+      <div className="fp-btn-row">
+        <button type="button" className={`filter-pill${!it.openUnder ? ' on' : ''}`} onClick={() => set({ openUnder: false })}>막힘</button>
+        <button type="button" className={`filter-pill${it.openUnder ? ' on' : ''}`} onClick={() => set({ openUnder: true })}>빈 공간 (수납·냉장고 자리)</button>
+      </div>
+      {it.openUnder ? (
+        <>
+          <p className="fp-muted">계단 아래에 냉장고·정수기·수납장을 놓아도 겹침 경고가 나지 않고, 물건 높이가 계단 아랫면보다 높으면 알려줘요.</p>
+          <ul className="fp-under-list">
+            {[['정수기', 1300], ['냉장고', 1800], ['수납장', 2000]].map(([n, h]) => (
+              <li key={n}>높이 {fmtM(h)} {josa(n, '은는')} 계단 시작점에서 약 <b>{fmtM(at(h))}</b> 안쪽부터 들어가요</li>
+            ))}
+          </ul>
+          <p className="fp-muted">시작점 = 계단을 오르기 시작하는 쪽(화살표 시작). 길이는 오르는 길을 따라 잰 값이에요.</p>
+        </>
+      ) : <p className="fp-muted">아래가 막힌 계단이에요. 아래에 비품을 넣으려면 '빈 공간'으로 바꾸세요.</p>}
+    </div>
+  );
+}
+
 /* 계단·경사로 계산 (참고용) */
 function StairCheck({ it, levelH, levelName }) {
   if (it.shape === 'elevator') {
@@ -748,7 +775,7 @@ export function ChecksPanel({ warnings, items, walls = [], lines = [], equipment
             {warnings.map((w, i) => (
               <li key={i}>
                 <button type="button" className={`fp-warn fp-warn-${w.type}`} onClick={() => onFocus(w)}>
-                  <b>{{ overlap: '겹침', wall: '벽', clear: '작업 공간', height: '층고' }[w.type]}</b>{w.text}
+                  <b>{{ overlap: '겹침', wall: '벽', clear: '작업 공간', height: '높이' }[w.type]}</b>{w.text}
                 </button>
               </li>
             ))}

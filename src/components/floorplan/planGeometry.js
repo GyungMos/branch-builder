@@ -1,5 +1,5 @@
 import { scaledPoints, lShapePoints, lStairPoints, stairArm } from './planShapes';
-import { isBeam, NO_COLLIDE_KINDS, recommendedLux } from './planLibrary';
+import { isBeam, NO_COLLIDE_KINDS, recommendedLux, isVertical } from './planLibrary';
 
 /** 배치도 계산 도구 (단위 mm) */
 
@@ -128,8 +128,9 @@ const collides = (it) => !NO_COLLIDE_KINDS.includes(it.kind);
  * 경고 찾기
  * - overlap: 비품끼리 겹침 / wall: 비품이 벽과 겹침 / clear: 다른 비품·벽이 작업 공간을 막음 / height: 층고 부족
  */
-export function findWarnings(items = [], walls = [], { ceiling, vehicleH = 1800, margin = 200 } = {}) {
+export function findWarnings(items = [], walls = [], { ceiling, vehicleH = 1800, margin = 200, levelH } = {}) {
   const out = [];
+  const underStairs = [];
   const list = items.filter(collides);
   const body = new Map(list.map(it => [it.id, bodyPolygon(it, TOUCH)]));
   const clear = new Map(list.filter(it => hasClearance(it) && !it.hideClear).map(it => [it.id, clearancePolygon(it, TOUCH)]));
@@ -145,6 +146,9 @@ export function findWarnings(items = [], walls = [], { ceiling, vehicleH = 1800,
       // 차는 리프트 위에 올라가는 게 맞으므로 차와 리프트 사이는 검사 안 함
       if ((a.kind === 'car' && b.lift) || (b.kind === 'car' && a.lift)) continue;
       if (polygonsOverlap(body.get(a.id), body.get(b.id))) {
+        // 아래가 빈 계단 밑에 들어간 비품은 겹침이 아니라 높이로 봄
+        const st = a.openUnder && !isVertical(b) ? a : b.openUnder && !isVertical(a) ? b : null;
+        if (st) { underStairs.push({ st, it: st === a ? b : a }); continue; }
         out.push({ type: 'overlap', ids: [a.id, b.id], text: `${josa(label(a), '과와')} ${josa(label(b))} 겹쳐요` });
         continue;
       }
@@ -170,6 +174,16 @@ export function findWarnings(items = [], walls = [], { ceiling, vehicleH = 1800,
     list.forEach(it => {
       if (polygonsOverlap(vp, body.get(it.id))) out.push({ type: 'overlap', ids: [it.id, v.id], text: `${josa(label(it))} 뚫린 곳 위에 있어요${label(v).startsWith('뚫린 곳') ? '' : ` (${label(v)})`}` });
     });
+  });
+
+  // 아래가 빈 계단: 그 밑에 넣은 비품 높이가 계단 아랫면보다 높으면
+  underStairs.forEach(({ st, it }) => {
+    const h = (Number(it.h) || 0) + (Number(it.elev) || 0);
+    if (!h) return;
+    const min = minStairUnderside(st, it, levelH || ceiling || 3500);
+    if (min !== null && h > min) {
+      out.push({ type: 'height', ids: [it.id, st.id], text: `${label(it)}: 높이 ${fmtM(h)} > 계단 아래 ${fmtM(min)} (더 안쪽으로 넣거나 낮은 것으로)` });
+    }
   });
 
   // 보 아래 높이: 리프트를 올리고 차를 얹었을 때(또는 높은 비품이) 보 아래에 닿는지
@@ -341,4 +355,52 @@ export function zoneLighting(zone, items = []) {
   const lux = area > 0 ? Math.round((lm * 0.6 * 0.8) / area) : 0;
   const need = zone.luxTarget || recommendedLux(zone.name);
   return { count: lights.length, lm, watt, area, lux, need, ok: lux >= need * 0.9 };
+}
+
+/* ───────── 아래가 빈 계단: 계단 아랫면 높이 ───────── */
+const STAIR_STRUCT = 250; // 디딤판·계단 구조 두께(어림)
+
+/** 계단 시작점(바닥)부터 걸어 올라간 거리로 높이를 어림해 아랫면 높이(mm). 계단 밑이 아니면 null */
+export function stairUndersideAt(st, p, H) {
+  const l = toLocal(st, p);
+  const hw = st.w / 2; const hd = st.d / 2;
+  if (Math.abs(l.x) > hw + 1 || Math.abs(l.y) > hd + 1) return null;
+  let s; let total;
+  if (st.shape === 'stairs') {
+    total = st.d; s = hd - l.y;
+  } else if (st.shape === 'stairsL') {
+    const sw = stairArm(st); const runA = st.d - sw; const runB = st.w - sw;
+    total = runA + sw + runB;
+    if (l.x >= hw - sw && l.y >= -hd + sw) s = hd - l.y;
+    else if (l.x >= hw - sw) s = runA + sw / 2;
+    else if (l.y < -hd + sw) s = runA + sw + (hw - sw - l.x);
+    else return null; // ㄱ자 안쪽 빈 모서리
+  } else if (st.shape === 'stairsU') {
+    const sw = stairArm(st); const L = Math.min(sw, st.d * 0.4); const run = st.d - L;
+    total = run * 2 + L;
+    if (l.y < -hd + L) s = run + L / 2;
+    else if (l.x >= hw - sw) s = hd - l.y;
+    else if (l.x <= -hw + sw) s = run + L + (l.y - (-hd + L));
+    else return null; // 가운데 틈
+  } else {
+    return null;
+  }
+  return Math.max(0, (H * Math.min(total, Math.max(0, s))) / total - STAIR_STRUCT);
+}
+
+/** 비품이 차지하는 자리 중 계단 아랫면이 가장 낮은 곳 (모서리·변 가운데·가운데를 봄) */
+export function minStairUnderside(st, item, H) {
+  const pts = bodyPolygon(item);
+  const samples = [...pts, { x: item.x, y: item.y }, ...pts.map((p, i) => ({ x: (p.x + pts[(i + 1) % pts.length].x) / 2, y: (p.y + pts[(i + 1) % pts.length].y) / 2 }))];
+  let min = null;
+  samples.forEach(p => { const u = stairUndersideAt(st, p, H); if (u !== null && (min === null || u < min)) min = u; });
+  return min;
+}
+
+/** 높이 h(mm)인 물건이 계단 시작점에서 몇 mm 안쪽(걸어 올라가는 길 기준)부터 들어가는지 */
+export function stairDistanceForHeight(st, h, H) {
+  let total = st.d;
+  if (st.shape === 'stairsL') { const sw = stairArm(st); total = (st.d - sw) + sw + (st.w - sw); }
+  if (st.shape === 'stairsU') { const sw = stairArm(st); const L = Math.min(sw, st.d * 0.4); total = (st.d - L) * 2 + L; }
+  return Math.round(((h + STAIR_STRUCT) / H) * total);
 }

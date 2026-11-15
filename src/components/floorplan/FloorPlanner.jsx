@@ -66,7 +66,7 @@ export function makeItem(tpl, at = { x: 0, y: 0 }) {
   if (tpl.elev) it.elev = tpl.elev;
   if (tpl.prof) it.prof = { ...tpl.prof };
   // 조명 밝기·전력, 지붕 모양, 불투명 자동문
-  ['lm', 'watt', 'roofType', 'rise', 'material', 'opaque', 'ceilH'].forEach(k => { if (tpl[k] !== undefined) it[k] = tpl[k]; });
+  ['lm', 'watt', 'roofType', 'rise', 'material', 'opaque', 'ceilH', 'openUnder'].forEach(k => { if (tpl[k] !== undefined) it[k] = tpl[k]; });
   // 3D 모습: 모양 빌리기 / 사진 상자 / 3D 모델 파일
   if (tpl.look) it.look = tpl.look;
   if (tpl.faces) it.faces = { ...tpl.faces };
@@ -182,6 +182,13 @@ const PlanItem = memo(function PlanItem({ item, z, warn, showClear, showCar, sho
         )}
         <g data-role="item" data-id={item.id} style={{ cursor: item.locked ? 'default' : 'move' }}>
           <ItemShape item={item} />
+          {item.openUnder && (
+            <g pointerEvents="none">
+              <rect x={-item.w / 2} y={-item.d / 2} width={item.w} height={item.d} fill="none" stroke={item.color || '#94a3b8'} strokeWidth={1.4} strokeDasharray="2 4" vectorEffect="non-scaling-stroke" />
+              <text x={0} y={item.d / 2 - fs * 0.8} textAnchor="middle" fontSize={fs * 0.9} fontWeight={700} fill={item.color || '#94a3b8'} stroke="var(--fp-bg)" strokeWidth={fs * 0.25} paintOrder="stroke"
+                transform={item.flip ? 'scale(-1 1)' : undefined}>아래 빈 공간</text>
+            </g>
+          )}
           {/* 누르기 쉽게 몸체 전체를 덮는 투명 판 */}
           <rect x={-item.w / 2} y={-item.d / 2} width={item.w} height={item.d} fill="transparent" />
         </g>
@@ -561,7 +568,7 @@ export default function FloorPlanner({
   const selectedDim = sel.kind === 'dim' ? plan.dims.find(d => d.id === sel.ids[0]) : null;
   const selectedLine = sel.kind === 'line' ? (plan.lines || []).find(l => l.id === sel.ids[0]) : null;
 
-  const warnings = useMemo(() => findWarnings(plan.items, plan.walls, { ceiling: plan.ceiling, vehicleH: plan.vehicleH }), [plan.items, plan.walls, plan.ceiling, plan.vehicleH]);
+  const warnings = useMemo(() => findWarnings(plan.items, plan.walls, { ceiling: plan.ceiling, vehicleH: plan.vehicleH, levelH: plan.ceiling || defaultLevelHeight(Math.max(0, levels.findIndex(l => l.id === lvId))) }), [plan.items, plan.walls, plan.ceiling, plan.vehicleH, levels, lvId]);
   const warnMap = useMemo(() => {
     const m = new Map();
     warnings.forEach(w => {
@@ -1098,7 +1105,8 @@ export default function FloorPlanner({
   }, [opts.gaps, single, plan.items, plan.walls]);
 
   const zones = plan.items.filter(it => it.kind === 'zone');
-  const others = plan.items.filter(it => it.kind !== 'zone' && it.kind !== 'roof');
+  // 아래가 빈 계단은 먼저 그려서, 그 밑에 넣은 비품이 위에 보이게
+  const others = plan.items.filter(it => it.kind !== 'zone' && it.kind !== 'roof').sort((a, b) => (b.openUnder ? 1 : 0) - (a.openUnder ? 1 : 0));
   const roofs = plan.items.filter(it => it.kind === 'roof');
   const levelHNow = plan.ceiling || defaultLevelHeight(Math.max(0, levels.findIndex(l => l.id === lvId)));
   const toolInfo = TOOLS.find(t => t.id === tool);

@@ -151,12 +151,85 @@ function step(g, x0, x1, z0, z1, top, material, solid) {
   else box(g, w, 50, d, (x0 + x1) / 2, top - 50, (z0 + z1) / 2, material);
 }
 
+/**
+ * 아래가 빈 계단 한 줄(한 번에 오르는 구간): 디딤판 + 챌판 + 양옆 옆판(계단 받침) + 한쪽 난간
+ * axis 'z': z방향으로 a0→a1 오르고 x는 c0~c1 / axis 'x': x방향으로 a0→a1 오르고 z는 c0~c1
+ * rail: 난간을 둘 쪽 ('c0' | 'c1' | null)
+ */
+function openFlight(g, { axis, a0, a1, c0, c1, y0, y1, count, kit, color, steel, rail }) {
+  const tread = kit.mat(color, { roughness: 0.6 });
+  const side = kit.mat(shade(color, -0.2), { roughness: 0.6 });
+  const riserM = kit.mat(shade(color, 0.15), { roughness: 0.7 });
+  const railM = kit.mat('#374151', { metalness: 0.5, roughness: 0.4 });
+  const rise = (y1 - y0) / count;
+  const at = (a, c, w, h, len, y, mat) => (axis === 'z'
+    ? box(g, w, h, len, c, y, a, mat)
+    : box(g, len, h, w, a, y, c, mat));
+  const width = Math.abs(c1 - c0); const cm = (c0 + c1) / 2;
+  for (let i = 0; i < count; i++) {
+    const t0 = a0 + ((a1 - a0) * i) / count; const t1 = a0 + ((a1 - a0) * (i + 1)) / count;
+    const top = y0 + rise * (i + 1);
+    at((t0 + t1) / 2, cm, width, 40, Math.abs(t1 - t0), top - 40, tread);
+    if (!steel) at(t0, cm, width, Math.max(10, rise - 40), 20, top - rise, riserM);
+  }
+  // 옆판·난간: 기울어진 판
+  const run = Math.abs(a1 - a0); const L = Math.hypot(run, y1 - y0);
+  const ang = Math.atan2(y1 - y0, run);
+  const slope = (cPos, h, yMid, mat, thick = 40) => {
+    const geo = axis === 'z' ? new THREE.BoxGeometry(thick * M, h * M, L * M) : new THREE.BoxGeometry(L * M, h * M, thick * M);
+    const m = new THREE.Mesh(geo, mat);
+    if (axis === 'z') { m.rotation.x = a1 < a0 ? ang : -ang; m.position.set(cPos * M, yMid * M, ((a0 + a1) / 2) * M); } else { m.rotation.z = a1 > a0 ? ang : -ang; m.position.set(((a0 + a1) / 2) * M, yMid * M, cPos * M); }
+    m.castShadow = true; m.receiveShadow = true;
+    g.add(m);
+  };
+  const yMid = (y0 + y1) / 2;
+  [c0, c1].forEach(cPos => slope(cPos + (cPos === Math.min(c0, c1) ? 20 : -20), steel ? 200 : 300, yMid - 120, side));
+  if (rail) {
+    const cPos = rail === 'c0' ? c0 + (c0 < c1 ? 30 : -30) : c1 + (c1 < c0 ? 30 : -30);
+    slope(cPos, 50, yMid + 900, railM, 50);
+    const posts = Math.max(2, Math.round(count / 3));
+    for (let k = 0; k <= posts; k++) {
+      const f = k / posts; const a = a0 + (a1 - a0) * f; const y = y0 + (y1 - y0) * f;
+      at(a, cPos, 30, 900, 30, y, railM);
+    }
+  }
+}
+
 function buildStairs(g, it, H, kit) {
   const { w, d } = it; const hw = w / 2; const hd = d / 2;
   const mat = kit.mat(it.color || '#94a3b8');
   const solid = it.key !== 'stairsSteel';
   const n = Math.max(3, Math.ceil(H / 180));
   const top = (k) => (H * k) / n;
+  // 아래가 빈 계단(나무·철골): 디딤판·챌판·옆판만, 밑은 비워 둠
+  if ((it.openUnder || it.key === 'stairsSteel') && it.shape !== 'stairsSpiral') {
+    const color = it.color || '#c8a273';
+    const steel = it.key === 'stairsSteel';
+    const common = { kit, color, steel };
+    if (it.shape === 'stairs') {
+      openFlight(g, { ...common, axis: 'z', a0: hd, a1: -hd, c0: -hw, c1: hw, y0: 0, y1: H, count: n, rail: 'c0' });
+      return;
+    }
+    if (it.shape === 'stairsL') {
+      const sw = stairArm(it); const runA = d - sw; const runB = w - sw;
+      const nA = Math.max(1, Math.round(((n - 1) * runA) / (runA + runB))); const nB = n - 1 - nA;
+      const yL = top(nA + 1);
+      openFlight(g, { ...common, axis: 'z', a0: hd, a1: -hd + sw, c0: hw - sw, c1: hw, y0: 0, y1: top(nA), count: nA, rail: 'c0' });
+      box(g, sw, 150, sw, hw - sw / 2, yL - 150, -hd + sw / 2, kit.mat(shade(color, -0.1)));
+      box(g, 100, yL - 150, 100, hw - sw + 50, 0, -hd + sw - 50, kit.mat(shade(color, -0.25)));
+      if (nB > 0) openFlight(g, { ...common, axis: 'x', a0: hw - sw, a1: -hw, c0: -hd, c1: -hd + sw, y0: yL, y1: H, count: nB, rail: 'c1' });
+      return;
+    }
+    if (it.shape === 'stairsU') {
+      const sw = stairArm(it); const L = Math.min(sw, d * 0.4);
+      const n1 = Math.ceil(n / 2); const yL = top(n1);
+      openFlight(g, { ...common, axis: 'z', a0: hd, a1: -hd + L, c0: hw - sw, c1: hw, y0: 0, y1: top(n1 - 1), count: n1 - 1, rail: 'c0' });
+      box(g, w, 150, L, 0, yL - 150, -hd + L / 2, kit.mat(shade(color, -0.1)));
+      [-1, 1].forEach(sx => box(g, 100, yL - 150, 100, sx * (hw - 50), 0, -hd + L - 50, kit.mat(shade(color, -0.25))));
+      openFlight(g, { ...common, axis: 'z', a0: -hd + L, a1: hd, c0: -hw, c1: -hw + sw, y0: yL, y1: H, count: n - n1, rail: 'c1' });
+      return;
+    }
+  }
   if (it.shape === 'stairs') {
     for (let i = 0; i < n; i++) step(g, -hw, hw, hd - (d * i) / n, hd - (d * (i + 1)) / n, top(i + 1), mat, solid);
     return;

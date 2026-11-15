@@ -122,9 +122,11 @@ export const PLAN_LIBRARY = [
   { key: 'sqcol75', cat: 'steel', name: '각파이프 기둥 □75×75', shape: 'sqpipe', w: 75, d: 75, prof: { t: 3.2 }, h: 0, clear: {}, color: '#64748b', kind: 'column' },
 
   // 계단·승강기 (층을 잇는 것. 높이 0 = 그 층 층고만큼)
-  { key: 'stairs', cat: 'vertical', name: '일자 계단', shape: 'stairs', w: 1200, d: 4500, h: 0, clear: { f: 1200 }, color: '#94a3b8', tip: '화살표 쪽으로 올라가요. 오른쪽 칸에서 층고에 맞는 길이인지 계산해 줘요.' },
+  { key: 'stairs', cat: 'vertical', name: '일자 계단(아래 막힘)', shape: 'stairs', w: 1200, d: 4500, h: 0, clear: { f: 1200 }, color: '#94a3b8', tip: '화살표 쪽으로 올라가요. 오른쪽 칸에서 층고에 맞는 길이인지 계산해 줘요.' },
+  { key: 'stairsOpen', cat: 'vertical', name: '일자 계단(아래 빈 공간)', shape: 'stairs', w: 1000, d: 4500, h: 0, openUnder: true, clear: { f: 1200 }, color: '#c8a273', tip: '계단 아래가 비어 있어 냉장고·정수기·수납장을 넣을 수 있어요. 아래에 놓은 비품이 계단 아랫면에 닿으면 알려줘요.' },
   { key: 'stairsU', cat: 'vertical', name: 'ㄷ자 계단(되돌림)', shape: 'stairsU', w: 2500, d: 4500, arm: 1200, h: 0, clear: { f: 1200 }, color: '#94a3b8', tip: '건물 안 계단실에 가장 많이 써요. 오른쪽으로 올라가 계단참에서 돌아 왼쪽으로 올라가요.' },
-  { key: 'stairsL', cat: 'vertical', name: 'ㄱ자 계단', shape: 'stairsL', w: 4200, d: 4200, arm: 1200, h: 0, clear: { f: 1200 }, color: '#94a3b8', tip: '벽 모서리를 따라 꺾이는 계단이에요. 좌우 뒤집기로 꺾이는 방향을 바꿔요.' },
+  { key: 'stairsLOpen', cat: 'vertical', name: 'ㄱ자 계단(아래 빈 공간)', shape: 'stairsL', w: 4200, d: 4200, arm: 1000, h: 0, openUnder: true, clear: { f: 1200 }, color: '#c8a273', tip: '계단 아래가 비어 있어 냉장고·정수기·수납장을 넣을 수 있어요. 아래에 놓은 비품이 계단 아랫면에 닿으면 알려줘요. 좌우 뒤집기로 꺾이는 방향을 바꿔요.' },
+  { key: 'stairsL', cat: 'vertical', name: 'ㄱ자 계단(아래 막힘)', shape: 'stairsL', w: 4200, d: 4200, arm: 1200, h: 0, clear: { f: 1200 }, color: '#94a3b8', tip: '벽 모서리를 따라 꺾이는 계단이에요. 좌우 뒤집기로 꺾이는 방향을 바꿔요.' },
   { key: 'stairsSpiral', cat: 'vertical', name: '나선형 계단', shape: 'stairsSpiral', w: 2000, d: 2000, h: 0, clear: { f: 900 }, color: '#94a3b8', tip: '자리를 적게 차지하지만 물건을 들고 다니기 어려워요. 사무실·창고용 보조 계단으로 써요.' },
   { key: 'stairsSteel', cat: 'vertical', name: '외부 철골 계단', shape: 'stairs', w: 1000, d: 4500, h: 0, clear: { f: 1000 }, color: '#64748b', tip: '건물 바깥 벽에 붙이는 철골 계단이에요.' },
   { key: 'elevator', cat: 'vertical', name: '승강기(사람용)', shape: 'elevator', w: 2100, d: 2300, h: 0, clear: { f: 1500 }, color: '#6366f1', tip: '승강로(벽 안쪽) 크기예요. 문 앞 1,500mm 비워 두기.' },

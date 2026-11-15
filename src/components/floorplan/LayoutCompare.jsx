@@ -25,7 +25,7 @@ export function layoutStats(level, { vehicleH = 1800, index = 0 } = {}) {
   const walls = level.walls || [];
   const ceiling = level.ceiling || defaultLevelHeight(index);
   const zones = items.filter(i => i.kind === 'zone');
-  const warnings = findWarnings(items, walls, { ceiling, vehicleH });
+  const warnings = findWarnings(items, walls, { ceiling, vehicleH, levelH: ceiling });
   const lights = items.filter(i => i.kind === 'light');
   const lightRows = zones.map(z => zoneLighting(z, items)).filter(r => r.count);
   return [
