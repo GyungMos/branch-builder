@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { bodyPolygon, wallPolygon, aabb, pointInPolygon } from './planGeometry';
 import { scaledPoints, lShapePoints, stairArm, shade, hProfilePoints, rectPoints } from './planShapes';
-import { isVertical, defaultLevelHeight, wallTypeOf, libraryByKey, steelProfile, mepLineTypeOf } from './planLibrary';
+import { isVertical, defaultLevelHeight, wallTypeOf, libraryByKey, steelProfile, mepLineTypeOf, isBeam } from './planLibrary';
 import { fileUrl } from './planFiles';
 import { loadModelScene, faceTexture, fitModel } from './modelTools';
 import { hasFaces } from './planLibrary';
@@ -899,9 +899,11 @@ function buildLevel(L, i, levels, el, opts, kit) {
   const g = new THREE.Group();
   const { elev: E, h: H } = el[i];
   g.position.y = E * M;
+  // 바닥판 범위: 보(H빔·각파이프 보)는 머리 위라 빼고 진짜 벽만. 벽이 없으면 비품(지붕·글자 빼고)
+  const realWalls = L.walls.filter(w => !isBeam(w));
   const pts = [
-    ...L.walls.flatMap(w => wallPolygon(w)),
-    ...(L.walls.length ? [] : L.items.filter(it => it.kind !== 'text').flatMap(it => bodyPolygon(it))),
+    ...realWalls.flatMap(w => wallPolygon(w)),
+    ...(realWalls.length ? [] : L.items.filter(it => !['text', 'roof'].includes(it.kind)).flatMap(it => bodyPolygon(it))),
   ];
   // 바닥판. 아래층 계단·승강기 자리와 이 층 '뚫린 곳'은 구멍
   // 2층부터는 층마다 범위를 고름: auto = 벽 전체를 감싸는 네모, zones = 이 층 구역 모양대로만, none = 없음

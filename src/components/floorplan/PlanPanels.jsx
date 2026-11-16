@@ -703,7 +703,7 @@ function FloorEditor({ it, set }) {
 }
 
 /* ───────── 오른쪽: 아무것도 안 골랐을 때 (도면·층고·건물) ───────── */
-export function PlanSettingsPanel({ plan, levelName, levelH, isUpper, onPlan, onPickBg, onCalibrate, onRoom }) {
+export function PlanSettingsPanel({ plan, levelName, levelH, isUpper, belowZoneCount = 0, onCopyBelowZones, onPlan, onPickBg, onCalibrate, onRoom }) {
   const [roomW, setRoomW] = useState('');
   const [roomD, setRoomD] = useState('');
   const bg = plan.bg;
@@ -746,10 +746,13 @@ export function PlanSettingsPanel({ plan, levelName, levelH, isUpper, onPlan, on
             ))}
           </div>
           <p className="fp-muted">
-            {(plan.slab || 'auto') === 'auto' && '이 층 벽을 모두 감싸는 네모로 바닥이 깔려요. 아래층 일부만 2층이면 \'구역 모양대로만\'을 고르세요.'}
+            {(plan.slab || 'auto') === 'auto' && '이 층 벽(보는 빼고)을 모두 감싸는 네모로 바닥이 깔려요. 아래층 계단 자리는 저절로 뚫려요. 건물 일부만 2층이면 \'구역 모양대로만\'을 고르세요.'}
             {plan.slab === 'zones' && (plan.items.some(i => i.kind === 'zone') ? '이 층에 그린 구역(방) 모양대로만 바닥이 깔려요. 구역이 없는 곳(예: 높은 정비 현장 위)은 뚫려 있어요.' : '아직 이 층에 구역이 없어요. \'구역(방) 그리기\'로 2층 사무실 자리를 그려 주세요.')}
             {plan.slab === 'none' && '이 층 바닥판을 그리지 않아요.'}
           </p>
+          {plan.slab === 'zones' && !plan.items.some(i => i.kind === 'zone') && belowZoneCount > 0 && onCopyBelowZones && (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={onCopyBelowZones}>아래층 구역 {belowZoneCount}개 모양 그대로 가져오기</button>
+          )}
         </>
       )}
       {!plan.ceiling && <p className="fp-muted">층고를 안 적으면 계단 계산과 3D는 {fmtM(levelH)}로 봐요.</p>}

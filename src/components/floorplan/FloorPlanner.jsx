@@ -1409,6 +1409,12 @@ export default function FloorPlanner({
           ) : (
             <PlanSettingsPanel
               isUpper={lvIndex > 0}
+              belowZoneCount={below ? below.items.filter(i => i.kind === 'zone').length : 0}
+              onCopyBelowZones={() => {
+                if (!below) return;
+                const copies = below.items.filter(i => i.kind === 'zone').map(z => ({ ...clean(z), id: generateId(), floor: null, ceilH: null, locked: false }));
+                if (copies.length) apply(p => ({ ...p, items: [...copies, ...p.items] }));
+              }}
               plan={plan}
               levelName={levels.length > 1 ? levels[lvIndex]?.name : ''}
               levelH={levelH}
