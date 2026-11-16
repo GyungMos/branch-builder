@@ -622,3 +622,16 @@ body.fp-fullscreen-on .animate-fadeIn { animation: none !important; transform: n
   .fp-cmp-cols { grid-template-columns: minmax(0, 1fr); }
 }
 .fp-under-list { margin: 0; padding-left: 18px; font-size: var(--font-size-xs); color: var(--color-text-primary); display: grid; gap: 2px; }
+
+/* 3D에서 고른 비품 */
+.fp-3d-pick {
+  position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18); color: #0f172a; font-size: 13px; max-width: calc(100% - 16px);
+}
+.fp-3d-pick small { color: #475569; }
+/* 판넬 벽 그리기 옵션 */
+.fp-panel-opt { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: 6px; }
+.fp-panel-opt input[type="number"] { width: 80px; padding: 2px 6px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-primary); color: var(--color-text-primary); }
+.fp-head-btns { display: inline-flex; gap: 4px; align-items: center; }

@@ -131,7 +131,7 @@ export function LibraryPanel({ onPick, onCustom, myLibrary, onRemoveTemplate, eq
 
 /* ───────── 오른쪽: 고른 것 고치기 ───────── */
 export function InspectorPanel({
-  sel, items, wall, dim, equipments, ceiling, vehicleH, levelH, levelName, aboveName, onCopyUp, demoMode, onAllWalls, line, onLine, allItems = [],
+  sel, items, wall, dim, equipments, ceiling, vehicleH, levelH, levelName, aboveName, onCopyUp, demoMode, onAllWalls, onShow3d, line, onLine, allItems = [],
   onItems, onWall, onDelete, onDuplicate, onRotate, onSaveTemplate, onClose, onAlign,
 }) {
   if (sel.kind === 'wall' && wall) {
@@ -144,7 +144,7 @@ export function InspectorPanel({
     const wt = wallTypeOf(wall.type);
     return (
       <section className="fp-panel">
-        <div className="fp-panel-head"><strong>{wt.short}</strong><button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>닫기</button></div>
+        <div className="fp-panel-head"><strong>{wt.short}</strong><span className="fp-head-btns">{onShow3d && <button type="button" className="btn btn-secondary btn-sm" onClick={() => onShow3d(wall.id)}>3D에서 보기</button>}<button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>닫기</button></span></div>
         <div className="fp-label">벽 종류 <small>(바꾸면 두께도 보통 값으로 바뀌어요)</small></div>
         <div className="fp-btn-row">
           {WALL_TYPES.map(t => (
@@ -179,8 +179,10 @@ export function InspectorPanel({
               <Num label="길이" value={len} onChange={setLen} />
               <Num label="두께" value={wall.t} onChange={(v) => v && onWall({ t: v })} />
               <Num label="높이" value={wall.h || ''} onChange={(v) => onWall({ h: v || null })} />
+              <Num label="아래 띄운 높이" step={100} value={wall.base || ''} onChange={(v) => onWall({ base: v || null })} />
             </div>
-            <p className="fp-muted">높이를 비워 두면 층고까지로 봐요. (3D로 볼 때 써요)</p>
+            <label className="fp-check"><input type="checkbox" checked={Boolean(wall.toRoof)} onChange={(e) => onWall({ toRoof: e.target.checked })} /> 지붕까지 채우기 (윗부분이 지붕 경사를 따라 올라감)</label>
+            <p className="fp-muted">높이를 비워 두면 층고까지로 봐요. '아래 띄운 높이'를 적으면 그 아래는 뚫려 있어요(보 위 판넬처럼). 지붕까지 채우기는 같은 층에 그린 지붕 아랫면까지 채워요.</p>
           </>
         )}
         <div className="fp-label">{wt.type === 'glass' || wt.type === 'curtain' ? '유리 틀 색' : wt.beam ? '보 색(도장)' : '벽 색 (도면·벽 두께 면)'}</div>
@@ -239,7 +241,7 @@ export function InspectorPanel({
 
   return (
     <section className="fp-panel">
-      <div className="fp-panel-head"><strong>{isZone ? '구역' : isText ? '글자' : '비품'}</strong><button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>닫기</button></div>
+      <div className="fp-panel-head"><strong>{isZone ? '구역' : isText ? '글자' : isRoof ? '지붕' : '비품'}</strong><span className="fp-head-btns">{onShow3d && !isText && <button type="button" className="btn btn-secondary btn-sm" onClick={() => onShow3d(it.id)}>3D에서 보기</button>}<button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>닫기</button></span></div>
       <label className="fp-field">
         <span>{isText ? '글자' : '이름'}</span>
         <input type="text" value={it.name || ''} onChange={(e) => set(isText ? { name: e.target.value, w: Math.max(300, e.target.value.length * it.d * 0.85) } : { name: e.target.value })} />

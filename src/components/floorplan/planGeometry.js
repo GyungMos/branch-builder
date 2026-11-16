@@ -1,5 +1,5 @@
 import { scaledPoints, lShapePoints, lStairPoints, stairArm } from './planShapes';
-import { isBeam, NO_COLLIDE_KINDS, recommendedLux, isVertical } from './planLibrary';
+import { isBeam, isOverhead, NO_COLLIDE_KINDS, recommendedLux, isVertical } from './planLibrary';
 
 /** 배치도 계산 도구 (단위 mm) */
 
@@ -135,7 +135,7 @@ export function findWarnings(items = [], walls = [], { ceiling, vehicleH = 1800,
   const body = new Map(list.map(it => [it.id, bodyPolygon(it, TOUCH)]));
   const clear = new Map(list.filter(it => hasClearance(it) && !it.hideClear).map(it => [it.id, clearancePolygon(it, TOUCH)]));
   // 보(머리 위 가로대)는 바닥 비품과 겹쳐도 되므로 벽 검사에서 빼고, 아래에서 높이만 봄
-  const wallPolys = walls.filter(w => !isBeam(w)).map(w => ({ w, p: wallPolygon(w, TOUCH) }));
+  const wallPolys = walls.filter(w => !isOverhead(w)).map(w => ({ w, p: wallPolygon(w, TOUCH) }));
   const label = (it) => it.name || '비품';
 
   for (let i = 0; i < list.length; i++) {
@@ -187,15 +187,15 @@ export function findWarnings(items = [], walls = [], { ceiling, vehicleH = 1800,
   });
 
   // 보 아래 높이: 리프트를 올리고 차를 얹었을 때(또는 높은 비품이) 보 아래에 닿는지
-  walls.filter(isBeam).forEach(bm => {
+  walls.filter(isOverhead).forEach(bm => {
     const top = Number(bm.h) || ceiling;
-    if (!top) return;
-    const bottom = top - (Number(bm.depth) || Number(bm.t) || 0);
+    if (isBeam(bm) && !top) return;
+    const bottom = isBeam(bm) ? top - (Number(bm.depth) || Number(bm.t) || 0) : Number(bm.base);
     const bp = wallPolygon(bm);
     list.forEach(it => {
       const need = neededHeight(it, vehicleH, margin);
       if (need && need > bottom && polygonsOverlap(bp, body.get(it.id))) {
-        out.push({ type: 'height', ids: [it.id], wallId: bm.id, text: `${label(it)}: 필요한 높이 ${fmtM(need)} > 보 아래 ${fmtM(bottom)}` });
+        out.push({ type: 'height', ids: [it.id], wallId: bm.id, text: `${label(it)}: 필요한 높이 ${fmtM(need)} > ${isBeam(bm) ? '보' : '벽'} 아래 ${fmtM(bottom)}` });
       }
     });
   });

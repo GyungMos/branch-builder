@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { bodyPolygon, wallPolygon, aabb, pointInPolygon } from './planGeometry';
+import { bodyPolygon, wallPolygon, aabb, pointInPolygon, toLocal } from './planGeometry';
 import { scaledPoints, lShapePoints, stairArm, shade, hProfilePoints, rectPoints } from './planShapes';
 import { isVertical, defaultLevelHeight, wallTypeOf, libraryByKey, steelProfile, mepLineTypeOf, isBeam } from './planLibrary';
 import { fileUrl } from './planFiles';
@@ -1016,7 +1016,44 @@ function buildWall(wall, items, H, kit) {
     // 위쪽 마감 몰딩
     box(g, lenS, 30, 30, (s0 + s1) / 2, wh - 15, sz * (t / 2 + 15), kit.mat(shade(f.wainscot.color || '#b08968', -0.25)));
   };
-  const piece = (s0, s1, y0, y1) => {
+  const base = Math.max(0, Number(wall.base) || 0);
+  // 지붕까지 채우기: 같은 층 지붕 아랫면을 따라 윗부분이 올라감(박공 세모까지). 문·창 자리는 구멍
+  if (wall.toRoof && !glassy) {
+    const roof = roofOver(wall, items);
+    if (roof) {
+      const ux = dx / len; const uy = dy / len;
+      const at = (sv) => ({ x: wall.x1 + ux * sv, y: wall.y1 + uy * sv });
+      const s0 = -t / 2; const s1 = len + t / 2;
+      const tops = [[s1, roofHeightAt(roof, at(s1), H)]];
+      // 양쪽 경사: 벽이 용마루 줄을 지나면 그 점을 넣음
+      if (roof.roofType === 'gable') {
+        const l0 = toLocal(roof, at(s0)).y; const l1 = toLocal(roof, at(s1)).y;
+        if ((l0 > 0) !== (l1 > 0) && Math.abs(l0 - l1) > 1) {
+          const sr = s0 + ((s1 - s0) * l0) / (l0 - l1);
+          tops.push([sr, roofHeightAt(roof, at(sr), H)]);
+        }
+      }
+      tops.push([s0, roofHeightAt(roof, at(s0), H)]);
+      const shape = new THREE.Shape([
+        new THREE.Vector2(s0 * M, base * M), new THREE.Vector2(s1 * M, base * M),
+        ...tops.map(([sv, hv]) => new THREE.Vector2(sv * M, Math.max(base + 10, hv) * M)),
+      ]);
+      wallOpenings(wall, items).forEach(o => {
+        const a = Math.max(s0 + 10, o.s0); const b = Math.min(s1 - 10, o.s1);
+        const y0 = Math.max(base + 10, o.bottom); const y1 = o.top;
+        if (b - a > 10 && y1 - y0 > 10) shape.holes.push(new THREE.Path([new THREE.Vector2(a * M, y0 * M), new THREE.Vector2(b * M, y0 * M), new THREE.Vector2(b * M, y1 * M), new THREE.Vector2(a * M, y1 * M)]));
+      });
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: t * M, bevelEnabled: false });
+      geo.translate(0, 0, (-t / 2) * M);
+      const mesh = new THREE.Mesh(geo, faceMat(faces.a));
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      g.add(mesh);
+      g.userData.label = `${wt.short} (지붕까지${base ? `, 아래 ${Math.round(base).toLocaleString()}mm 띄움` : ''})`;
+      return g;
+    }
+  }
+  const piece = (s0, s1, y0In, y1) => {
+    const y0 = Math.max(y0In, base);
     if (s1 - s0 < 5 || y1 - y0 < 5) return;
     const mesh = box(g, s1 - s0, y1 - y0, t, (s0 + s1) / 2, y0, 0, mats, !glassy);
     if (mesh && glassy) mesh.renderOrder = 2;
@@ -1039,8 +1076,27 @@ function buildWall(wall, items, H, kit) {
     const step = type === 'curtain' ? 1200 : 0;
     if (step) for (let s = step; s < len - 100; s += step) box(g, 60, Hw, t + 20, s, 0, 0, frame);
   }
-  g.userData.label = wt.short;
+  g.userData.label = base ? `${wt.short} (아래 ${Math.round(base).toLocaleString()}mm 띄움)` : wt.short;
   return g;
+}
+
+/** 벽 위에 있는 지붕 (벽 가운데를 덮는 지붕, 없으면 가장 가까운 지붕) */
+function roofOver(wall, items) {
+  const roofs = items.filter(it => it.kind === 'roof');
+  if (!roofs.length) return null;
+  const mid = { x: (wall.x1 + wall.x2) / 2, y: (wall.y1 + wall.y2) / 2 };
+  return roofs.find(r => pointInPolygon(mid, bodyPolygon(r)))
+    || roofs.slice().sort((a, b) => Math.hypot(a.x - mid.x, a.y - mid.y) - Math.hypot(b.x - mid.x, b.y - mid.y))[0];
+}
+/** 그 자리 지붕 높이(mm): 평지붕 = 처마, 한쪽 경사 = 앞(처마)→뒤(높음), 양쪽 경사 = 가운데가 가장 높음 */
+function roofHeightAt(roof, p, H) {
+  const eave = Number(roof.h) || H;
+  const rise = roof.roofType === 'flat' ? 0 : Math.max(0, Number(roof.rise) || 0);
+  const hd = roof.d / 2;
+  const ly = Math.max(-hd, Math.min(hd, toLocal(roof, p).y));
+  if (roof.roofType === 'gable') return eave + rise * (1 - Math.abs(ly) / hd);
+  if (roof.roofType === 'mono') return eave + rise * ((hd - ly) / roof.d);
+  return eave;
 }
 
 /* ───────── 한 층 ───────── */
@@ -1111,10 +1167,11 @@ function buildLevel(L, i, levels, el, opts, kit) {
     plane.receiveShadow = true;
     zg.add(plane);
     zg.userData.label = `${z.name} (바닥)`;
+    zg.userData.itemId = z.id;
     g.add(zg);
   });
   // 벽
-  L.walls.forEach(w => g.add(buildWall(w, L.items, H, kit)));
+  L.walls.forEach(w => { const wg = buildWall(w, L.items, H, kit); wg.userData.wallId = w.id; g.add(wg); });
   // 구역 천장 (천장 높이를 적은 방)
   const zones = L.items.filter(z => z.kind === 'zone');
   const zoneCeil = (it) => {
@@ -1157,7 +1214,7 @@ function buildLevel(L, i, levels, el, opts, kit) {
   }
 
   // 지붕
-  if (opts.showRoof) L.items.filter(it => it.kind === 'roof').forEach(it => g.add(buildRoof(it, H, kit)));
+  if (opts.showRoof) L.items.filter(it => it.kind === 'roof').forEach(it => { const rg = buildRoof(it, H, kit); rg.userData.itemId = it.id; g.add(rg); });
 
   // 비품
   L.items.forEach(it => {
@@ -1169,6 +1226,9 @@ function buildLevel(L, i, levels, el, opts, kit) {
     ig.rotation.y = -((it.rot || 0) * Math.PI) / 180;
     if (it.flip) ig.scale.x = -1;
     ig.userData.label = it.name;
+    ig.userData.itemId = it.id;
+    // 지금 층의 비품만 3D에서 끌어 옮김 (구역·지붕·글자·잠근 것은 빼고)
+    ig.userData.drag = L.id === opts.editLevelId && !it.locked;
     g.add(ig);
   });
   g.userData.levelName = L.name;
@@ -1224,7 +1284,7 @@ const VIEWS = [
   { id: 'side', label: '옆에서' },
 ];
 
-export default function Plan3D({ levels, currentId, vehicleH, title, onClose }) {
+export default function Plan3D({ levels, currentId, vehicleH, title, onClose, focus, selectedId, onItemSelect, onItemMove, onItemRotate }) {
   const wrapRef = useRef(null);
   const tipRef = useRef(null);
   const three = useRef(null);
@@ -1235,6 +1295,11 @@ export default function Plan3D({ levels, currentId, vehicleH, title, onClose }) 
   const [showMep, setShowMep] = useState(true);
   const [err, setErr] = useState('');
   const [modelErrs, setModelErrs] = useState([]);
+  const [dragOn, setDragOn] = useState(true); // 비품을 끌어서 옮기기
+  const [picked, setPicked] = useState(null); // 3D에서 고른 비품 { id, name, drag }
+  const live = useRef({});
+  live.current = { onItemSelect, onItemMove, dragOn };
+  const pendingFocus = useRef(focus || null);
 
   // 처음 한 번: 화면·카메라·빛
   useEffect(() => {
@@ -1299,10 +1364,60 @@ export default function Plan3D({ levels, currentId, vehicleH, title, onClose }) 
     };
     renderer.domElement.addEventListener('pointermove', onMove);
 
+    // 비품 누르기 → 고르기, 지금 층 비품이면 끌어서 옮기기
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const hitPt = new THREE.Vector3();
+    let drag = null;
+    const toMouse = (e) => { const r = renderer.domElement.getBoundingClientRect(); mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(mouse, camera); };
+    const onDown = (e) => {
+      if (e.button !== 0 || !three.current?.root) return;
+      toMouse(e);
+      const hits = ray.intersectObjects(three.current.root.children, true);
+      let o = hits[0]?.object;
+      while (o && !o.userData?.itemId) o = o.parent;
+      if (!o) return;
+      const id = o.userData.itemId;
+      setPicked({ id, name: o.userData.label || '', drag: Boolean(o.userData.drag) });
+      live.current.onItemSelect?.(id);
+      if (!live.current.dragOn || !o.userData.drag) return;
+      const floorY = o.parent.getWorldPosition(new THREE.Vector3()).y + (o.position.y > 0.05 ? 0 : 0);
+      plane.constant = -floorY;
+      if (!ray.ray.intersectPlane(plane, hitPt)) return;
+      drag = { obj: o, id, dx: o.position.x - hitPt.x, dz: o.position.z - hitPt.z, moved: false, sx: e.clientX, sy: e.clientY };
+      controls.enabled = false;
+      try { renderer.domElement.setPointerCapture(e.pointerId); } catch { /* 이미 뗀 경우 */ }
+      e.stopPropagation();
+    };
+    const onDragMove = (e) => {
+      if (!drag) return;
+      if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 4) return;
+      drag.moved = true;
+      toMouse(e);
+      if (!ray.ray.intersectPlane(plane, hitPt)) return;
+      const snap = (v) => Math.round(v / 0.05) * 0.05; // 50mm 단위
+      drag.obj.position.x = snap(hitPt.x + drag.dx);
+      drag.obj.position.z = snap(hitPt.z + drag.dz);
+      three.current?.sel?.update?.();
+    };
+    const onUp = () => {
+      if (!drag) return;
+      const d = drag; drag = null;
+      controls.enabled = true;
+      if (d.moved) live.current.onItemMove?.(d.id, d.obj.position.x / M, d.obj.position.z / M);
+    };
+    renderer.domElement.addEventListener('pointerdown', onDown, { capture: true });
+    renderer.domElement.addEventListener('pointermove', onDragMove);
+    renderer.domElement.addEventListener('pointerup', onUp);
+    renderer.domElement.addEventListener('pointercancel', onUp);
+
     three.current = { renderer, scene, camera, controls, sun, ground, grid, root: null, kit: null, fitted: false };
     return () => {
       cancelAnimationFrame(raf); ro.disconnect();
       renderer.domElement.removeEventListener('pointermove', onMove);
+      renderer.domElement.removeEventListener('pointerdown', onDown, { capture: true });
+      renderer.domElement.removeEventListener('pointermove', onDragMove);
+      renderer.domElement.removeEventListener('pointerup', onUp);
+      renderer.domElement.removeEventListener('pointercancel', onUp);
       const t = three.current;
       if (t?.root) { disposeTree(t.root); t.kit?.dispose(); }
       ground.geometry.dispose(); ground.material.dispose(); grid.dispose?.();
@@ -1320,7 +1435,7 @@ export default function Plan3D({ levels, currentId, vehicleH, title, onClose }) 
     const kit = makeKit();
     const el = levelElevations(levels);
     const root = new THREE.Group();
-    levels.forEach((L, i) => { if (i <= upTo) root.add(buildLevel(L, i, levels, el, { showCar, showRoof, showCeil, showMep, vehicleH, onModelError: (name) => setModelErrs(e => (e.includes(name) ? e : [...e, name])) }, kit)); });
+    levels.forEach((L, i) => { if (i <= upTo) root.add(buildLevel(L, i, levels, el, { showCar, showRoof, showCeil, showMep, vehicleH, editLevelId: currentId, onModelError: (name) => setModelErrs(e => (e.includes(name) ? e : [...e, name])) }, kit)); });
     t.scene.add(root);
     t.root = root; t.kit = kit;
     // 땅·격자·그림자 범위 맞추기
@@ -1341,7 +1456,49 @@ export default function Plan3D({ levels, currentId, vehicleH, title, onClose }) 
       t.bb = bb;
       if (!t.fitted) { setView('iso'); t.fitted = true; }
     }
+    markSelected();
+    if (pendingFocus.current) { if (focusOn(pendingFocus.current.id)) t.fitted = true; pendingFocus.current = null; }
   }, [levels, upTo, showCar, showRoof, showCeil, showMep, vehicleH]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 고른 것(2D·3D) 노란 상자로 표시
+  const findObj = (id) => {
+    const t = three.current; let f = null;
+    if (!t?.root || !id) return null;
+    t.root.traverse(o => { if (!f && (o.userData.itemId === id || o.userData.wallId === id)) f = o; });
+    return f;
+  };
+  const markSelected = () => {
+    const t = three.current;
+    if (!t) return;
+    if (t.sel) { t.scene.remove(t.sel); t.sel.geometry?.dispose(); t.sel.material?.dispose(); t.sel = null; }
+    const o = findObj(selectedId);
+    if (!o) return;
+    t.sel = new THREE.BoxHelper(o, 0xf59e0b);
+    t.scene.add(t.sel);
+  };
+  useEffect(() => { markSelected(); }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** 대상으로 확대: 대상 크기에 맞춰 비스듬히 가까이 */
+  const focusOn = (id) => {
+    const t = three.current; const o = findObj(id);
+    if (!t || !o) return false;
+    const b = new THREE.Box3().setFromObject(o);
+    if (b.isEmpty()) return false;
+    const size = b.getSize(new THREE.Vector3()); const c = b.getCenter(new THREE.Vector3());
+    const r = Math.max(size.x, size.y, size.z, 0.8);
+    const dist = r * 1.8 + 1.5;
+    t.camera.position.set(c.x + dist * 0.6, c.y + dist * 0.65, c.z + dist * 0.9);
+    t.controls.target.copy(c);
+    t.controls.update();
+    return true;
+  };
+  // 2D에서 '3D에서 보기'를 누르면: 지금 층까지만 보이게 하고 그 대상으로
+  useEffect(() => {
+    if (!focus) return;
+    pendingFocus.current = focus;
+    const idx = levels.findIndex(l => l.id === currentId);
+    if (idx >= 0 && idx !== upTo) setUpTo(idx); else if (focusOn(focus.id)) pendingFocus.current = null;
+  }, [focus?.n]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setView = (id) => {
     const t = three.current;
@@ -1392,11 +1549,21 @@ export default function Plan3D({ levels, currentId, vehicleH, title, onClose }) 
           <label className="fp-check"><input type="checkbox" checked={showRoof} onChange={(e) => setShowRoof(e.target.checked)} /> 지붕</label>
           <label className="fp-check"><input type="checkbox" checked={showCeil} onChange={(e) => setShowCeil(e.target.checked)} /> 천장</label>
           <label className="fp-check"><input type="checkbox" checked={showMep} onChange={(e) => setShowMep(e.target.checked)} /> 전기·배관</label>
+          <label className="fp-check"><input type="checkbox" checked={dragOn} onChange={(e) => setDragOn(e.target.checked)} /> 비품 끌어서 옮기기</label>
           <button type="button" className="btn btn-secondary btn-sm" onClick={savePng}>3D 그림 저장</button>
           <button type="button" className="btn btn-primary btn-sm" onClick={onClose}>2D로</button>
         </div>
       </div>
-      <p className="fp-3d-hint">끌어서 돌리기 · 오른쪽 버튼(두 손가락)으로 옮기기 · 휠로 키우고 줄이기. 문·창·셔터를 벽 위에 놓으면 그 자리가 뚫려 보여요.</p>
+      {picked && (
+        <div className="fp-3d-pick">
+          <strong>{picked.name || '비품'}</strong>
+          {picked.drag ? <small>끌어서 옮겨요</small> : <small>다른 층·구역·지붕은 2D에서 고쳐요</small>}
+          {picked.drag && <button type="button" className="btn btn-secondary btn-sm" onClick={() => onItemRotate?.(picked.id, 90)}>↻ 90° 돌리기</button>}
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => focusOn(picked.id)}>가까이 보기</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setPicked(null); onItemSelect?.(null); }}>✕</button>
+        </div>
+      )}
+      <p className="fp-3d-hint">빈 곳을 끌면 돌리기 · 비품을 끌면 옮기기 · 오른쪽 버튼(두 손가락)으로 화면 옮기기 · 휠로 키우고 줄이기. 문·창·셔터를 벽 위에 놓으면 그 자리가 뚫려 보여요.</p>
     </div>
   );
 }

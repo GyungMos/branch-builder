@@ -246,6 +246,7 @@ export const WALL_TYPES = [
   { type: 'light', label: '가벽(경량 칸막이)', short: '가벽', t: 100, color: '#a8a29e' },
   { type: 'glass', label: '유리벽(유리 칸막이)', short: '유리벽', t: 100, color: '#38bdf8' },
   { type: 'curtain', label: '통유리 외벽(커튼월)', short: '통유리 외벽', t: 150, color: '#0ea5e9' },
+  { type: 'panel', label: '샌드위치 판넬 벽', short: '판넬 벽', t: 100, color: '#e5e7eb' },
   // 보: 바닥이 아니라 머리 위(천장 쪽)에 걸리는 가로대. t = 단면 폭, depth = 단면 높이, h = 보 윗면 높이(비우면 층고)
   { type: 'beamH', label: 'H빔 보 (머리 위)', short: 'H빔 보', t: 200, depth: 200, color: '#475569', beam: 'hbeam' },
   { type: 'beamSq', label: '각파이프 보 (머리 위)', short: '각파이프 보', t: 100, depth: 100, color: '#64748b', beam: 'sqpipe' },
@@ -253,6 +254,8 @@ export const WALL_TYPES = [
 export const wallTypeOf = (type) => WALL_TYPES.find(w => w.type === type) || WALL_TYPES[0];
 /** 보(머리 위 가로대)인지: 바닥 비품과 겹쳐도 경고하지 않고, 높이만 봄 */
 export const isBeam = (w) => Boolean(wallTypeOf(w?.type).beam);
+/** 머리 위에 있는 것(보, 아래를 띄운 벽): 바닥 비품과 겹쳐도 되고 높이만 봄 */
+export const isOverhead = (w) => isBeam(w) || (Number(w?.base) || 0) > 0;
 
 /**
  * 철골 규격 (KS 많이 쓰는 것, mm)
