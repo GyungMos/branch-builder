@@ -31,7 +31,7 @@ const emptyPlan = () => ({ items: [], walls: [], dims: [], lines: [], bg: null, 
 const clean = (v) => JSON.parse(JSON.stringify(v));
 
 /** 한 층에 따로 저장하는 것 */
-const pickLevel = (p) => ({ items: p.items || [], walls: p.walls || [], dims: p.dims || [], lines: p.lines || [], bg: p.bg || null, ceiling: p.ceiling || null });
+const pickLevel = (p) => ({ items: p.items || [], walls: p.walls || [], dims: p.dims || [], lines: p.lines || [], bg: p.bg || null, ceiling: p.ceiling || null, slab: p.slab || 'auto' });
 
 const Plan3D = lazy(() => import('./Plan3D'));
 
@@ -361,7 +361,7 @@ export default function FloorPlanner({
       items: layout.items || [], walls: layout.walls || [], dims: layout.dims || [], bg: layout.bg || null, ceiling: layout.ceiling || null,
     });
     const levels = (src.levels || [{ id: 'L1', name: '1층', items: src.items, walls: src.walls, dims: src.dims, bg: src.bg, ceiling: src.ceiling }])
-      .map((l, i) => ({ id: l.id || generateId(), name: l.name || `${i + 1}층`, items: l.items || [], walls: l.walls || [], dims: l.dims || [], lines: l.lines || [], bg: l.bg || null, ceiling: l.ceiling || null }));
+      .map((l, i) => ({ id: l.id || generateId(), name: l.name || `${i + 1}층`, items: l.items || [], walls: l.walls || [], dims: l.dims || [], lines: l.lines || [], bg: l.bg || null, ceiling: l.ceiling || null, slab: l.slab || 'auto' }));
     if (!levels[0].ceiling && branch?.property?.floorHeight) levels[0].ceiling = Math.round(Number(branch.property.floorHeight) * 1000);
     return { levels, vehicleH: layout.vehicleH || 1800, wallT: layout.wallT || 200 };
   }, [layout.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1408,6 +1408,7 @@ export default function FloorPlanner({
             />
           ) : (
             <PlanSettingsPanel
+              isUpper={lvIndex > 0}
               plan={plan}
               levelName={levels.length > 1 ? levels[lvIndex]?.name : ''}
               levelH={levelH}

@@ -703,7 +703,7 @@ function FloorEditor({ it, set }) {
 }
 
 /* ───────── 오른쪽: 아무것도 안 골랐을 때 (도면·층고·건물) ───────── */
-export function PlanSettingsPanel({ plan, levelName, levelH, onPlan, onPickBg, onCalibrate, onRoom }) {
+export function PlanSettingsPanel({ plan, levelName, levelH, isUpper, onPlan, onPickBg, onCalibrate, onRoom }) {
   const [roomW, setRoomW] = useState('');
   const [roomD, setRoomD] = useState('');
   const bg = plan.bg;
@@ -737,6 +737,21 @@ export function PlanSettingsPanel({ plan, levelName, levelH, onPlan, onPickBg, o
         <Num label="가장 높은 차" unit="mm" step={50} value={plan.vehicleH || 1800} onChange={(v) => onPlan({ vehicleH: v || 1800 })} />
       </div>
       <p className="fp-muted">리프트를 끝까지 올리고 차를 얹었을 때 천장(보·배관·조명 포함)에 닿지 않는지 봐요. 여유 200mm를 더해요.</p>
+      {isUpper && (
+        <>
+          <div className="fp-panel-head fp-sub"><strong>{levelName || '이 층'} 바닥판</strong></div>
+          <div className="fp-btn-row">
+            {[['auto', '벽 전체 네모'], ['zones', '구역 모양대로만'], ['none', '없음']].map(([id, label]) => (
+              <button key={id} type="button" className={`filter-pill${(plan.slab || 'auto') === id ? ' on' : ''}`} onClick={() => onPlan({ slab: id })}>{label}</button>
+            ))}
+          </div>
+          <p className="fp-muted">
+            {(plan.slab || 'auto') === 'auto' && '이 층 벽을 모두 감싸는 네모로 바닥이 깔려요. 아래층 일부만 2층이면 \'구역 모양대로만\'을 고르세요.'}
+            {plan.slab === 'zones' && (plan.items.some(i => i.kind === 'zone') ? '이 층에 그린 구역(방) 모양대로만 바닥이 깔려요. 구역이 없는 곳(예: 높은 정비 현장 위)은 뚫려 있어요.' : '아직 이 층에 구역이 없어요. \'구역(방) 그리기\'로 2층 사무실 자리를 그려 주세요.')}
+            {plan.slab === 'none' && '이 층 바닥판을 그리지 않아요.'}
+          </p>
+        </>
+      )}
       {!plan.ceiling && <p className="fp-muted">층고를 안 적으면 계단 계산과 3D는 {fmtM(levelH)}로 봐요.</p>}
 
       <div className="fp-panel-head fp-sub"><strong>건물 크기로 벽 만들기</strong></div>

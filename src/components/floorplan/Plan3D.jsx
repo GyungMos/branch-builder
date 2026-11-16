@@ -903,23 +903,31 @@ function buildLevel(L, i, levels, el, opts, kit) {
     ...L.walls.flatMap(w => wallPolygon(w)),
     ...(L.walls.length ? [] : L.items.filter(it => it.kind !== 'text').flatMap(it => bodyPolygon(it))),
   ];
-  // 바닥판 (2층부터). 아래층 계단·승강기 자리와 이 층 '뚫린 곳'은 구멍
-  if (pts.length) {
-    const b = aabb(pts);
-    const outline = [{ x: b.x0, y: b.y0 }, { x: b.x1, y: b.y0 }, { x: b.x1, y: b.y1 }, { x: b.x0, y: b.y1 }];
+  // 바닥판. 아래층 계단·승강기 자리와 이 층 '뚫린 곳'은 구멍
+  // 2층부터는 층마다 범위를 고름: auto = 벽 전체를 감싸는 네모, zones = 이 층 구역 모양대로만, none = 없음
+  const slabMode = i > 0 ? (L.slab || 'auto') : 'auto';
+  const holeSrc = [
+    ...(i > 0 ? levels[i - 1].items.filter(isVertical) : []),
+    ...L.items.filter(it => it.kind === 'void'),
+  ].map(it => bodyPolygon(it));
+  const overlaps = (a, c) => a.x0 < c.x1 && a.x1 > c.x0 && a.y0 < c.y1 && a.y1 > c.y0;
+  const makeSlab = (outline) => {
+    const b = aabb(outline);
     const inside = (bb) => bb.x0 > b.x0 + 20 && bb.y0 > b.y0 + 20 && bb.x1 < b.x1 - 20 && bb.y1 < b.y1 - 20;
-    const overlaps = (a, c) => a.x0 < c.x1 && a.x1 > c.x0 && a.y0 < c.y1 && a.y1 > c.y0;
-    const holes = [];
-    const holeBoxes = [];
-    const addHole = (poly) => {
+    const holes = []; const holeBoxes = [];
+    holeSrc.forEach(poly => {
       const bb = aabb(poly);
       if (!inside(bb) || holeBoxes.some(x => overlaps(x, bb))) return;
       holes.push(poly); holeBoxes.push(bb);
-    };
-    if (i > 0) levels[i - 1].items.filter(isVertical).forEach(it => addHole(bodyPolygon(it)));
-    L.items.filter(it => it.kind === 'void').forEach(it => addHole(bodyPolygon(it)));
+    });
     if (i > 0) extrude(g, outline, 200, -200, kit.mat('#d4d4d8', { roughness: 0.95 }), holes);
     else extrude(g, outline, 30, -25, kit.mat('#d6d3d1', { roughness: 0.95 }), holes);
+  };
+  if (slabMode === 'zones') {
+    L.items.filter(it => it.kind === 'zone').forEach(z => makeSlab(bodyPolygon(z)));
+  } else if (slabMode !== 'none' && pts.length) {
+    const b = aabb(pts);
+    makeSlab([{ x: b.x0, y: b.y0 }, { x: b.x1, y: b.y0 }, { x: b.x1, y: b.y1 }, { x: b.x0, y: b.y1 }]);
   }
   // 바닥 마감
   L.items.filter(it => it.kind === 'zone').forEach(z => {
