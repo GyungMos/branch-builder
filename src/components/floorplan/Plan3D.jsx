@@ -308,6 +308,109 @@ function buildStairs(g, it, H, kit) {
   }
 }
 
+/**
+ * 접수 카운터(로고형): 도면 치수 그대로 (가로 2,400 · 깊이 800 · 높이 1,125)
+ * - 앞(손님 쪽, +z): 왼쪽 파란 기둥 80 · 흰 앞판(로고) · 오른쪽 파란 기둥 100, 아래 스테인리스 걸레받이
+ * - 위: 파란 윗판 깊이 250 · 두께 150, 왼쪽은 150 폭으로 뒤까지 이어짐, 윗판 아래 LED
+ * - 뒤(직원 쪽, -z): 높이 775 책상 상판(대리석 무늬), 상판 아래 서랍 줄(가운데는 빈칸), 윗판 밑 수납칸 3칸
+ * 크기를 바꾸면 비율에 맞춰 늘거나 줄어요.
+ */
+function receptionLogoTexture() {
+  const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 512;
+  const x = cv.getContext('2d');
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, 1024, 512);
+  // 간단한 엠블럼: 위쪽 휘어진 띠 + 굵은 W + 아래 밑줄 (실제 로고 그림을 올리면 그걸로 바뀜)
+  x.strokeStyle = '#1e3a8a'; x.lineCap = 'round';
+  x.lineWidth = 26; x.beginPath(); x.ellipse(512, 250, 210, 95, 0, Math.PI * 1.08, Math.PI * 1.92); x.stroke();
+  x.fillStyle = '#1e3a8a'; x.font = 'italic 900 210px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText('W', 512, 285);
+  x.beginPath(); x.ellipse(512, 400, 230, 14, 0, 0, Math.PI * 2); x.fill();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+function marbleTexture(color) {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 512;
+  const x = cv.getContext('2d');
+  x.fillStyle = color; x.fillRect(0, 0, 512, 512);
+  x.strokeStyle = 'rgba(80,80,90,0.18)'; x.lineWidth = 2;
+  for (let k = 0; k < 14; k++) {
+    x.beginPath();
+    let px = (k * 73) % 512; let py = 0;
+    x.moveTo(px, py);
+    while (py < 512) { px += Math.sin(py / 40 + k) * 18; py += 24; x.lineTo(px, py); }
+    x.stroke();
+  }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+function buildReception(g, it, kit) {
+  const W = it.w || 2400; const D = it.d || 800; const H = it.h || 1125;
+  const sx = W / 2400; const sz = D / 800; const sy = H / 1125;
+  const hw = W / 2; const hd = D / 2;
+  const pL = 80 * sx; const pR = 100 * sx;           // 왼쪽·오른쪽 기둥(옆판) 두께
+  const capH = 150 * sy; const capD = 250 * sz; const retW = 150 * sx;
+  const deskY = Math.min(775 * sy, H - capH - 150); const deskT = 25;
+  const kick = 100 * sy; const post = 80 * sz;        // 걸레받이 높이, 앞 기둥 깊이
+  const frontZ = hd - post; const frontT = 25;
+  const blue = kit.mat(it.color || '#1d4ed8', { roughness: 0.3, metalness: 0.1 });
+  const white = kit.mat(it.panelColor || '#f8fafc', { roughness: 0.45 });
+  const steel = kit.mat('#cbd5e1', { metalness: 0.75, roughness: 0.25 });
+  const inner0 = -hw + pL; const inner1 = hw - pR; const innerW = inner1 - inner0; const ix = (inner0 + inner1) / 2;
+
+  // 옆판(흰색) + 앞쪽 파란 기둥
+  box(g, pL, H - capH, D - post, -hw + pL / 2, 0, (frontZ - hd) / 2, white);
+  box(g, pL, H - capH, post, -hw + pL / 2, 0, hd - post / 2, blue);
+  box(g, pR, H - capH, D - post, hw - pR / 2, 0, (frontZ - hd) / 2, white);
+  box(g, pR, H - capH, post, hw - pR / 2, 0, hd - post / 2, blue);
+
+  // 앞판: 앞면에 로고 그림
+  const logoTex = it.logoImg ? faceTexture(it.logoImg) : receptionLogoTexture();
+  const logoMat = new THREE.MeshStandardMaterial({ map: logoTex, roughness: 0.45 });
+  logoMat.userData.own = !it.logoImg;
+  const ph = H - capH - kick;
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(innerW * M, ph * M, frontT * M), [white, white, white, white, logoMat, white]);
+  panel.position.set(ix * M, (kick + ph / 2) * M, (frontZ - frontT / 2) * M);
+  panel.castShadow = true; panel.receiveShadow = true;
+  g.add(panel);
+  // 걸레받이(스테인리스)
+  box(g, innerW, kick, 20, ix, 0, frontZ - frontT - 10, steel);
+
+  // 파란 윗판 + 왼쪽 이어지는 부분
+  box(g, W, capH, capD, 0, H - capH, hd - capD / 2, blue);
+  box(g, retW, capH, D - capD, -hw + retW / 2, H - capH, (-hd + (hd - capD)) / 2, blue);
+  // 윗판 아래 LED
+  box(g, innerW, 12, 25, ix, H - capH - 12, frontZ + 15, kit.mat('#ffffff', { emissive: '#ffffff', emissiveIntensity: 1 }), false);
+
+  // 직원 쪽 책상 상판 (대리석 무늬)
+  const deskMat = new THREE.MeshStandardMaterial({ map: marbleTexture(it.deskColor || '#d4d4d8'), roughness: 0.35 });
+  deskMat.userData.own = true;
+  const deskD = (frontZ - frontT) - (-hd);
+  const desk = new THREE.Mesh(new THREE.BoxGeometry(innerW * M, deskT * M, deskD * M), deskMat);
+  desk.position.set(ix * M, (deskY - deskT / 2) * M, (-hd + deskD / 2) * M);
+  desk.castShadow = true; desk.receiveShadow = true;
+  g.add(desk);
+  // 책상 위 전선 구멍
+  [-0.33, 0, 0.33].forEach(k => cyl(g, 30, 4, ix + innerW * k, deskY, hd - capD - 60, kit.mat('#1f2937')));
+
+  // 윗판 밑 수납칸 3칸: 칸막이 2개 + 칸 바닥
+  const cubZ0 = hd - capD; const cubZ1 = frontZ - frontT;
+  if (cubZ1 > cubZ0) {
+    [1 / 3, 2 / 3].forEach(k => box(g, 18, H - capH - deskY, cubZ1 - cubZ0, inner0 + innerW * k, deskY, (cubZ0 + cubZ1) / 2, white));
+    box(g, innerW, 18, cubZ1 - cubZ0, ix, deskY, (cubZ0 + cubZ1) / 2, white);
+  }
+
+  // 상판 아래 서랍 줄: 5칸 중 가운데는 비움, 손잡이
+  const drH = 115 * sy; const drD = Math.min(450 * sz, deskD - 100);
+  const knob = kit.mat('#9ca3af', { metalness: 0.6, roughness: 0.3 });
+  for (let k = 0; k < 5; k++) {
+    const x0 = inner0 + (innerW * k) / 5; const x1 = inner0 + (innerW * (k + 1)) / 5;
+    if (k === 2) { box(g, x1 - x0, 18, drD, (x0 + x1) / 2, deskY - deskT - drH, -hd + drD / 2, white); continue; }
+    box(g, x1 - x0 - 6, drH, drD, (x0 + x1) / 2, deskY - deskT - drH, -hd + drD / 2, white);
+    cyl(g, 14, 12, (x0 + x1) / 2, deskY - deskT - drH / 2, -hd - 6, knob).rotation.x = Math.PI / 2;
+  }
+}
+
 /** 3D 모델 파일(GLB) 비품: 읽는 동안은 흐린 상자, 다 읽으면 크기에 맞춰 바꿔 끼움 */
 function buildModelItem(it, ctx) {
   const g = new THREE.Group();
@@ -438,6 +541,9 @@ function buildItem(src, ctx) {
       }
       break;
     }
+    case 'receptionW':
+      buildReception(g, it, kit);
+      break;
     case 'counter': {
       const ch = h || 1050; const light = kit.mat(shade(c, 0.35));
       box(g, w, ch, 120, 0, 0, hd - 60, m);

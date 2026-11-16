@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   PLAN_CATEGORIES, PLAN_LIBRARY, ITEM_COLORS, guessLibraryFromName, FLOOR_TYPES, floorTypeOf, WALL_TYPES, wallTypeOf, WALL_COLORS, isVertical, hasFaces, STEEL_SIZES, steelProfile, PAINT_COLORS, LOUVER_COLORS, ROOF_TYPES, ROOF_MATERIALS, MEP_LINE_TYPES, mepLineTypeOf, STAIR_SHAPES, STAIR_COLOR_DEFAULTS, STAIR_COLORS, RAIL_COLORS, POST_COLORS,
 } from './planLibrary';
@@ -47,7 +47,7 @@ const tplOf = (it) => ({
   color: it.color, points: it.points, baseW: it.baseW, baseD: it.baseD, img: it.img, arm: it.arm, elev: it.elev,
   look: it.look, faces: it.faces, model: it.model, modelRot: it.modelRot, prof: it.prof,
   lm: it.lm, watt: it.watt, roofType: it.roofType, rise: it.rise, material: it.material, opaque: it.opaque, openUnder: it.openUnder,
-  railColor: it.railColor, postColor: it.postColor, noRail: it.noRail,
+  railColor: it.railColor, postColor: it.postColor, noRail: it.noRail, panelColor: it.panelColor, deskColor: it.deskColor, logoImg: it.logoImg,
 });
 
 /* ───────── 왼쪽: 비품 목록 ───────── */
@@ -338,6 +338,7 @@ export function InspectorPanel({
         </>
       )}
 
+      {it.shape === 'receptionW' && <ReceptionOptions it={it} set={set} demoMode={demoMode} />}
       {STAIR_SHAPES.includes(it.shape) ? <StairColors it={it} set={set} /> : (
         <>
           <div className="fp-label">{isZone ? '테두리·이름 색' : '색'}</div>
@@ -575,6 +576,42 @@ function Item3DSection({ it, set, demoMode }) {
           {(it.model || hasFaces(it)) && it.look && <p className="fp-muted">모델·사진이 있으면 그것이 먼저 보여요.</p>}
         </>
       )}
+    </div>
+  );
+}
+
+/* 접수 카운터(로고형): 앞판 로고 그림, 앞판·책상 색 */
+function ReceptionOptions({ it, set, demoMode }) {
+  const ref = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const pick = async (file) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const { fileToFaceImage } = await import('./planImages');
+      const { uploadFaceImage } = await import('./planFiles');
+      const img = await fileToFaceImage(file, { maxSide: 1200, limit: 160 * 1024 });
+      set({ logoImg: await uploadFaceImage(img.dataUrl, demoMode) });
+    } catch (err) {
+      alert(err.message || '그림을 넣지 못했어요.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="fp-3d-sec">
+      <div className="fp-label">앞판 로고 <small>(손님 쪽 흰 앞판에 붙는 그림)</small></div>
+      <div className="fp-btn-row">
+        <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => ref.current?.click()}>{busy ? '넣는 중…' : it.logoImg ? '로고 그림 바꾸기' : '로고 그림 넣기'}</button>
+        {it.logoImg && <button type="button" className="btn btn-ghost btn-sm" onClick={() => set({ logoImg: null })}>기본 그림으로</button>}
+      </div>
+      <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; pick(f); }} />
+      <p className="fp-muted">앞판 사진이나 로고 파일(흰 바탕)을 넣으면 앞판 전체에 붙어요. 가로가 긴 그림(약 2:1)이 잘 맞아요.</p>
+      <div className="fp-label">앞판·옆판 색</div>
+      <ColorPicker value={it.panelColor || '#f8fafc'} colors={PAINT_COLORS} onChange={(c) => set({ panelColor: c })} />
+      <div className="fp-label">직원 쪽 책상 상판 색 <small>(대리석 무늬)</small></div>
+      <ColorPicker value={it.deskColor || '#d4d4d8'} colors={['#f8fafc', '#e5e7eb', '#d4d4d8', '#a8a29e', '#57534e', '#1f2937', '#e3caa5', '#a47148']} onChange={(c) => set({ deskColor: c })} />
+      <p className="fp-muted">파란 기둥·윗판 색은 아래 '색'에서 바꿔요.</p>
     </div>
   );
 }

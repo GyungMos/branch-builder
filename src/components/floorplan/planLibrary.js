@@ -73,6 +73,7 @@ export const PLAN_LIBRARY = [
   { key: 'meeting', cat: 'office', name: '회의 테이블(6~8인)', shape: 'table4', w: 2400, d: 1000, h: 720, clear: { f: 700, b: 700, l: 600, r: 600 }, color: '#d6b98c' },
   { key: 'sofa3', cat: 'office', name: '소파(3인)', shape: 'sofa', w: 2000, d: 850, h: 800, clear: { f: 500 }, color: '#8b5cf6' },
   { key: 'sofa1', cat: 'office', name: '소파(1인)', shape: 'sofa', w: 900, d: 850, h: 800, clear: { f: 500 }, color: '#8b5cf6' },
+  { key: 'receptionW', cat: 'office', name: '접수 카운터(로고형 2400)', shape: 'receptionW', w: 2400, d: 800, h: 1125, clear: { f: 1200, b: 900 }, color: '#1d4ed8', tip: '손님 쪽(앞)은 파란 기둥·흰 앞판(로고)·파란 윗판, 직원 쪽(뒤)은 높이 775mm 책상·서랍·수납칸. 오른쪽 칸에서 로고 그림·색을 바꿔요.' },
   { key: 'counter', cat: 'office', name: '접수 카운터', shape: 'counter', w: 2000, d: 700, h: 1050, clear: { f: 1200, b: 900 }, color: '#d6b98c', tip: '앞(손님 쪽) 1,200mm, 뒤(직원 쪽) 900mm 비워 두기.' },
   { key: 'water', cat: 'office', name: '정수기', shape: 'box', w: 350, d: 450, h: 1300, clear: { f: 500 }, color: '#7dd3fc' },
   { key: 'coffee', cat: 'office', name: '커피 머신 대', shape: 'box', w: 800, d: 500, h: 900, clear: { f: 600 }, color: '#a16207' },

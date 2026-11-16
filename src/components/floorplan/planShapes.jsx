@@ -389,6 +389,19 @@ export function ItemShape({ item, z = 0.05 }) {
         </g>
       );
     }
+    case 'receptionW': {
+      // 위에서 본 카운터: 앞쪽(아래) 파란 윗판 · 왼쪽 이어지는 띠 · 오른쪽 기둥 · 뒤쪽 책상과 서랍
+      const capD = d * (250 / 800); const ret = w * (150 / 2400); const pR = w * (100 / 2400);
+      return (
+        <g>
+          <rect x={-hw} y={-hd} width={w} height={d} fill="#e5e7eb" fillOpacity={0.6} stroke={c} strokeWidth={1.4} {...NS} />
+          <rect x={-hw} y={hd - capD} width={w} height={capD} fill={c} fillOpacity={0.85} {...NS} />
+          <rect x={-hw} y={-hd} width={ret} height={d - capD} fill={c} fillOpacity={0.85} {...NS} />
+          <rect x={hw - pR} y={-hd} width={pR} height={d - capD} fill="#f8fafc" stroke={c} strokeWidth={1} {...NS} />
+          {[1, 2, 3, 4].map(k => <path key={k} d={`M${-hw + ret + ((w - ret - pR) * k) / 5},${-hd} v${d * 0.5}`} {...line(c, { strokeDasharray: '4 3', strokeWidth: 0.8 })} />)}
+        </g>
+      );
+    }
     case 'counter':
       return (
         <g>

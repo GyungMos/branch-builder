@@ -66,7 +66,7 @@ export function makeItem(tpl, at = { x: 0, y: 0 }) {
   if (tpl.elev) it.elev = tpl.elev;
   if (tpl.prof) it.prof = { ...tpl.prof };
   // 조명 밝기·전력, 지붕 모양, 불투명 자동문
-  ['lm', 'watt', 'roofType', 'rise', 'material', 'opaque', 'ceilH', 'openUnder', 'railColor', 'postColor', 'noRail'].forEach(k => { if (tpl[k] !== undefined) it[k] = tpl[k]; });
+  ['lm', 'watt', 'roofType', 'rise', 'material', 'opaque', 'ceilH', 'openUnder', 'railColor', 'postColor', 'noRail', 'panelColor', 'deskColor', 'logoImg'].forEach(k => { if (tpl[k] !== undefined) it[k] = tpl[k]; });
   // 3D 모습: 모양 빌리기 / 사진 상자 / 3D 모델 파일
   if (tpl.look) it.look = tpl.look;
   if (tpl.faces) it.faces = { ...tpl.faces };
