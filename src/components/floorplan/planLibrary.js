@@ -100,7 +100,10 @@ export const PLAN_LIBRARY = [
   { key: 'locker', cat: 'storage', name: '사물함(6칸)', shape: 'locker', w: 900, d: 500, h: 1800, clear: { f: 700 }, color: '#94a3b8' },
 
   // 문·창·기둥
-  { key: 'door', cat: 'arch', name: '여닫이문(900)', shape: 'door', w: 900, d: 150, h: 2100, clear: { f: 900 }, color: '#f59e0b', kind: 'arch', tip: '벽 위에 놓고, 문이 열리는 쪽(작업 공간)이 아래로 가요. 돌리기로 방향을 바꿔요.' },
+  { key: 'door', cat: 'arch', name: '사무실 문(여닫이 900)', leafColor: '#c8a273', shape: 'door', w: 900, d: 150, h: 2100, clear: { f: 900 }, color: '#f59e0b', kind: 'arch', tip: '벽 위에 놓고, 문이 열리는 쪽(작업 공간)이 아래로 가요. 돌리기로 방향을 바꿔요.' },
+  { key: 'doorWc', cat: 'arch', name: '화장실 문(여닫이 800)', shape: 'door', w: 800, d: 150, h: 2100, clear: { f: 800 }, color: '#f59e0b', leafColor: '#f8fafc', kind: 'arch', tip: '오른쪽 칸에서 열리는 쪽(앞·뒤)과 경첩(왼쪽·오른쪽)을 바꿔요.' },
+  { key: 'doorStore', cat: 'arch', name: '창고 문(여닫이 1000)', shape: 'door', w: 1000, d: 150, h: 2100, clear: { f: 1000 }, color: '#f59e0b', leafColor: '#9ca3af', kind: 'arch' },
+  { key: 'doorSteel', cat: 'arch', name: '철문·방화문(900)', shape: 'door', w: 900, d: 150, h: 2100, clear: { f: 900 }, color: '#f59e0b', leafColor: '#64748b', kind: 'arch', tip: '계단실·전기실·보일러실처럼 불이 번지지 않게 막는 문이에요.' },
   { key: 'door2', cat: 'arch', name: '양개문(1800)', shape: 'door2', w: 1800, d: 150, h: 2100, clear: { f: 900 }, color: '#f59e0b', kind: 'arch' },
   { key: 'autodoor', cat: 'arch', name: '자동문(양개 1800)', shape: 'autodoor', w: 1800, d: 150, h: 2100, clear: { f: 1200, b: 1200 }, color: '#0ea5e9', kind: 'arch', tip: '가운데에서 양쪽으로 열리는 유리 자동문. 고객 출입구에 많이 써요. 앞뒤 1,200mm 비워 두기.' },
   { key: 'autodoor24', cat: 'arch', name: '자동문(양개 2400)', shape: 'autodoor', w: 2400, d: 150, h: 2400, clear: { f: 1500, b: 1500 }, color: '#0ea5e9', kind: 'arch', tip: '넓은 출입구용. 짐·카트가 드나드는 곳에 좋아요.' },
@@ -352,3 +355,7 @@ export const STAIR_COLOR_DEFAULTS = { rail: '#a47148', post: '#374151' };
 export const STAIR_COLORS = ['#e3caa5', '#c8a273', '#a47148', '#6b4f3a', '#d6d3d1', '#94a3b8', '#64748b', '#374151', '#f8fafc'];
 export const RAIL_COLORS = ['#e3caa5', '#c8a273', '#a47148', '#6b4f3a', '#374151', '#111827', '#d1d5db', '#f8fafc'];
 export const POST_COLORS = ['#374151', '#111827', '#64748b', '#d1d5db', '#f8fafc', '#a47148', '#c8a273'];
+
+/** 문짝 색 */
+export const LEAF_COLORS = ['#e3caa5', '#c8a273', '#a47148', '#6b4f3a', '#f8fafc', '#d1d5db', '#9ca3af', '#64748b', '#1f2937', '#1d4ed8'];
+export const SWING_DOOR_SHAPES = ['door', 'door2', 'glassdoor'];

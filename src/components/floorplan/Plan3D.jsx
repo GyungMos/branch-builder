@@ -411,6 +411,44 @@ function buildReception(g, it, kit) {
   }
 }
 
+/**
+ * 여닫이문(한쪽·양쪽·유리): 문틀 + 문짝 + 손잡이
+ * - 경첩은 왼쪽(-x), 좌우 뒤집기면 오른쪽 / 열리는 쪽은 앞(+z), swingBack이면 뒤(-z)
+ * - open3d면 75° 열린 모습 (어느 쪽으로 열리는지 보기 좋게)
+ */
+function buildSwingDoor(g, it, kit, glass) {
+  const { w, d } = it; const hw = w / 2;
+  const dh = it.h || 2100; const fr = 50;
+  const frame = kit.mat(shade(it.leafColor || '#c8a273', -0.25), { roughness: 0.6 });
+  const leafM = glass ? kit.glass() : kit.mat(it.leafColor || '#c8a273', { roughness: 0.55 });
+  const metal = kit.mat('#d1d5db', { metalness: 0.7, roughness: 0.3 });
+  const T = Math.max(d, 100) + 20;
+  box(g, fr, dh, T, -hw + fr / 2, 0, 0, frame);
+  box(g, fr, dh, T, hw - fr / 2, 0, 0, frame);
+  box(g, w, fr, T, 0, dh - fr, 0, frame);
+  const sg = it.swingBack ? -1 : 1;
+  const ang = it.open3d ? (75 * Math.PI) / 180 : 0;
+  const leaves = it.shape === 'door2'
+    ? [{ x: -hw + fr, dir: 1, lw: w / 2 - fr }, { x: hw - fr, dir: -1, lw: w / 2 - fr }]
+    : [{ x: -hw + fr, dir: 1, lw: w - fr * 2 }];
+  leaves.forEach(({ x, dir, lw }) => {
+    const pivot = new THREE.Group();
+    pivot.position.set(x * M, 0, 0);
+    const lt = glass ? 12 : 40;
+    const leaf = box(pivot, lw - 4, dh - fr - 10, lt, (dir * lw) / 2, 5, 0, leafM, !glass);
+    if (leaf && glass) leaf.renderOrder = 2;
+    if (glass) {
+      // 유리문: 위아래 테두리
+      box(pivot, lw, 60, 30, (dir * lw) / 2, 5, 0, frame);
+      box(pivot, lw, 60, 30, (dir * lw) / 2, dh - fr - 65, 0, frame);
+    }
+    // 손잡이 (양쪽 면으로 튀어나옴)
+    box(pivot, 20, glass ? 400 : 140, lt + 90, dir * (lw - 70), glass ? 800 : 980, 0, metal);
+    pivot.rotation.y = -dir * sg * ang;
+    g.add(pivot);
+  });
+}
+
 /** 3D 모델 파일(GLB) 비품: 읽는 동안은 흐린 상자, 다 읽으면 크기에 맞춰 바꿔 끼움 */
 function buildModelItem(it, ctx) {
   const g = new THREE.Group();
@@ -670,13 +708,18 @@ function buildItem(src, ctx) {
       g.add(slab);
       break;
     }
-    case 'door': case 'door2': case 'sliding': {
+    case 'door': case 'door2':
+      buildSwingDoor(g, it, kit, false);
+      break;
+    case 'sliding': {
       const dh = h || 2100;
-      box(g, w, dh, 45, 0, 0, 0, kit.mat(c, { roughness: 0.6 }));
-      if (it.shape === 'door2') box(g, 20, dh, 60, 0, 0, 0, darker);
+      box(g, w, dh, 45, 0, 0, 0, kit.mat(it.leafColor || c, { roughness: 0.6 }));
       break;
     }
-    case 'glassdoor': case 'autodoor': case 'glasspanel': case 'autodoor1': {
+    case 'glassdoor':
+      buildSwingDoor(g, it, kit, true);
+      break;
+    case 'autodoor': case 'glasspanel': case 'autodoor1': {
       const dh = h || (it.shape === 'glasspanel' ? 2400 : 2100);
       const leaf = it.opaque ? kit.mat(c, { roughness: 0.5 }) : kit.glass();
       if (it.shape === 'autodoor') {

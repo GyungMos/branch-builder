@@ -442,23 +442,27 @@ export function ItemShape({ item, z = 0.05 }) {
           {[-w / 6, w / 6].map((x, i) => <path key={i} d={`M${x},${-hd} V${hd}`} {...line(c)} />)}
         </g>
       );
-    case 'door':
+    case 'door': {
+      // 여닫이문: 경첩은 왼쪽(좌우 뒤집기로 오른쪽), 열리는 쪽은 앞(아래) 또는 뒤(위)
+      const sg = item.swingBack ? -1 : 1; const e = sg * hd; const sw = sg > 0 ? 0 : 1;
       return (
         <g>
           <rect x={-hw} y={-hd} width={w} height={d} fill="var(--fp-bg)" stroke="none" />
           <path d={`M${-hw},${-hd} V${hd} M${hw},${-hd} V${hd}`} {...line(c, { strokeWidth: 2 })} />
-          <path d={`M${-hw},${hd} V${hd + w}`} {...line(c, { strokeWidth: 2.2 })} />
-          <path d={`M${-hw},${hd + w} A${w},${w} 0 0 0 ${hw},${hd}`} {...line(c, { strokeDasharray: '4 3' })} />
+          <path d={`M${-hw},${e} V${e + sg * w}`} {...line(item.leafColor && item.leafColor !== '#f8fafc' ? item.leafColor : c, { strokeWidth: 2.6 })} />
+          <path d={`M${-hw},${e + sg * w} A${w},${w} 0 0 ${sw} ${hw},${e}`} {...line(c, { strokeDasharray: '4 3' })} />
         </g>
       );
+    }
     case 'door2': {
       const h2 = w / 2;
+      const sg = item.swingBack ? -1 : 1; const e = sg * hd; const sw = sg > 0 ? 0 : 1;
       return (
         <g>
           <rect x={-hw} y={-hd} width={w} height={d} fill="var(--fp-bg)" stroke="none" />
           <path d={`M${-hw},${-hd} V${hd} M${hw},${-hd} V${hd}`} {...line(c, { strokeWidth: 2 })} />
-          <path d={`M${-hw},${hd} V${hd + h2} M${hw},${hd} V${hd + h2}`} {...line(c, { strokeWidth: 2.2 })} />
-          <path d={`M${-hw},${hd + h2} A${h2},${h2} 0 0 0 0,${hd} A${h2},${h2} 0 0 0 ${hw},${hd + h2}`} {...line(c, { strokeDasharray: '4 3' })} />
+          <path d={`M${-hw},${e} V${e + sg * h2} M${hw},${e} V${e + sg * h2}`} {...line(c, { strokeWidth: 2.2 })} />
+          <path d={`M${-hw},${e + sg * h2} A${h2},${h2} 0 0 ${sw} 0,${e} A${h2},${h2} 0 0 ${sw} ${hw},${e + sg * h2}`} {...line(c, { strokeDasharray: '4 3' })} />
         </g>
       );
     }
@@ -777,15 +781,17 @@ export function ItemShape({ item, z = 0.05 }) {
           <path d={`M${-hw},0 H${hw}`} {...line(c, { strokeOpacity: 0.7 })} />
         </g>
       );
-    case 'glassdoor':
+    case 'glassdoor': {
+      const sg = item.swingBack ? -1 : 1; const e = sg * hd; const sw = sg > 0 ? 0 : 1;
       return (
         <g>
           <rect x={-hw} y={-hd} width={w} height={d} fill="var(--fp-bg)" stroke="none" />
           <path d={`M${-hw},${-hd} V${hd} M${hw},${-hd} V${hd}`} {...line(c, { strokeWidth: 2 })} />
-          <rect x={-hw} y={hd} width={Math.max(20, d * 0.35)} height={w} fill="#bae6fd" fillOpacity={0.6} stroke={c} strokeWidth={1.4} {...NS} />
-          <path d={`M${-hw},${hd + w} A${w},${w} 0 0 0 ${hw},${hd}`} {...line(c, { strokeDasharray: '4 3' })} />
+          <rect x={-hw} y={sg > 0 ? hd : -hd - w} width={Math.max(20, d * 0.35)} height={w} fill="#bae6fd" fillOpacity={0.6} stroke={c} strokeWidth={1.4} {...NS} />
+          <path d={`M${-hw},${e + sg * w} A${w},${w} 0 0 ${sw} ${hw},${e}`} {...line(c, { strokeDasharray: '4 3' })} />
         </g>
       );
+    }
     case 'autodoor1': {
       // 편개 자동문: 문짝 하나가 오른쪽(벽 쪽)으로 열림. 점선 = 문짝이 들어가는 자리
       const pt = Math.max(20, d * 0.25);

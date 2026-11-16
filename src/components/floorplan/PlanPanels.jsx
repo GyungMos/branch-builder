@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  PLAN_CATEGORIES, PLAN_LIBRARY, ITEM_COLORS, guessLibraryFromName, FLOOR_TYPES, floorTypeOf, WALL_TYPES, wallTypeOf, WALL_COLORS, isVertical, hasFaces, STEEL_SIZES, steelProfile, PAINT_COLORS, LOUVER_COLORS, ROOF_TYPES, ROOF_MATERIALS, MEP_LINE_TYPES, mepLineTypeOf, STAIR_SHAPES, STAIR_COLOR_DEFAULTS, STAIR_COLORS, RAIL_COLORS, POST_COLORS,
+  PLAN_CATEGORIES, PLAN_LIBRARY, ITEM_COLORS, guessLibraryFromName, FLOOR_TYPES, floorTypeOf, WALL_TYPES, wallTypeOf, WALL_COLORS, isVertical, hasFaces, STEEL_SIZES, steelProfile, PAINT_COLORS, LOUVER_COLORS, ROOF_TYPES, ROOF_MATERIALS, MEP_LINE_TYPES, mepLineTypeOf, STAIR_SHAPES, STAIR_COLOR_DEFAULTS, STAIR_COLORS, RAIL_COLORS, POST_COLORS, LEAF_COLORS, SWING_DOOR_SHAPES,
 } from './planLibrary';
 import { LookSelect, FacePhotos, ModelPicker, inspectModel } from './Plan3DInputs';
 import { ShapeThumb, stairArm } from './planShapes';
@@ -47,7 +47,7 @@ const tplOf = (it) => ({
   color: it.color, points: it.points, baseW: it.baseW, baseD: it.baseD, img: it.img, arm: it.arm, elev: it.elev,
   look: it.look, faces: it.faces, model: it.model, modelRot: it.modelRot, prof: it.prof,
   lm: it.lm, watt: it.watt, roofType: it.roofType, rise: it.rise, material: it.material, opaque: it.opaque, openUnder: it.openUnder,
-  railColor: it.railColor, postColor: it.postColor, noRail: it.noRail, panelColor: it.panelColor, deskColor: it.deskColor, logoImg: it.logoImg,
+  railColor: it.railColor, postColor: it.postColor, noRail: it.noRail, panelColor: it.panelColor, deskColor: it.deskColor, logoImg: it.logoImg, leafColor: it.leafColor, swingBack: it.swingBack, open3d: it.open3d,
 });
 
 /* ───────── 왼쪽: 비품 목록 ───────── */
@@ -339,6 +339,7 @@ export function InspectorPanel({
       )}
 
       {it.shape === 'receptionW' && <ReceptionOptions it={it} set={set} demoMode={demoMode} />}
+      {SWING_DOOR_SHAPES.includes(it.shape) && <DoorOptions it={it} set={set} />}
       {STAIR_SHAPES.includes(it.shape) ? <StairColors it={it} set={set} /> : (
         <>
           <div className="fp-label">{isZone ? '테두리·이름 색' : '색'}</div>
@@ -576,6 +577,43 @@ function Item3DSection({ it, set, demoMode }) {
           {(it.model || hasFaces(it)) && it.look && <p className="fp-muted">모델·사진이 있으면 그것이 먼저 보여요.</p>}
         </>
       )}
+    </div>
+  );
+}
+
+/* 여닫이문: 열리는 쪽(앞·뒤), 경첩(왼쪽·오른쪽), 문짝 색, 3D에서 열린 모습 */
+function DoorOptions({ it, set }) {
+  const back = Boolean(it.swingBack);
+  // 열리는 쪽을 바꾸면 비워 둘 자리(작업 공간)도 같이 옮김
+  const swing = (toBack) => {
+    if (toBack === back) return;
+    const c = it.clear || {};
+    set({ swingBack: toBack, clear: { ...c, f: c.b || 0, b: c.f || 0 } });
+  };
+  return (
+    <div className="fp-3d-sec">
+      <div className="fp-label">문이 열리는 쪽 <small>(도면에서 점선 반원이 있는 쪽)</small></div>
+      <div className="fp-btn-row">
+        <button type="button" className={`filter-pill${!back ? ' on' : ''}`} onClick={() => swing(false)}>앞쪽(아래)으로</button>
+        <button type="button" className={`filter-pill${back ? ' on' : ''}`} onClick={() => swing(true)}>뒤쪽(위)으로</button>
+      </div>
+      {it.shape !== 'door2' && (
+        <>
+          <div className="fp-label">경첩(문이 돌아가는 쪽)</div>
+          <div className="fp-btn-row">
+            <button type="button" className={`filter-pill${!it.flip ? ' on' : ''}`} onClick={() => set({ flip: false })}>왼쪽</button>
+            <button type="button" className={`filter-pill${it.flip ? ' on' : ''}`} onClick={() => set({ flip: true })}>오른쪽</button>
+          </div>
+        </>
+      )}
+      {it.shape !== 'glassdoor' && (
+        <>
+          <div className="fp-label">문짝 색</div>
+          <ColorPicker value={it.leafColor || '#c8a273'} colors={LEAF_COLORS} onChange={(c) => set({ leafColor: c })} />
+        </>
+      )}
+      <label className="fp-check"><input type="checkbox" checked={Boolean(it.open3d)} onChange={(e) => set({ open3d: e.target.checked })} /> 3D에서 열린 모습으로 보기</label>
+      <p className="fp-muted">방 안쪽으로 열리게 하려면 점선 반원이 방 쪽으로 오게 고르세요. 문을 벽 위에 놓으면 3D에서 그 자리 벽이 뚫려요.</p>
     </div>
   );
 }
