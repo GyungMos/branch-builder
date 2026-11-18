@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState } from 'react';
 import {
   PLAN_CATEGORIES, PLAN_LIBRARY, ITEM_COLORS, guessLibraryFromName, FLOOR_TYPES, floorTypeOf, WALL_TYPES, wallTypeOf, WALL_COLORS, isVertical, hasFaces, STEEL_SIZES, steelProfile, PAINT_COLORS, LOUVER_COLORS, ROOF_TYPES, ROOF_MATERIALS, MEP_LINE_TYPES, mepLineTypeOf, STAIR_SHAPES, STAIR_COLOR_DEFAULTS, STAIR_COLORS, RAIL_COLORS, POST_COLORS, LEAF_COLORS, SWING_DOOR_SHAPES,
+  isOpening, isFireItem, fireLife, libraryByKey,
 } from './planLibrary';
 import { LookSelect, FacePhotos, ModelPicker, inspectModel } from './Plan3DInputs';
 import { ShapeThumb, stairArm } from './planShapes';
-import { areaText, fmtM, neededHeight, stairInfo, zoneLighting, stairDistanceForHeight, josa } from './planGeometry';
+import { fmtM, neededHeight, stairInfo, zoneLighting, stairDistanceForHeight, josa, areaTextOf, zoneArea, bodyPolygon, zoneFromWorldPts, parseAxes, nearestAxis, fireStatus } from './planGeometry';
 
 /** 색 고르기: 자주 쓰는 색 + 직접 고르기 */
 function ColorPicker({ value, colors, onChange, onReset, resetLabel = '기본 색' }) {
@@ -47,7 +48,7 @@ const tplOf = (it) => ({
   color: it.color, points: it.points, baseW: it.baseW, baseD: it.baseD, img: it.img, arm: it.arm, elev: it.elev,
   look: it.look, faces: it.faces, model: it.model, modelRot: it.modelRot, prof: it.prof,
   lm: it.lm, watt: it.watt, roofType: it.roofType, rise: it.rise, material: it.material, opaque: it.opaque, openUnder: it.openUnder,
-  railColor: it.railColor, postColor: it.postColor, noRail: it.noRail, panelColor: it.panelColor, deskColor: it.deskColor, logoImg: it.logoImg, leafColor: it.leafColor, swingBack: it.swingBack, open3d: it.open3d,
+  railColor: it.railColor, postColor: it.postColor, noRail: it.noRail, panelColor: it.panelColor, deskColor: it.deskColor, logoImg: it.logoImg, leafColor: it.leafColor, swingBack: it.swingBack, open3d: it.open3d, fire: it.fire, lifeYears: it.lifeYears,
 });
 
 /* ───────── 왼쪽: 비품 목록 ───────── */
@@ -132,7 +133,7 @@ export function LibraryPanel({ onPick, onCustom, myLibrary, onRemoveTemplate, eq
 /* ───────── 오른쪽: 고른 것 고치기 ───────── */
 export function InspectorPanel({
   sel, items, wall, dim, equipments, ceiling, vehicleH, levelH, levelName, aboveName, onCopyUp, demoMode, onAllWalls, onShow3d, line, onLine, allItems = [],
-  onItems, onWall, onDelete, onDuplicate, onRotate, onSaveTemplate, onClose, onAlign,
+  onItems, onWall, onDelete, onDuplicate, onRotate, onSaveTemplate, onClose, onAlign, axes, onSnapWall,
 }) {
   if (sel.kind === 'wall' && wall) {
     const len = Math.round(Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1));
@@ -257,6 +258,7 @@ export function InspectorPanel({
           {(it.shape === 'stairsL' || it.shape === 'stairsU') && <Num label="계단 폭" value={Math.round(stairArm(it))} onChange={(v) => v && set({ arm: v })} />}
         </div>
       )}
+      {!isText && !isRoof && axes && <AxisDistance it={it} axes={axes} set={set} />}
       {(it.shape === 'hbeam' || it.shape === 'sqpipe') && (
         <>
           <label className="fp-field">
@@ -293,7 +295,8 @@ export function InspectorPanel({
           {it.shape === 'elevator' ? `${aboveName}에도 같은 자리에 놓기` : `${aboveName}에 뚫린 곳(계단 구멍) 표시`}
         </button>
       )}
-      {isZone && <p className="fp-area">넓이 {areaText(it.w, it.d)}</p>}
+      {isZone && <p className="fp-area">넓이 {areaTextOf(it)}</p>}
+      {isZone && <ZoneShapeEditor key={`${it.id}-${(it.points || []).length}`} it={it} set={set} />}
       {isZone && <FloorEditor it={it} set={set} />}
       {isZone && <ZoneCeilingLight it={it} set={set} allItems={allItems} />}
       {isRoof && <RoofEditor it={it} set={set} levelH={levelH} />}
@@ -318,6 +321,12 @@ export function InspectorPanel({
         <button type="button" className="filter-pill" onClick={() => onRotate(15)}>↻ 15°</button>
         {!isText && <button type="button" className="filter-pill" onClick={() => set({ flip: !it.flip })}>좌우 뒤집기</button>}
       </div>
+      {isOpening(it) && onSnapWall && (
+        <>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => onSnapWall(it)}>가까운 벽에 맞추기</button>
+          <p className="fp-muted">문·창은 벽 가까이 끌면 벽 가운데 줄에 저절로 붙고 벽 방향으로 돌아요. 안 붙게 하려면 Alt를 누른 채 끌어요.</p>
+        </>
+      )}
 
       {!isZone && !isText && !isRoof && (
         <>
@@ -340,6 +349,7 @@ export function InspectorPanel({
         </>
       )}
 
+      {isFireItem(it) && <FireCheck it={it} set={set} />}
       {it.shape === 'receptionW' && <ReceptionOptions it={it} set={set} demoMode={demoMode} />}
       {SWING_DOOR_SHAPES.includes(it.shape) && <DoorOptions it={it} set={set} />}
       {STAIR_SHAPES.includes(it.shape) ? <StairColors it={it} set={set} /> : (
@@ -732,6 +742,154 @@ function StairCheck({ it, levelH, levelName }) {
 }
 
 /* 구역 바닥 마감: 종류·타일 크기·색 */
+/** 가장 가까운 축선에서 거리 (가운데 기준). 숫자를 바꾸면 그 거리로 옮김 */
+function AxisDistance({ it, axes, set }) {
+  const nx = nearestAxis(axes?.x, it.x); const ny = nearestAxis(axes?.y, it.y);
+  if (!nx && !ny) return null;
+  return (
+    <>
+      <div className="fp-label">축선에서 거리 <small>(가운데 기준, 오른쪽·아래가 +)</small></div>
+      <div className="fp-grid2">
+        {nx && <Num label={`${nx.axis.name}에서 가로`} min={-1000000} value={nx.dist} onChange={(v) => set({ x: nx.axis.pos + (Number(v) || 0) })} />}
+        {ny && <Num label={`${ny.axis.name}에서 세로`} min={-1000000} value={ny.dist} onChange={(v) => set({ y: ny.axis.pos + (Number(v) || 0) })} />}
+      </div>
+    </>
+  );
+}
+
+const edgeArrow = (dx, dy) => (Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? '→' : '←') : (dy >= 0 ? '↓' : '↑'));
+
+/** 구역 모양: 네모 ↔ 꼭짓점(ㄱ·ㄷ자). 변 길이를 적으면 그 변 끝쪽이 같이 밀려요 */
+function ZoneShapeEditor({ it, set }) {
+  const poly = it.points?.length >= 3;
+  if (!poly) {
+    return (
+      <>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => set(zoneFromWorldPts(bodyPolygon(it)))}>꼭짓점으로 모양 고치기 (ㄱ·ㄷ자)</button>
+        <p className="fp-muted">누르면 네 모서리에 동그라미가 생겨요. 동그라미를 끌어 옮기고, 변 가운데 마름모를 끌면 꼭짓점이 하나 더 생겨요.</p>
+      </>
+    );
+  }
+  const pts = bodyPolygon(it);
+  const n = pts.length;
+  const setLen = (i, L) => {
+    const a = pts[i]; const b = pts[(i + 1) % n];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (!L || L < 50 || !len) return;
+    const ux = (b.x - a.x) / len; const uy = (b.y - a.y) / len; const delta = L - len;
+    const pb = b.x * ux + b.y * uy;
+    // 이 변 끝점보다 앞쪽(변 방향)에 있는 꼭짓점들을 같이 밀어서 다른 변의 방향은 그대로
+    set(zoneFromWorldPts(pts.map((p, k) => (k !== i && p.x * ux + p.y * uy >= pb - 1 ? { x: p.x + ux * delta, y: p.y + uy * delta } : p))));
+  };
+  const del = (i) => { if (n > 3) set(zoneFromWorldPts(pts.filter((_, k) => k !== i))); };
+  return (
+    <>
+      <div className="fp-label">변 길이 <small>(꼭짓점 {n}개 · 적고 Enter)</small></div>
+      <div className="fp-edge-list">
+        {pts.map((p, i) => {
+          const q = pts[(i + 1) % n];
+          const L = Math.round(Math.hypot(q.x - p.x, q.y - p.y));
+          return (
+            <div key={`${i}-${L}`} className="fp-edge-row">
+              <span>{i + 1}→{((i + 1) % n) + 1} {edgeArrow(q.x - p.x, q.y - p.y)}</span>
+              <input type="number" step="10" min="50" defaultValue={L}
+                onBlur={(e) => { const v = Number(e.target.value); if (v && v !== L) setLen(i, v); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} />
+              <em>mm</em>
+              <button type="button" className="fp-edge-del" title={`꼭짓점 ${i + 1} 지우기`} disabled={n <= 3} onClick={() => del(i)}>×</button>
+            </div>
+          );
+        })}
+      </div>
+      <button type="button" className="btn btn-ghost btn-sm" onClick={() => set({ points: null, baseW: null, baseD: null })}>네모로 되돌리기</button>
+    </>
+  );
+}
+
+const FIRE_LABEL = { bad: '🔴 교체 필요', warn: '🟡 주의', ok: '🟢 괜찮음' };
+const todayStr = () => new Date().toLocaleDateString('sv-SE');
+
+/** 소화기 점검: 제조년월·최근 점검일 → 교체 필요(빨강) / 주의(노랑) */
+function FireCheck({ it, set }) {
+  const life = fireLife(it);
+  const st = fireStatus(it, undefined, life);
+  return (
+    <>
+      <div className="fp-label">소방 점검</div>
+      <div className="fp-grid2">
+        <label className="fp-field"><span>제조년월</span><input type="month" value={it.mfg || ''} onChange={(e) => set({ mfg: e.target.value || null })} /></label>
+        <label className="fp-field"><span>최근 점검일</span><input type="date" value={it.lastCheck || ''} onChange={(e) => set({ lastCheck: e.target.value || null })} /></label>
+        <Num label="내용연수" unit="년" step={1} value={life || ''} onChange={(v) => set({ lifeYears: v || 0 })} />
+      </div>
+      <p className={`fp-fire fp-fire-${st.level}`}><b>{FIRE_LABEL[st.level]}</b> {st.text}</p>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={() => set({ lastCheck: todayStr() })}>오늘 점검함</button>
+      <p className="fp-muted">분말소화기는 만든 지 10년이 지나면 바꿔야 해요(내용연수). 점검은 한 달에 한 번 압력계·안전핀을 봐요.</p>
+    </>
+  );
+}
+
+/** 축선(기둥 중심선): 간격을 적으면 X1·X2… / Y1·Y2… 줄이 생김 */
+function AxisEditor({ plan, origin, onPlan, onAxisColumns }) {
+  const ax = plan.axes;
+  const [xText, setXText] = useState(ax?.xText || '');
+  const [yText, setYText] = useState(ax?.yText || '');
+  const [ox, setOx] = useState(ax?.ox ?? origin?.x ?? 0);
+  const [oy, setOy] = useState(ax?.oy ?? origin?.y ?? 0);
+  const [col, setCol] = useState('hcol250');
+  const apply = () => {
+    const x = parseAxes(xText, 'X', Number(ox) || 0); const y = parseAxes(yText, 'Y', Number(oy) || 0);
+    if (!x.length && !y.length) { alert('간격을 적어 주세요. 예: 8000 8000 6000'); return; }
+    onPlan({ axes: { x, y, xText, yText, ox: Number(ox) || 0, oy: Number(oy) || 0 } });
+  };
+  return (
+    <>
+      <div className="fp-panel-head fp-sub"><strong>축선 (기둥 중심선)</strong></div>
+      <label className="fp-field"><span>가로 방향 간격 (X축, 왼쪽부터)</span><input type="text" value={xText} onChange={(e) => setXText(e.target.value)} placeholder="예: 8000 8000 6000 또는 X1 3200 X1-1 3800 X2" /></label>
+      <label className="fp-field"><span>세로 방향 간격 (Y축, 위부터)</span><input type="text" value={yText} onChange={(e) => setYText(e.target.value)} placeholder="예: 6000 6000" /></label>
+      <div className="fp-grid2">
+        <Num label="시작 X" step={50} min={-1000000} value={ox} onChange={(v) => setOx(v ?? 0)} />
+        <Num label="시작 Y" step={50} min={-1000000} value={oy} onChange={(v) => setOy(v ?? 0)} />
+      </div>
+      <div className="fp-btn-row">
+        <button type="button" className="btn btn-primary btn-sm" onClick={apply}>{ax ? '축선 고치기' : '축선 그리기'}</button>
+        {origin && <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setOx(origin.x); setOy(origin.y); }}>시작점 = 벽 왼쪽 위</button>}
+        {ax && <button type="button" className="btn btn-ghost btn-sm fp-danger-text" onClick={() => onPlan({ axes: null })}>축선 지우기</button>}
+      </div>
+      {ax?.x?.length > 0 && ax?.y?.length > 0 && onAxisColumns && (
+        <>
+          <div className="fp-inline">
+            <select value={col} onChange={(e) => setCol(e.target.value)} aria-label="놓을 기둥 규격">
+              {['hcol200', 'hcol250', 'hcol300', 'sqcol100', 'sqcol150'].map(k => <option key={k} value={k}>{libraryByKey(k)?.name || k}</option>)}
+            </select>
+          </div>
+          <div className="fp-btn-row">
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => onAxisColumns(col, true)}>둘레 교차점에 기둥 놓기</button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => onAxisColumns(col, false)}>모든 교차점에</button>
+          </div>
+        </>
+      )}
+      <p className="fp-muted">숫자는 앞 축선에서 다음 축선까지 간격(mm)이에요. 이름을 적으면 그 이름으로(X1-1처럼). 벽을 그릴 때 축선·교차점에 저절로 붙고, 비품을 고르면 가까운 축선에서 거리가 나와요.</p>
+    </>
+  );
+}
+
+/** 방향과 길이로 구역 만들기: 우 25200 하 12000 좌 25200 */
+function DirZoneMaker({ onDirZone }) {
+  const [text, setText] = useState('');
+  const [name, setName] = useState('');
+  return (
+    <>
+      <div className="fp-panel-head fp-sub"><strong>방향·길이로 구역 만들기</strong></div>
+      <label className="fp-field"><span>이름</span><input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 정비동" /></label>
+      <label className="fp-field"><span>방향과 길이 (우·좌·상·하 + mm)</span>
+        <textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="예: 우 25200 하 12000 좌 25200 (마지막 변은 저절로 닫혀요)" />
+      </label>
+      <button type="button" className="btn btn-secondary btn-sm" disabled={!text.trim()} onClick={() => { if (onDirZone(text, name.trim())) { setText(''); setName(''); } }}>구역 만들기</button>
+      <p className="fp-muted">축선이 있으면 X1·Y1 교차점, 없으면 벽 왼쪽 위에서 시작해요. ㄱ자는 '우 20000 하 8000 좌 8000 하 6000 좌 12000'처럼 적어요. R·L·U·D나 →←↑↓도 돼요.</p>
+    </>
+  );
+}
+
 function FloorEditor({ it, set }) {
   const f = it.floor || null;
   const ft = f ? floorTypeOf(f.type) : null;
@@ -742,7 +900,7 @@ function FloorEditor({ it, set }) {
     set({ floor: { type, color: f?.type === type ? f.color : t.colors[Math.min(1, t.colors.length - 1)], ...(size ? { tw: size[0], td: size[1] } : {}) } });
   };
   const setF = (patch) => set({ floor: { ...f, ...patch } });
-  const n = f && ft?.sizes ? tileCount(it.w, it.d, f.tw, f.td) : 0;
+  const n = f && ft?.sizes ? tileCount(zoneArea(it), 1, f.tw, f.td) : 0;
   return (
     <>
       <div className="fp-label">바닥 마감</div>
@@ -780,7 +938,7 @@ function FloorEditor({ it, set }) {
 }
 
 /* ───────── 오른쪽: 아무것도 안 골랐을 때 (도면·층고·건물) ───────── */
-export function PlanSettingsPanel({ plan, levelName, levelH, isUpper, belowZoneCount = 0, onCopyBelowZones, onPlan, onPickBg, onCalibrate, onRoom }) {
+export function PlanSettingsPanel({ plan, levelName, levelH, isUpper, belowZoneCount = 0, onCopyBelowZones, onPlan, onPickBg, onCalibrate, onRoom, axisOrigin, onAxisColumns, onDirZone }) {
   const [roomW, setRoomW] = useState('');
   const [roomD, setRoomD] = useState('');
   const bg = plan.bg;
@@ -841,12 +999,15 @@ export function PlanSettingsPanel({ plan, levelName, levelH, isUpper, belowZoneC
         <Num label="벽 두께" value={plan.wallT || 200} onChange={(v) => onPlan({ wallT: v || 200 })} />
       </div>
       <button type="button" className="btn btn-secondary btn-sm" disabled={!roomW || !roomD} onClick={() => { onRoom(Number(roomW), Number(roomD), plan.wallT || 200); setRoomW(''); setRoomD(''); }}>네모 벽 만들기</button>
+
+      <AxisEditor key={`${levelName}-${plan.axes ? 'a' : 'n'}`} plan={plan} origin={axisOrigin} onPlan={onPlan} onAxisColumns={onAxisColumns} />
+      {onDirZone && <DirZoneMaker onDirZone={onDirZone} />}
     </section>
   );
 }
 
 /* ───────── 오른쪽 아래: 점검(경고)·개수 세기 ───────── */
-export function ChecksPanel({ warnings, items, walls = [], lines = [], equipments, onFocus, onPlaceEquipment }) {
+export function ChecksPanel({ warnings, items, walls = [], lines = [], equipments, onFocus, onPlaceEquipment, onFireLayer }) {
   const lightRows = useMemo(() => items.filter(i => i.kind === 'zone').map(z => ({ z, L: zoneLighting(z, items) })).filter(r => r.L.count), [items]);
   const lineSum = useMemo(() => MEP_LINE_TYPES.map(t => ({ t, len: lines.filter(l => (l.type || 'elec') === t.type).reduce((s, l) => s + (l.pts || []).reduce((a, q, i, arr) => (i ? a + Math.hypot(q.x - arr[i - 1].x, q.y - arr[i - 1].y) : 0), 0), 0) })).filter(r => r.len > 0), [lines]);
   const finishes = useMemo(() => {
@@ -855,8 +1016,8 @@ export function ChecksPanel({ warnings, items, walls = [], lines = [], equipment
       const ft = floorTypeOf(z.floor.type);
       const key = ft?.sizes ? `${ft.label} ${z.floor.tw}×${z.floor.td}` : (ft?.label || '바닥');
       const cur = m.get(key) || { area: 0, tiles: 0, sized: Boolean(ft?.sizes) };
-      cur.area += (z.w * z.d) / 1e6;
-      if (ft?.sizes) cur.tiles += tileCount(z.w, z.d, z.floor.tw, z.floor.td);
+      cur.area += zoneArea(z) / 1e6;
+      if (ft?.sizes) cur.tiles += tileCount(zoneArea(z), 1, z.floor.tw, z.floor.td);
       m.set(key, cur);
     });
     return [...m.entries()];
@@ -870,6 +1031,8 @@ export function ChecksPanel({ warnings, items, walls = [], lines = [], equipment
     return [...m.entries()];
   }, [walls]);
   const [tab, setTab] = useState('warn');
+  const fireRows = useMemo(() => items.filter(isFireItem).map(it => ({ it, st: fireStatus(it, undefined, fireLife(it)) })).sort((a, b) => ['bad', 'warn', 'ok'].indexOf(a.st.level) - ['bad', 'warn', 'ok'].indexOf(b.st.level)), [items]);
+  const fireBad = fireRows.filter(r => r.st.level !== 'ok').length;
   const counts = useMemo(() => {
     const m = new Map();
     items.filter(i => !['zone', 'text', 'roof'].includes(i.kind)).forEach(i => {
@@ -879,7 +1042,7 @@ export function ChecksPanel({ warnings, items, walls = [], lines = [], equipment
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   }, [items]);
   const zones = items.filter(i => i.kind === 'zone');
-  const zoneTotal = zones.reduce((s, z) => s + (z.w * z.d) / 1e6, 0);
+  const zoneTotal = zones.reduce((s, z) => s + zoneArea(z) / 1e6, 0);
   const ledger = equipments.map(eq => ({ eq, need: Number(eq.quantity) || 1, placed: items.filter(i => i.equipId === eq.id).length }));
   const missing = ledger.filter(l => l.placed < l.need);
 
@@ -888,7 +1051,22 @@ export function ChecksPanel({ warnings, items, walls = [], lines = [], equipment
       <div className="fp-btn-row">
         <button type="button" className={`filter-pill${tab === 'warn' ? ' on' : ''}`} onClick={() => setTab('warn')}>점검 {warnings.length ? `⚠ ${warnings.length}` : '✓'}</button>
         <button type="button" className={`filter-pill${tab === 'count' ? ' on' : ''}`} onClick={() => setTab('count')}>개수·넓이</button>
+        {fireRows.length > 0 && <button type="button" className={`filter-pill${tab === 'fire' ? ' on' : ''}`} onClick={() => setTab('fire')}>소방 점검 {fireBad ? `⚠ ${fireBad}` : '✓'}</button>}
       </div>
+      {tab === 'fire' && (
+        <>
+          <ul className="fp-warn-list">
+            {fireRows.map(({ it, st }) => (
+              <li key={it.id}>
+                <button type="button" className={`fp-warn fp-fire-row fp-fire-${st.level}`} onClick={() => onFocus({ ids: [it.id] })}>
+                  <b>{FIRE_LABEL[st.level]}</b>{it.name}{it.mfg ? ` · ${it.mfg} 제조` : ''} · {st.text}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {onFireLayer && <button type="button" className="btn btn-ghost btn-sm" onClick={onFireLayer}>소화기 위치도로 보기</button>}
+        </>
+      )}
       {tab === 'warn' && (
         warnings.length ? (
           <ul className="fp-warn-list">
@@ -929,7 +1107,7 @@ export function ChecksPanel({ warnings, items, walls = [], lines = [], equipment
               <div className="fp-label">구역 넓이</div>
               <table className="fp-table">
                 <tbody>
-                  {zones.map(z => <tr key={z.id}><td>{z.name}</td><td>{areaText(z.w, z.d)}</td></tr>)}
+                  {zones.map(z => <tr key={z.id}><td>{z.name}</td><td>{areaTextOf(z)}</td></tr>)}
                   <tr className="fp-total"><td>합계</td><td>{zoneTotal.toFixed(1)}㎡ ({(zoneTotal * 0.3025).toFixed(1)}평)</td></tr>
                 </tbody>
               </table>

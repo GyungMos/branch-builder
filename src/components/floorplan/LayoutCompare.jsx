@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import ModalPortal from '../common/ModalPortal';
 import { PlanItem, WallShape, MepLine, DimLine } from './FloorPlanner';
-import { planBounds, findWarnings, zoneLighting } from './planGeometry';
+import { planBounds, findWarnings, zoneLighting, zoneArea } from './planGeometry';
 import { isBeam, defaultLevelHeight } from './planLibrary';
 
 /**
@@ -33,8 +33,8 @@ export function layoutStats(level, { vehicleH = 1800, index = 0 } = {}) {
     { key: 'lift', label: '리프트 수', value: items.filter(i => i.lift !== undefined).length, unit: '대', better: 'more' },
     { key: 'column', label: '기둥 수', value: items.filter(i => i.kind === 'column').length, unit: '개' },
     { key: 'door', label: '문·셔터 수', value: items.filter(i => /door|shutter|sliding/.test(i.shape || '')).length, unit: '개' },
-    { key: 'area', label: '구역 넓이 합계', value: Math.round(zones.reduce((s, z) => s + (z.w * z.d) / 1e6, 0) * 10) / 10, unit: '㎡' },
-    { key: 'floor', label: '바닥 마감 넓이', value: Math.round(zones.filter(z => z.floor?.type).reduce((s, z) => s + (z.w * z.d) / 1e6, 0) * 10) / 10, unit: '㎡' },
+    { key: 'area', label: '구역 넓이 합계', value: Math.round(zones.reduce((s, z) => s + zoneArea(z) / 1e6, 0) * 10) / 10, unit: '㎡' },
+    { key: 'floor', label: '바닥 마감 넓이', value: Math.round(zones.filter(z => z.floor?.type).reduce((s, z) => s + zoneArea(z) / 1e6, 0) * 10) / 10, unit: '㎡' },
     { key: 'wall', label: '벽 길이', value: Math.round(walls.filter(w => !isBeam(w)).reduce((s, w) => s + wallLen(w), 0)), unit: 'mm' },
     { key: 'beam', label: '보 길이', value: Math.round(walls.filter(isBeam).reduce((s, w) => s + wallLen(w), 0)), unit: 'mm' },
     { key: 'lines', label: '전기·배관 길이', value: Math.round((level.lines || []).reduce((s, l) => s + segLen(l.pts), 0)), unit: 'mm' },

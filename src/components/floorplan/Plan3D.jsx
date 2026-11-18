@@ -1158,7 +1158,15 @@ function buildLevel(L, i, levels, el, opts, kit) {
     } else {
       material = kit.mat(z.color || '#10b981', { transparent: true, opacity: 0.18, depthWrite: false });
     }
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(z.w * M, z.d * M), material);
+    let geo;
+    if (z.points?.length >= 3) {
+      // 꼭짓점 구역: 그 모양대로 (무늬는 1m마다 같은 크기로)
+      let sp = scaledPoints(z).map(p => new THREE.Vector2(p.x * M, -p.y * M));
+      if (THREE.ShapeUtils.isClockWise(sp)) sp = sp.reverse();
+      geo = new THREE.ShapeGeometry(new THREE.Shape(sp));
+      if (material.map) { material.map.repeat.set(material.map.repeat.x / (z.w * M), material.map.repeat.y / (z.d * M)); material.map.offset.set(0, 0); }
+    } else geo = new THREE.PlaneGeometry(z.w * M, z.d * M);
+    const plane = new THREE.Mesh(geo, material);
     plane.rotation.x = -Math.PI / 2;
     const zg = new THREE.Group();
     zg.position.set(z.x * M, 6 * M, z.y * M);
@@ -1183,7 +1191,13 @@ function buildLevel(L, i, levels, el, opts, kit) {
       const cg = new THREE.Group();
       cg.position.set(z.x * M, Number(z.ceilH) * M, z.y * M);
       cg.rotation.y = -((z.rot || 0) * Math.PI) / 180;
-      box(cg, z.w, 20, z.d, 0, 0, 0, kit.mat('#f8fafc', { transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }), false);
+      const cmat = kit.mat('#f8fafc', { transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide });
+      if (z.points?.length >= 3) {
+        const cp = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(scaledPoints(z).map(p => new THREE.Vector2(p.x * M, -p.y * M)))), cmat);
+        cp.rotation.x = -Math.PI / 2;
+        if (z.flip) cg.scale.x = -1;
+        cg.add(cp);
+      } else box(cg, z.w, 20, z.d, 0, 0, 0, cmat, false);
       cg.userData.label = `${z.name} 천장 (${Math.round(z.ceilH).toLocaleString()}mm)`;
       g.add(cg);
     });

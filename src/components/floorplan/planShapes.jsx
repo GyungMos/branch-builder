@@ -40,6 +40,8 @@ export function FloorFill({ item, z = 0.05, opacity = 0.85 }) {
   const g = shade(c, isDarkColor(c) ? 0.35 : -0.3);
   const sw = Math.max(3, 0.9 / z);
   const pid = `fpf${rid}`;
+  // 꼭짓점으로 그린 구역(ㄱ·ㄷ자)은 그 모양대로
+  const area = (p) => (item.points?.length >= 3 ? <path d={polygonPath(scaledPoints(item))} {...p} /> : <rect x={-hw} y={-hd} width={item.w} height={item.d} {...p} />);
   let pat = null;
   if (f.type === 'tile' || f.type === 'carpet') {
     const tw = Number(f.tw) || 600; const td = Number(f.td) || 600;
@@ -88,8 +90,8 @@ export function FloorFill({ item, z = 0.05, opacity = 0.85 }) {
   return (
     <g pointerEvents="none">
       {pat && <defs>{pat}</defs>}
-      <rect x={-hw} y={-hd} width={item.w} height={item.d} fill={pat ? `url(#${pid})` : c} fillOpacity={opacity} />
-      {f.type === 'epoxy' && <rect x={-hw} y={-hd} width={item.w} height={item.d} fill={shade(c, 0.3)} fillOpacity={0.15} />}
+      {area({ fill: pat ? `url(#${pid})` : c, fillOpacity: opacity })}
+      {f.type === 'epoxy' && area({ fill: shade(c, 0.3), fillOpacity: 0.15 })}
     </g>
   );
 }

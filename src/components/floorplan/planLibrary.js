@@ -19,6 +19,7 @@ export const PLAN_CATEGORIES = [
   { id: 'steel', label: 'H빔·각파이프' },
   { id: 'finish', label: '바닥·유리' },
   { id: 'mep', label: '조명·전기·배관' },
+  { id: 'safety', label: '소방·안전' },
   { id: 'outside', label: '건물·외부' },
   { id: 'etc', label: '기타' },
 ];
@@ -163,8 +164,8 @@ export const PLAN_LIBRARY = [
   { key: 'aircock', cat: 'mep', name: '에어 콕(배관 출구)', shape: 'aircock', w: 120, d: 120, h: 150, elev: 1500, clear: {}, color: '#2563eb', kind: 'mep' },
   { key: 'faucet', cat: 'mep', name: '수전(급수)', shape: 'faucet', w: 150, d: 150, h: 150, elev: 600, clear: {}, color: '#16a34a', kind: 'mep' },
   { key: 'cctv', cat: 'mep', name: 'CCTV 카메라', shape: 'circle', w: 150, d: 150, h: 150, elev: 2800, clear: {}, color: '#1f2937', kind: 'mep' },
-  { key: 'exitsign', cat: 'mep', name: '비상구 유도등', shape: 'box', w: 400, d: 100, h: 200, elev: 2300, clear: {}, color: '#16a34a', kind: 'mep' },
-  { key: 'hydrant', cat: 'mep', name: '소화전함', shape: 'box', w: 750, d: 200, h: 1400, elev: 0, clear: { f: 800 }, color: '#dc2626', kind: 'mount' },
+  { key: 'exitsign', cat: 'safety', name: '비상구 유도등', shape: 'box', w: 400, d: 100, h: 200, elev: 2300, clear: {}, color: '#16a34a', kind: 'mep' },
+  { key: 'hydrant', cat: 'safety', name: '소화전함', shape: 'box', w: 750, d: 200, h: 1400, elev: 0, clear: { f: 800 }, color: '#dc2626', kind: 'mount' },
 
   // 건물·외부
   { key: 'canopy', cat: 'outside', name: '캐노피(입구 차양)', shape: 'roof', kind: 'roof', w: 6000, d: 2500, h: 3000, roofType: 'mono', rise: 150, material: 'poly', color: '#38bdf8', tip: '입구 위 차양이에요. 오른쪽 칸에서 높이·경사·재료를 바꿔요.' },
@@ -178,8 +179,21 @@ export const PLAN_LIBRARY = [
   { key: 'fence', cat: 'outside', name: '안전 펜스(1,000mm)', shape: 'fence', w: 1000, d: 50, h: 1100, clear: {}, color: '#f59e0b', kind: 'mount', tip: '길게 늘여 쓰세요.' },
   { key: 'parking', cat: 'outside', name: '주차 칸(2,500×5,000mm)', shape: 'parking', w: 2500, d: 5000, h: 0, clear: {}, color: '#e5e7eb', kind: 'floor' },
 
+  // 소방·안전 (fire: 점검 관리 대상, lifeYears: 내용연수)
+  { key: 'extCO2', cat: 'safety', fire: true, name: 'CO₂ 소화기', shape: 'circle', w: 250, d: 250, h: 800, clear: { f: 500 }, color: '#dc2626', tip: '전기 설비(분전반·충전기) 가까이에 둬요.' },
+  { key: 'extAuto', cat: 'safety', fire: true, lifeYears: 10, name: '자동확산소화기(천장)', shape: 'circle', w: 300, d: 300, h: 300, elev: 2700, clear: {}, color: '#dc2626', kind: 'mount', tip: '보일러실·전기실·배터리 보관 자리 천장에 달아요.' },
+  { key: 'extK', cat: 'safety', fire: true, name: 'K급 소화기(주방)', shape: 'circle', w: 250, d: 250, h: 700, clear: { f: 500 }, color: '#b91c1c' },
+  { key: 'evBlanket', cat: 'safety', fire: true, name: 'EV 질식소화포', shape: 'box', w: 600, d: 300, h: 600, elev: 900, clear: { f: 800 }, color: '#ea580c', kind: 'mount', tip: '전기차 화재 때 차를 덮는 포예요. 정비동 출입구 가까이에.' },
+  { key: 'detector', cat: 'safety', name: '화재감지기(천장)', shape: 'circle', w: 120, d: 120, h: 60, elev: 2800, clear: {}, color: '#dc2626', kind: 'mep' },
+  { key: 'exitDoor', cat: 'safety', name: '비상구 표시(문 위)', shape: 'box', w: 900, d: 150, h: 150, elev: 2100, clear: { f: 1200 }, color: '#16a34a', kind: 'mount', tip: '비상구 문 위에 놓아요. 앞 1,200mm는 비워 둬요.' },
+  { key: 'firstaid', cat: 'safety', name: '구급함', shape: 'box', w: 400, d: 150, h: 400, elev: 1200, clear: { f: 500 }, color: '#16a34a', kind: 'mount' },
+  { key: 'sandbox', cat: 'safety', name: '소화수조·모래함', shape: 'box', w: 1000, d: 600, h: 600, clear: { f: 600 }, color: '#f59e0b' },
+  { key: 'insulMat', cat: 'safety', name: '절연매트', shape: 'box', w: 1000, d: 1000, h: 10, clear: {}, color: '#facc15', kind: 'floor', tip: '전기차 고전압 작업 자리 바닥에 깔아요.' },
+  { key: 'muster', cat: 'safety', name: '대피 집결지', shape: 'zone', kind: 'zone', w: 3000, d: 3000, color: '#16a34a' },
+  { key: 'batteryIso', cat: 'safety', name: '배터리 격리구역', shape: 'zone', kind: 'zone', w: 3000, d: 3000, color: '#dc2626', tip: '불이 난 전기차 배터리를 떼어 두는 자리예요. 건물·차와 떨어뜨려요.' },
+
   // 기타
-  { key: 'extinguisher', cat: 'etc', name: '소화기', shape: 'circle', w: 300, d: 300, h: 600, clear: { f: 500 }, color: '#ef4444' },
+  { key: 'extinguisher', cat: 'safety', fire: true, lifeYears: 10, name: '분말소화기(ABC)', shape: 'circle', w: 300, d: 300, h: 600, clear: { f: 500 }, color: '#ef4444' },
   { key: 'pillar_sign', cat: 'etc', name: '분리수거함', shape: 'box', w: 1200, d: 500, h: 1000, clear: { f: 600 }, color: '#22c55e' },
   { key: 'text', cat: 'etc', name: '글자 메모', shape: 'text', w: 2000, d: 500, h: 0, clear: {}, color: '#e2e8f0', kind: 'text' },
 ];
@@ -341,6 +355,7 @@ export const MEP_LINE_TYPES = [
   { type: 'water', label: '급수', color: '#16a34a', dash: '', h: 300 },
   { type: 'drain', label: '배수', color: '#92400e', dash: '3 3', h: 0 },
   { type: 'gas', label: '가스', color: '#eab308', dash: '12 3 3 3 3 3', h: 2400 },
+  { type: 'evac', label: '대피 경로', color: '#16a34a', dash: '16 6', h: 100, arrow: true },
 ];
 export const mepLineTypeOf = (type) => MEP_LINE_TYPES.find(t => t.type === type) || MEP_LINE_TYPES[0];
 
@@ -362,3 +377,32 @@ export const POST_COLORS = ['#374151', '#111827', '#64748b', '#d1d5db', '#f8fafc
 /** 문짝 색 */
 export const LEAF_COLORS = ['#e3caa5', '#c8a273', '#a47148', '#6b4f3a', '#f8fafc', '#d1d5db', '#9ca3af', '#64748b', '#1f2937', '#1d4ed8'];
 export const SWING_DOOR_SHAPES = ['door', 'door2', 'glassdoor'];
+
+/** 배치도 종류(겹쳐 보기): 평면(벽·구역·문·계단)은 늘 보이고, 고른 종류만 진하게 */
+export const PLAN_LAYERS = [
+  { id: 'all', label: '전체' },
+  { id: 'equip', label: '장비 배치도' },
+  { id: 'fire', label: '소화기 위치도' },
+  { id: 'elec', label: '전기·동력 배치도' },
+  { id: 'evac', label: '안전·대피 동선도' },
+];
+const EVAC_KEYS = ['exitsign', 'exitDoor', 'muster', 'firstaid'];
+const BASE_KINDS = ['zone', 'text', 'roof', 'void', 'column', 'arch'];
+const BASE_CATS = ['arch', 'vertical', 'steel', 'finish'];
+/** 비품이 어느 배치도 종류에 속하는지 ('base' = 평면이라 늘 보임) */
+export function layerOf(it) {
+  if (it.layer) return it.layer;
+  const lib = it.key ? libraryByKey(it.key) : null;
+  if (lib?.cat === 'safety') return EVAC_KEYS.includes(it.key) ? 'evac' : 'fire';
+  if (BASE_KINDS.includes(it.kind) || BASE_CATS.includes(lib?.cat)) return 'base';
+  if (lib?.cat === 'mep' || it.kind === 'light' || it.kind === 'mep') return 'elec';
+  return 'equip';
+}
+export const lineLayerOf = (line) => (line.type === 'evac' ? 'evac' : 'elec');
+
+/** 벽에 붙는 문·창 */
+export const OPENING_SHAPES = ['door', 'door2', 'sliding', 'glassdoor', 'autodoor', 'autodoor1', 'window', 'shutter'];
+export const isOpening = (it) => OPENING_SHAPES.includes(it?.shape);
+/** 점검 관리하는 소방 비품(소화기·질식소화포 등) */
+export const isFireItem = (it) => Boolean(it?.fire || (it?.key && libraryByKey(it.key)?.fire));
+export const fireLife = (it) => Number(it?.lifeYears ?? (it?.key ? libraryByKey(it.key)?.lifeYears : 0)) || 0;

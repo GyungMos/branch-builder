@@ -29,7 +29,7 @@ const rectPts = (x0, y0, x1, y1) => [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1
 export function bodyPolygon(item, shrink = 0) {
   const hw = Math.max(1, item.w / 2 - shrink); const hd = Math.max(1, item.d / 2 - shrink);
   let local;
-  if (item.shape === 'poly' && item.points?.length >= 3) {
+  if ((item.shape === 'poly' || item.kind === 'zone') && item.points?.length >= 3) {
     const pts = scaledPoints(item);
     const fx = hw / (item.w / 2); const fy = hd / (item.d / 2);
     local = pts.map(p => ({ x: p.x * fx, y: p.y * fy }));
@@ -298,7 +298,7 @@ export const itemBox = (it) => aabb(bodyPolygon(it));
 export const wallBox = (w) => aabb(wallPolygon(w));
 
 /** 배치 전체를 감싸는 네모 (화면 맞추기·그림 내려받기) */
-export function planBounds(plan, bgBox) {
+export function planBounds(plan, bgBox, withAxes = true) {
   const pts = [];
   (plan.items || []).forEach(it => pts.push(...clearancePolygon(it)));
   (plan.walls || []).forEach(w => pts.push(...wallPolygon(w)));
@@ -306,7 +306,15 @@ export function planBounds(plan, bgBox) {
   (plan.lines || []).forEach(l => pts.push(...(l.pts || [])));
   if (bgBox) pts.push({ x: bgBox.x0, y: bgBox.y0 }, { x: bgBox.x1, y: bgBox.y1 });
   if (!pts.length) return { x0: -5000, y0: -5000, x1: 15000, y1: 10000 };
-  return aabb(pts);
+  const b = aabb(pts);
+  // 축선: 동그라미 이름·치수까지 들어오게
+  const ax = withAxes ? plan.axes : null;
+  if (ax && ((ax.x || []).length || (ax.y || []).length)) {
+    const xs = (ax.x || []).map(q => q.pos); const ys = (ax.y || []).map(q => q.pos);
+    pts.push({ x: Math.min(b.x0, ...xs) - 5200, y: Math.min(b.y0, ...ys) - 5200 }, { x: Math.max(b.x1, ...xs) + 1600, y: Math.max(b.y1, ...ys) + 1600 });
+    return aabb(pts);
+  }
+  return b;
 }
 
 /**
@@ -351,7 +359,7 @@ export function zoneLighting(zone, items = []) {
   const lights = items.filter(it => it.kind === 'light' && pointInPolygon({ x: it.x, y: it.y }, poly));
   const lm = lights.reduce((s, it) => s + (Number(it.lm) || 0), 0);
   const watt = lights.reduce((s, it) => s + (Number(it.watt) || 0), 0);
-  const area = (zone.w * zone.d) / 1e6;
+  const area = zoneArea(zone) / 1e6;
   const lux = area > 0 ? Math.round((lm * 0.6 * 0.8) / area) : 0;
   const need = zone.luxTarget || recommendedLux(zone.name);
   return { count: lights.length, lm, watt, area, lux, need, ok: lux >= need * 0.9 };
@@ -403,4 +411,124 @@ export function stairDistanceForHeight(st, h, H) {
   if (st.shape === 'stairsL') { const sw = stairArm(st); total = (st.d - sw) + sw + (st.w - sw); }
   if (st.shape === 'stairsU') { const sw = stairArm(st); const L = Math.min(sw, st.d * 0.4); total = (st.d - L) * 2 + L; }
   return Math.round(((h + STAIR_STRUCT) / H) * total);
+}
+
+/* ───────── 다각형 구역 ───────── */
+export function polyArea(pts = []) {
+  let a = 0;
+  for (let i = 0; i < pts.length; i++) { const p = pts[i]; const q = pts[(i + 1) % pts.length]; a += p.x * q.y - q.x * p.y; }
+  return Math.abs(a) / 2;
+}
+/** 구역 넓이(mm²): 다각형이면 꼭짓점으로, 아니면 가로×세로 */
+export const zoneArea = (z) => (z.points?.length >= 3 ? polyArea(bodyPolygon(z)) : z.w * z.d);
+export const areaTextOf = (z) => { const m2 = zoneArea(z) / 1e6; return `${m2.toFixed(1)}㎡ (${(m2 * 0.3025).toFixed(1)}평)`; };
+
+/** 배치도 좌표 꼭짓점들 → 구역 값 (돌리기 없이, 꼭짓점은 가운데 기준) */
+export function zoneFromWorldPts(pts) {
+  const b = aabb(pts);
+  const cx = Math.round((b.x0 + b.x1) / 2); const cy = Math.round((b.y0 + b.y1) / 2);
+  const w = Math.max(10, Math.round(b.x1 - b.x0)); const d = Math.max(10, Math.round(b.y1 - b.y0));
+  return { x: cx, y: cy, w, d, rot: 0, flip: false, baseW: w, baseD: d, points: pts.map(p => ({ x: Math.round(p.x - cx), y: Math.round(p.y - cy) })) };
+}
+
+/**
+ * 방향과 길이로 다각형: "우 25200 하 12000 좌 25200" (우·좌·상·하 / R L U D / → ← ↑ ↓)
+ * 시작점에서 차례로 움직인 꼭짓점들. 마지막은 시작점과 이어짐(돌아오는 변은 적지 않아도 됨)
+ */
+export function parseDirections(text = '', start = { x: 0, y: 0 }) {
+  const DIR = { 우: [1, 0], 좌: [-1, 0], 상: [0, -1], 하: [0, 1], r: [1, 0], l: [-1, 0], u: [0, -1], d: [0, 1], '→': [1, 0], '←': [-1, 0], '↑': [0, -1], '↓': [0, 1] };
+  const re = /(우|좌|상|하|r|l|u|d|→|←|↑|↓)\s*([\d,.]+)/gi;
+  const pts = [{ ...start }]; let m;
+  while ((m = re.exec(text))) {
+    const v = DIR[m[1].toLowerCase()] || DIR[m[1]];
+    const len = parseFloat(m[2].replace(/,/g, ''));
+    if (!v || !len) continue;
+    const p = pts[pts.length - 1];
+    pts.push({ x: p.x + v[0] * len, y: p.y + v[1] * len });
+  }
+  const last = pts[pts.length - 1];
+  if (pts.length > 1 && Math.hypot(last.x - start.x, last.y - start.y) < 1) pts.pop();
+  return pts;
+}
+
+/* ───────── 축선(기둥 중심선) ───────── */
+/**
+ * "8000 8000 6000" 또는 "X1 3200 X1-1 3800 X2" → [{ name, pos }]
+ * 숫자는 앞 축선에서 다음 축선까지 간격(mm). 이름을 안 적으면 X1, X2… 처럼 붙음
+ */
+export function parseAxes(text = '', prefix = 'X', origin = 0) {
+  const tokens = String(text).split(/[\s,]+/).filter(Boolean);
+  const out = []; let pos = origin; let pendingName = null; let n = 1;
+  const push = (name) => { out.push({ name: name || `${prefix}${n}`, pos }); n += 1; };
+  tokens.forEach(tk => {
+    const v = parseFloat(tk.replace(/,/g, ''));
+    if (Number.isFinite(v) && /^[\d.,]+$/.test(tk)) {
+      if (!out.length) push(pendingName);
+      pendingName = null;
+      pos += v;
+      push(null);
+    } else {
+      if (out.length && out[out.length - 1].pos === pos && !pendingName) out[out.length - 1].name = tk;
+      else if (!out.length) { pendingName = tk; push(tk); pendingName = null; } else pendingName = tk;
+    }
+  });
+  if (!out.length && pendingName) push(pendingName);
+  return out;
+}
+/** 가장 가까운 축선과 거리 */
+export function nearestAxis(axes = [], v) {
+  let best = null;
+  axes.forEach(a => { if (!best || Math.abs(v - a.pos) < Math.abs(v - best.pos)) best = a; });
+  return best ? { axis: best, dist: Math.round(v - best.pos) } : null;
+}
+
+/* ───────── 소화기 점검 상태 ───────── */
+const monthsBetween = (a, b) => (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+/**
+ * 내용연수(lifeYears)·제조년월(mfg, YYYY-MM)·최근 점검일(lastCheck, YYYY-MM-DD)로 상태
+ * bad = 교체 필요 / warn = 1년 안에 교체 또는 점검 31일 지남·안 적음 / ok
+ */
+export function fireStatus(it, now = new Date(), life = it.lifeYears) {
+  const notes = []; let level = 'ok';
+  if (life) {
+    if (!it.mfg) { level = 'warn'; notes.push('제조년월 미입력'); } else {
+      const [y, m] = it.mfg.split('-').map(Number);
+      const left = life * 12 - monthsBetween(new Date(y, (m || 1) - 1, 1), now);
+      if (left <= 0) { level = 'bad'; notes.push(`내용연수 ${life}년 지남 · 교체 필요`); } else {
+        if (left <= 12) { level = 'warn'; }
+        notes.push(`교체까지 ${left >= 12 ? `${Math.floor(left / 12)}년 ` : ''}${left % 12 ? `${left % 12}개월` : ''}`.trim());
+      }
+    }
+  }
+  if (!it.lastCheck) { if (level === 'ok') level = 'warn'; notes.push('점검일 미입력'); } else {
+    const days = Math.floor((now - new Date(`${it.lastCheck}T00:00:00`)) / 86400000);
+    notes.push(`점검 후 ${days}일`);
+    if (days > 31 && level === 'ok') level = 'warn';
+  }
+  return { level, text: notes.join(' · ') };
+}
+
+/**
+ * 문·창을 가까운 벽 가운데 줄에 붙이기: 벽 방향으로 돌리고(지금 방향과 가까운 쪽) 벽 끝을 넘지 않게
+ * walls: 바닥에 서는 벽만 넘겨 주세요. tol: 벽 겉면에서 이만큼(mm) 안이면 붙음
+ */
+export function snapToWall(item, pos, walls, tol = 400) {
+  let best = null;
+  walls.forEach(w => {
+    const dx = w.x2 - w.x1; const dy = w.y2 - w.y1; const len = Math.hypot(dx, dy);
+    if (len < 300) return;
+    const ux = dx / len; const uy = dy / len;
+    const t = (pos.x - w.x1) * ux + (pos.y - w.y1) * uy;
+    if (t < -100 || t > len + 100) return;
+    const dist = Math.abs((pos.x - w.x1) * -uy + (pos.y - w.y1) * ux);
+    if (dist > (w.t || 200) / 2 + tol) return;
+    const half = Math.min(len / 2, item.w / 2);
+    const tc = Math.min(len - half, Math.max(half, t));
+    if (!best || dist < best.dist) best = { dist, x: w.x1 + ux * tc, y: w.y1 + uy * tc, ang: (Math.atan2(dy, dx) * 180) / Math.PI };
+  });
+  if (!best) return null;
+  const norm = (a) => ((Math.round(a) % 360) + 360) % 360;
+  const cur = norm(item.rot || 0); const a1 = norm(best.ang); const a2 = norm(best.ang + 180);
+  const diff = (a, b) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); };
+  return { x: Math.round(best.x), y: Math.round(best.y), rot: diff(cur, a1) <= diff(cur, a2) ? a1 : a2, dist: best.dist };
 }
